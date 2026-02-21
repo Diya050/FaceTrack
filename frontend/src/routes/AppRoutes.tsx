@@ -1,4 +1,7 @@
 import { Routes, Route } from "react-router-dom";
+import FAQ from "../pages/FAQ/FAQ";
+import QueryForm from "../pages/FAQ/QueryForm";
+
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
@@ -18,6 +21,11 @@ export default function AppRoutes() {
       <Route path="/pending-approval" element={<PendingApproval />} />
       <Route path="/team" element={<MeetOurTeam />} />
       <Route path="/features" element={<Features />} />
+      <Route path="/" element={<FAQ />} />
+      <Route path="/query" element={<QueryForm />} />
+
+
+
 
     </Routes>
   );

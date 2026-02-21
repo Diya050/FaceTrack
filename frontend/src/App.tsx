@@ -1,4 +1,5 @@
 import AppRoutes from "./routes/AppRoutes";
+import FAQ from "./pages/FAQ/FAQ";
 
 
 function App() {
