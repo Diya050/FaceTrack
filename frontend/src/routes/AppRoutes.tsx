@@ -4,6 +4,7 @@ import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
+import MeetOurTeam from "../pages/user/MeetOurTeam";
 
 export default function AppRoutes() {
   return (
@@ -13,6 +14,7 @@ export default function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/pending-approval" element={<PendingApproval />} />
+      <Route path="/team" element={<MeetOurTeam />} />
     </Routes>
   );
 }
