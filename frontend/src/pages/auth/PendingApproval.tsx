@@ -1,19 +1,49 @@
-import { Typography, Box } from "@mui/material";
+import { 
+  Typography, 
+  Stack,
+  Container 
+} from "@mui/material";
 import AuthLayout from "../../layouts/AuthLayout";
 
 export default function PendingApproval() {
   return (
     <AuthLayout>
-      <Box textAlign="center">
-        <Typography variant="h5" gutterBottom>
-          Registration Submitted
-        </Typography>
+      <Container
+        maxWidth="sm"
+        sx={{
+          px: { xs: 2, sm: 3 },
+        }}
+      >
+        <Stack
+          spacing={{ xs: 2, sm: 3 }}
+          alignItems="center"
+          textAlign="center"
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              fontSize: {
+                xs: "1.5rem",
+                sm: "1.75rem",
+              },
+              fontWeight: 600,
+            }}
+          >
+            Registration Submitted
+          </Typography>
 
-        <Typography color="text.secondary">
-          Your account is pending admin approval.
-          You will be notified once approved.
-        </Typography>
-      </Box>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{
+              maxWidth: 420,
+            }}
+          >
+            Your account is pending admin approval.
+            You will be notified once approved.
+          </Typography>
+        </Stack>
+      </Container>
     </AuthLayout>
   );
 }

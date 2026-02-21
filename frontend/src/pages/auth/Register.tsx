@@ -1,6 +1,8 @@
 import {
   TextField,
   Button,
+  Container,
+  Stack,
   Typography,
   Box,
   Link,
@@ -120,23 +122,49 @@ export default function Register() {
   };
 
   return (
-    <AuthLayout>
-      <Typography variant="h4" gutterBottom>
-        Create Account
-      </Typography>
+  <AuthLayout>
+    <Container
+      maxWidth="sm"
+      sx={{
+        px: { xs: 2, sm: 3 },
+      }}
+    >
+      <Stack spacing={{ xs: 2.5, sm: 3 }}>
+        
+        {/* Header */}
+        <Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontSize: {
+                xs: "1.6rem",
+                sm: "1.9rem",
+              },
+              fontWeight: 600,
+            }}
+            gutterBottom
+          >
+            Create Account
+          </Typography>
 
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        Register to access FaceTrack
-      </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            Register to access FaceTrack
+          </Typography>
+        </Box>
 
-      <Box display="flex" flexDirection="column" gap={2}>
         {error && <Alert severity="error">{error}</Alert>}
 
+        {/* Form Fields */}
         <TextField
           label="Full Name"
           fullWidth
           value={form.fullName}
-          onChange={(e) => handleChange("fullName", e.target.value)}
+          onChange={(e) =>
+            handleChange("fullName", e.target.value)
+          }
         />
 
         <TextField
@@ -144,10 +172,12 @@ export default function Register() {
           type="email"
           fullWidth
           value={form.email}
-          onChange={(e) => handleChange("email", e.target.value)}
+          onChange={(e) =>
+            handleChange("email", e.target.value)
+          }
         />
 
-        {/* Organization Dropdown */}
+        {/* Organization */}
         <TextField
           select
           label="Organization"
@@ -155,7 +185,7 @@ export default function Register() {
           value={form.organizationId}
           onChange={(e) => {
             handleChange("organizationId", e.target.value);
-            handleChange("departmentId", ""); // reset department
+            handleChange("departmentId", "");
           }}
         >
           {mockOrganizations.map((org) => (
@@ -165,7 +195,7 @@ export default function Register() {
           ))}
         </TextField>
 
-        {/* Department Dropdown */}
+        {/* Department */}
         <TextField
           select
           label="Department"
@@ -176,11 +206,16 @@ export default function Register() {
           }
           disabled={!form.organizationId}
         >
-          {selectedOrganization?.departments.map((dept) => (
-            <MenuItem key={dept.id} value={dept.id}>
-              {dept.name}
-            </MenuItem>
-          ))}
+          {selectedOrganization?.departments.map(
+            (dept) => (
+              <MenuItem
+                key={dept.id}
+                value={dept.id}
+              >
+                {dept.name}
+              </MenuItem>
+            )
+          )}
         </TextField>
 
         <TextField
@@ -188,7 +223,9 @@ export default function Register() {
           type="password"
           fullWidth
           value={form.password}
-          onChange={(e) => handleChange("password", e.target.value)}
+          onChange={(e) =>
+            handleChange("password", e.target.value)
+          }
         />
 
         <TextField
@@ -197,27 +234,44 @@ export default function Register() {
           fullWidth
           value={form.confirmPassword}
           onChange={(e) =>
-            handleChange("confirmPassword", e.target.value)
+            handleChange(
+              "confirmPassword",
+              e.target.value
+            )
           }
         />
 
+        {/* Register Button */}
         <Button
           variant="contained"
           size="large"
+          fullWidth
           onClick={handleSubmit}
           disabled={loading}
+          sx={{
+            py: { xs: 1.4, sm: 1.6 },
+            mt: 1,
+          }}
         >
-          {loading ? <CircularProgress size={22} /> : "Register"}
+          {loading ? (
+            <CircularProgress size={22} />
+          ) : (
+            "Register"
+          )}
         </Button>
 
-        <Link
-          component="button"
-          onClick={() => navigate("/login")}
-          sx={{ textAlign: "center", mt: 1 }}
-        >
-          Already have an account? Login
-        </Link>
-      </Box>
-    </AuthLayout>
-  );
+        {/* Footer Link */}
+        <Box textAlign="center">
+          <Link
+            component="button"
+            onClick={() => navigate("/login")}
+          >
+            Already have an account? Login
+          </Link>
+        </Box>
+
+      </Stack>
+    </Container>
+  </AuthLayout>
+);
 }

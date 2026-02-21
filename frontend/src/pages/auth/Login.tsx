@@ -1,6 +1,7 @@
 import {
   TextField,
   Button,
+  Container,
   Typography,
   Box,
   Stack,
@@ -36,7 +37,6 @@ export default function Login() {
       return;
     }
 
-    // Auto detect credential type(wether email or EmpId)
     const credentialType = form.identifier.includes("@")
       ? "email"
       : "employeeId";
@@ -49,29 +49,37 @@ export default function Login() {
     };
 
     console.log("Login Payload:", payload);
-
-    // TODO:
-    // POST /auth/login
-    // Backend should:
-    // - Validate credentials
-    // - Check status
-    // - If face_enrolled = false → return flag
-    // - Frontend redirect to /enroll-face if needed
   };
 
   return (
-    <AuthLayout>
-      <Stack spacing={3}>
+  <AuthLayout>
+    <Container
+      maxWidth="sm"
+      sx={{
+        px: { xs: 2, sm: 3 },
+      }}
+    >
+      <Stack spacing={{ xs: 2.5, sm: 3 }}>
+        
         {/* Header */}
         <Box textAlign="center">
           <LockOutlinedIcon
             sx={{
-              fontSize: 42,
+              fontSize: { xs: 36, sm: 42 },
               color: "primary.main",
               mb: 1,
             }}
           />
-          <Typography variant="h5" fontWeight={600}>
+          <Typography
+            variant="h5"
+            fontWeight={600}
+            sx={{
+              fontSize: {
+                xs: "1.4rem",
+                sm: "1.6rem",
+              },
+            }}
+          >
             Secure Access
           </Typography>
           <Typography
@@ -90,12 +98,18 @@ export default function Login() {
           onChange={(_, value) => {
             if (value) setLoginMode(value);
           }}
+          sx={{
+            "& .MuiToggleButton-root": {
+              textTransform: "none",
+              fontWeight: 500,
+            },
+          }}
         >
           <ToggleButton value="user">User</ToggleButton>
           <ToggleButton value="admin">Admin</ToggleButton>
         </ToggleButtonGroup>
 
-        {/*Identifier Field for credentials */}
+        {/* Identifier */}
         <TextField
           label="Email or Employee ID"
           placeholder="Enter email or employee ID"
@@ -131,34 +145,61 @@ export default function Login() {
           size="large"
           fullWidth
           onClick={handleSubmit}
+          sx={{
+            py: { xs: 1.4, sm: 1.6 },
+          }}
         >
           Sign In
         </Button>
 
-        {/* Footer */}
+        {/* Footer Links */}
         <Box
-          display="flex"
-          justifyContent="space-between"
+          sx={{
+            display: "flex",
+            flexDirection: {
+              xs: "column",
+              sm: "row",
+            },
+            justifyContent: {
+              sm: "space-between",
+            },
+            alignItems: {
+              sm: "center",
+            },
+            gap: { xs: 1, sm: 0 },
+          }}
         >
           <Button
             size="small"
-            onClick={() =>
-              navigate("/forgot-password")
-            }
+            onClick={() => navigate("/forgot-password")}
+            sx={{
+              justifyContent: {
+                xs: "flex-start",
+                sm: "flex-start",
+              },
+              px: 0,
+            }}
           >
             Forgot Password?
           </Button>
 
           <Button
             size="small"
-            onClick={() =>
-              navigate("/register")
-            }
+            onClick={() => navigate("/register")}
+            sx={{
+              justifyContent: {
+                xs: "flex-start",
+                sm: "flex-end",
+              },
+              px: 0,
+            }}
           >
             Create Account
           </Button>
         </Box>
       </Stack>
-    </AuthLayout>
-  );
+    </Container>
+  </AuthLayout>
+);
 }
+

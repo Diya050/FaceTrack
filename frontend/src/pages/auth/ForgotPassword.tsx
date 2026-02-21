@@ -1,6 +1,8 @@
 import {
   TextField,
   Button,
+  Container,
+  Stack,
   Typography,
   Box,
   CircularProgress,
@@ -45,19 +47,44 @@ export default function ForgotPassword() {
   };
 
   return (
-    <AuthLayout>
-      <Typography variant="h4" gutterBottom>
-        Forgot Password
-      </Typography>
+  <AuthLayout>
+    <Container
+      maxWidth="sm"
+      sx={{
+        px: { xs: 2, sm: 3 },
+      }}
+    >
+      <Stack spacing={{ xs: 2.5, sm: 3 }}>
+        
+        {/* Header */}
+        <Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontSize: {
+                xs: "1.6rem",
+                sm: "1.9rem",
+              },
+              fontWeight: 600,
+            }}
+            gutterBottom
+          >
+            Forgot Password
+          </Typography>
 
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        Enter your email to receive a password reset link.
-      </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            Enter your email to receive a password reset link.
+          </Typography>
+        </Box>
 
-      <Box display="flex" flexDirection="column" gap={2}>
+        {/* Alerts */}
         {error && <Alert severity="error">{error}</Alert>}
         {success && <Alert severity="success">{success}</Alert>}
 
+        {/* Email Field */}
         <TextField
           label="Email"
           type="email"
@@ -66,22 +93,36 @@ export default function ForgotPassword() {
           onChange={(e) => setEmail(e.target.value)}
         />
 
+        {/* Submit Button */}
         <Button
           variant="contained"
           size="large"
+          fullWidth
           onClick={handleSubmit}
           disabled={loading}
+          sx={{
+            py: { xs: 1.4, sm: 1.6 },
+          }}
         >
-          {loading ? <CircularProgress size={22} /> : "Send Reset Link"}
+          {loading ? (
+            <CircularProgress size={22} />
+          ) : (
+            "Send Reset Link"
+          )}
         </Button>
 
-        <Button
-          variant="text"
-          onClick={() => navigate("/login")}
-        >
-          Back to Login
-        </Button>
-      </Box>
-    </AuthLayout>
-  );
+        {/* Back Button */}
+        <Box textAlign="center">
+          <Button
+            variant="text"
+            onClick={() => navigate("/login")}
+          >
+            Back to Login
+          </Button>
+        </Box>
+
+      </Stack>
+    </Container>
+  </AuthLayout>
+);
 }

@@ -16,8 +16,9 @@ export default function AuthLayout({ children }: Props) {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        px: { xs: 2, sm: 3 },
+        py: { xs: 3, sm: 4 },
 
-        // Theme-based gradient
         background: `linear-gradient(
           135deg,
           ${theme.palette.primary.main} 0%,
@@ -25,12 +26,13 @@ export default function AuthLayout({ children }: Props) {
         )`,
       }}
     >
-      <Container maxWidth="sm">
+      <Container maxWidth="sm" disableGutters>
         <Paper
-          elevation={8}
+          elevation={6}
           sx={{
-            p: 4,
-            borderRadius: 3,
+            width: "100%",
+            p: { xs: 3, sm: 4 },
+            borderRadius: { xs: 2, sm: 3 },
             backgroundColor: theme.palette.background.paper,
           }}
         >

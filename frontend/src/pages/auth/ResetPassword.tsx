@@ -1,6 +1,8 @@
 import {
   TextField,
   Button,
+  Container,
+  Stack,
   Typography,
   Box,
   CircularProgress,
@@ -70,19 +72,44 @@ export default function ResetPassword() {
   };
 
   return (
-    <AuthLayout>
-      <Typography variant="h4" gutterBottom>
-        Reset Password
-      </Typography>
+  <AuthLayout>
+    <Container
+      maxWidth="sm"
+      sx={{
+        px: { xs: 2, sm: 3 },
+      }}
+    >
+      <Stack spacing={{ xs: 2.5, sm: 3 }}>
+        
+        {/* Header */}
+        <Box>
+          <Typography
+            variant="h4"
+            sx={{
+              fontSize: {
+                xs: "1.6rem",
+                sm: "1.9rem",
+              },
+              fontWeight: 600,
+            }}
+            gutterBottom
+          >
+            Reset Password
+          </Typography>
 
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        Enter your new password.
-      </Typography>
+          <Typography
+            variant="body2"
+            color="text.secondary"
+          >
+            Enter your new password.
+          </Typography>
+        </Box>
 
-      <Box display="flex" flexDirection="column" gap={2}>
+        {/* Alerts */}
         {error && <Alert severity="error">{error}</Alert>}
         {success && <Alert severity="success">{success}</Alert>}
 
+        {/* New Password */}
         <TextField
           label="New Password"
           type="password"
@@ -91,6 +118,7 @@ export default function ResetPassword() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
+        {/* Confirm Password */}
         <TextField
           label="Confirm Password"
           type="password"
@@ -99,15 +127,26 @@ export default function ResetPassword() {
           onChange={(e) => setConfirmPassword(e.target.value)}
         />
 
+        {/* Submit Button */}
         <Button
           variant="contained"
           size="large"
+          fullWidth
           onClick={handleSubmit}
           disabled={loading}
+          sx={{
+            py: { xs: 1.4, sm: 1.6 },
+          }}
         >
-          {loading ? <CircularProgress size={22} /> : "Reset Password"}
+          {loading ? (
+            <CircularProgress size={22} />
+          ) : (
+            "Reset Password"
+          )}
         </Button>
-      </Box>
-    </AuthLayout>
-  );
+
+      </Stack>
+    </Container>
+  </AuthLayout>
+);
 }
