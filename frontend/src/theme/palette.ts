@@ -34,7 +34,7 @@ export const palette: PaletteOptions = {
   },
 
   background: {
-    default: "#F0F0DB",
+    default: "#ffffff",
     paper: "#ffffff",
   },
 
