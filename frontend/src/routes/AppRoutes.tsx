@@ -19,6 +19,8 @@ import Features from "../pages/public/Features";
 import HowItWorks from "../pages/public/HowItWorks";
 import FAQ from "../pages/public/FAQ/FAQ";
 import QueryForm from "../pages/public/FAQ/QueryForm";
+import ContactPage from "../pages/ContactPage";
+import AboutTechnologyPage from "../pages/AboutTechnologyPage";
 
 
 export default function AppRoutes() {
@@ -29,12 +31,12 @@ export default function AppRoutes() {
       <Route element={<PublicLayout />}>
         <Route path="/" />
         <Route path="/features" element={<Features />} />
-        <Route path="/contact" />
+        <Route path="/contact" element={<ContactPage/>} />
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/help-center" />
         <Route path="/privacy-policy" />
         <Route path="/terms-of-use" element={<TermsOfUsePage/>}/>
-        <Route path="/about-technology" />
+        <Route path="/about-technology" element={<AboutTechnologyPage/>} />
         <Route path="/faqs" element={<FAQ/>} />
         <Route path="/team" element={<MeetOurTeam />} /> 
         <Route path="/help-center" element={<HelpCenterPage/>}/>

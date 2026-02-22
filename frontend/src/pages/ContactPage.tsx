@@ -10,7 +10,6 @@ import {
   Dialog,
   DialogContent,
   DialogActions,
-  Link,
 } from "@mui/material";
 import {
   Phone,
@@ -54,35 +53,40 @@ const ContactPage = () => {
     <Box
       sx={{
         minHeight: "100vh",
-        py: 10,
+        backgroundColor: "#F0F0DB",
       }}
     >
-      <Container maxWidth="lg">
-
-        {/* ================= HERO TEXT ================= */}
-        <Box textAlign="center" mb={8}>
-          <Typography mt={3} variant="h5">
-            <strong>CONTACT US</strong>
+      {/* ================= HERO SECTION ================= */}
+      <Box
+        sx={{
+          background:
+            "linear-gradient(135deg, #1e2338 0%, #2f3655 100%)",
+          color: "#f6f3e7",
+          pt: 14,
+          pb: 12,
+          textAlign: "center",
+        }}
+      >
+        <Container maxWidth="md">
+          <Typography
+            variant="h2"
+            fontWeight="bold"
+            gutterBottom
+            sx={{ color: "#E1D9BC" }}
+          >
+            CONTACT US
           </Typography>
 
-          <Typography variant="h3" fontWeight="bold">
+          <Typography variant="h4">
             We are always ready to help you and answer your questions
           </Typography>
+        </Container>
+      </Box>
 
-          <Typography
-            variant="body1"
-            color="text.secondary"
-            mt={2}
-            maxWidth={650}
-            mx="auto"
-          >
-            Have questions about FaceTrack? Reach out anytime and our team will
-            get back to you quickly.
-          </Typography>
+      {/* ================= MAIN CONTENT ================= */}
+      <Container maxWidth="lg" sx={{ py: 10 }}>
 
-        </Box>
-
-        {/* ================= INFO CARDS ================= */}
+         {/* ================= INFO CARDS ================= */}
         <Grid container spacing={4} mb={8}>
           {[
             {
@@ -138,6 +142,7 @@ const ContactPage = () => {
           ))}
         </Grid>
 
+
         {/* ================= MAP + FORM ================= */}
         <Paper sx={{ borderRadius: 4, p: 5 }}>
           <Grid container spacing={6} alignItems="stretch">
@@ -152,12 +157,13 @@ const ContactPage = () => {
                 }}
               >
                 <iframe
-                  src="https://www.google.com/maps?q=23.241813,72.627509&output=embed"
+                  src="https://www.google.com/maps?q=Argusoft,Gandhinagar&output=embed"
                   width="100%"
                   height="450"
                   style={{ border: 0 }}
                   loading="lazy"
-                ></iframe>
+                  title="map"
+                />
               </Box>
             </Grid>
 
@@ -221,7 +227,6 @@ const ContactPage = () => {
 
           </Grid>
         </Paper>
-
       </Container>
 
       {/* ================= SUCCESS POPUP ================= */}
@@ -242,7 +247,6 @@ const ContactPage = () => {
         }}
       >
         <DialogContent>
-
           <Box
             sx={{
               width: 120,
@@ -279,7 +283,6 @@ const ContactPage = () => {
             <br />
             We’ll get back to you soon.
           </Typography>
-
         </DialogContent>
 
         <DialogActions sx={{ justifyContent: "center" }}>
@@ -292,7 +295,6 @@ const ContactPage = () => {
               borderRadius: 4,
               fontWeight: "bold",
               backgroundColor: "#2f3655",
-              boxShadow: "0 6px 15px rgba(0,0,0,0.2)",
               "&:hover": {
                 backgroundColor: "#1e2338",
               },
