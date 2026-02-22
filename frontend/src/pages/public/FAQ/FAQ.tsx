@@ -1,16 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Search, MessageCircle } from 'lucide-react';
+import { 
+  Box, 
+  Container, 
+  Typography, 
+  TextField, 
+  InputAdornment, 
+  Accordion, 
+  AccordionSummary, 
+  AccordionDetails, 
+  Button 
+} from '@mui/material';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import SearchIcon from '@mui/icons-material/Search';
+import ChatBubbleOutlineIcon from '@mui/icons-material/ChatBubbleOutline';
 
 const FAQ = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+  
+  // MUI Accordions work best tracking the expanded panel index
+  const [expanded, setExpanded] = useState<number | false>(false);
 
   // Changes the browser tab title when the page loads
   useEffect(() => {
     document.title = "FAQ | FaceTrack";
   }, []);
+
+  const handleChange = (panel: number) => (event: React.SyntheticEvent, isExpanded: boolean) => {
+    setExpanded(isExpanded ? panel : false);
+  };
 
   const faqData = [
     {
@@ -51,92 +70,154 @@ const FAQ = () => {
     faq.question.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const toggleFaq = (index: number) => {
-    setOpenIndex(openIndex === index ? null : index);
-  };
-
   return (
-    <div className="min-h-screen bg-[#F0F0DB] font-sans">
+    <Box sx={{ minHeight: '100vh', bgcolor: '#F0F0DB', fontFamily: 'sans-serif', pb: 10 }}>
       
       {/* Enhanced Hero Section */}
-      <div className="relative bg-gradient-to-br from-[#1e2336] via-[#30364F] to-[#424a6b] py-24 px-4 text-center overflow-hidden">
+      <Box sx={{ 
+        position: 'relative',
+        background: 'linear-gradient(to bottom right, #1e2336, #30364F, #424a6b)',
+        py: 12, 
+        px: 2, 
+        textAlign: 'center', 
+        overflow: 'hidden' 
+      }}>
         
-        {/* Decorative Background Blurs */}
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-          <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-[#ACBAC4] opacity-10 blur-3xl"></div>
-          <div className="absolute bottom-0 right-0 w-80 h-80 rounded-full bg-[#F0F0DB] opacity-10 blur-3xl"></div>
-        </div>
+        {/* Decorative Background Blurs mapped to MUI sx */}
+        <Box sx={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}>
+          <Box sx={{ 
+            position: 'absolute', top: -128, left: -128, width: 384, height: 384, 
+            borderRadius: '50%', bgcolor: '#ACBAC4', opacity: 0.1, filter: 'blur(64px)' 
+          }} />
+          <Box sx={{ 
+            position: 'absolute', bottom: 0, right: 0, width: 320, height: 320, 
+            borderRadius: '50%', bgcolor: '#F0F0DB', opacity: 0.1, filter: 'blur(64px)' 
+          }} />
+        </Box>
 
-        <div className="relative z-10">
-          <h1 className="text-4xl md:text-6xl font-extrabold text-[#F0F0DB] mb-6 tracking-tight drop-shadow-md">
+        <Box sx={{ position: 'relative', zIndex: 10 }}>
+          <Typography variant="h2" sx={{ 
+            color: '#F0F0DB', fontWeight: 800, mb: 3, 
+            letterSpacing: '-0.02em', textShadow: '0 4px 6px rgba(0,0,0,0.1)' 
+          }}>
             FAQs
-          </h1>
-          <p className="text-[#ACBAC4] text-lg md:text-xl max-w-2xl mx-auto mb-10 font-medium">
+          </Typography>
+          <Typography variant="h6" sx={{ color: '#ACBAC4', maxWidth: '600px', mx: 'auto', mb: 6, fontWeight: 500 }}>
             How can the FaceTrack team help you?
-          </p>
+          </Typography>
           
           {/* Styled Search Bar */}
-          <div className="max-w-2xl mx-auto relative group shadow-2xl rounded-2xl">
-            <Search className="absolute left-5 top-1/2 transform -translate-y-1/2 text-[#30364F] opacity-50 group-focus-within:opacity-100 transition-opacity" size={24} />
-            <input
-              type="text"
+          <Box sx={{ maxWidth: '600px', mx: 'auto', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', borderRadius: 4 }}>
+            <TextField
+              fullWidth
               placeholder="Search for answers..."
-              className="w-full pl-16 pr-6 py-5 rounded-2xl border-none focus:ring-4 focus:ring-[#ACBAC4] focus:outline-none text-[#30364F] text-lg font-semibold transition-all bg-[#F0F0DB]"
               onChange={(e) => setSearchTerm(e.target.value)}
+              sx={{
+                bgcolor: '#F0F0DB',
+                borderRadius: 4,
+                '& .MuiOutlinedInput-root': {
+                  borderRadius: 4,
+                  py: 1,
+                  fontSize: '1.125rem',
+                  fontWeight: 600,
+                  color: '#30364F',
+                  '& fieldset': { border: 'none' },
+                  '&.Mui-focused fieldset': { border: '4px solid #ACBAC4' },
+                }
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ pl: 2 }}>
+                    <SearchIcon sx={{ color: '#30364F', opacity: 0.5 }} fontSize="large" />
+                  </InputAdornment>
+                ),
+              }}
             />
-          </div>
-        </div>
-      </div>
+          </Box>
+        </Box>
+      </Box>
 
       {/* FAQ List */}
-      <div className="max-w-3xl mx-auto py-12 px-6">
-        <div className="space-y-4">
+      <Container maxWidth="md" sx={{ py: 6 }}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {filteredFaqs.length > 0 ? (
             filteredFaqs.map((faq, index) => (
-              <div 
+              <Accordion 
                 key={index}
-                className="bg-white rounded-xl shadow-sm border border-[#ACBAC4] overflow-hidden transition-all duration-300"
+                expanded={expanded === index}
+                onChange={handleChange(index)}
+                disableGutters
+                sx={{ 
+                  borderRadius: '12px !important', 
+                  border: '1px solid #ACBAC4', 
+                  boxShadow: '0 1px 2px 0 rgba(0,0,0,0.05)',
+                  '&:before': { display: 'none' }, // Removes default MUI dividing line
+                  transition: 'all 0.3s ease'
+                }}
               >
-                <button
-                  onClick={() => toggleFaq(index)}
-                  className="w-full flex items-center justify-between p-5 text-left hover:bg-gray-50 transition-colors"
+                <AccordionSummary 
+                  expandIcon={<ExpandMoreIcon sx={{ color: '#30364F' }} />}
+                  sx={{ p: 3, '&:hover': { bgcolor: '#fafafa' }, borderRadius: '12px' }}
                 >
-                  <span className="font-bold text-[#30364F] text-lg">{faq.question}</span>
-                  {openIndex === index ? (
-                    <ChevronUp className="text-[#30364F]" />
-                  ) : (
-                    <ChevronDown className="text-[#30364F]" />
-                  )}
-                </button>
+                  <Typography sx={{ fontWeight: 'bold', color: '#30364F', fontSize: '1.125rem' }}>
+                    {faq.question}
+                  </Typography>
+                </AccordionSummary>
                 
-                {openIndex === index && (
-                  <div className="p-5 pt-0 text-gray-600 border-t border-gray-100 animate-fadeIn">
-                    <p className="leading-relaxed">{faq.answer}</p>
-                  </div>
-                )}
-              </div>
+                <AccordionDetails sx={{ p: 3, pt: 0, borderTop: '1px solid #f3f4f6' }}>
+                  <Typography sx={{ color: 'text.secondary', lineHeight: 1.6 }}>
+                    {faq.answer}
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
             ))
           ) : (
-            <p className="text-center text-gray-500 py-10">No matching questions found.</p>
+            <Typography sx={{ textAlign: 'center', color: 'text.secondary', py: 5 }}>
+              No matching questions found.
+            </Typography>
           )}
-        </div>
+        </Box>
 
         {/* Support Section */}
-        <div className="mt-16 bg-[#ACBAC4] bg-opacity-30 rounded-2xl p-8 text-center border-2 border-[#30364F] border-dashed">
-          <MessageCircle className="mx-auto mb-4 text-[#30364F]" size={40} />
-          <h2 className="text-2xl font-bold text-[#30364F] mb-2">Still have questions?</h2>
-          <p className="text-[#30364F] opacity-80 mb-6">
+        <Box sx={{ 
+          mt: 8, 
+          bgcolor: 'rgba(172, 186, 196, 0.3)', 
+          borderRadius: 4, 
+          p: 4, 
+          textAlign: 'center', 
+          border: '2px dashed #30364F' 
+        }}>
+          <ChatBubbleOutlineIcon sx={{ color: '#30364F', fontSize: 40, mb: 2 }} />
+          <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#30364F', mb: 1 }}>
+            Still have questions?
+          </Typography>
+          <Typography sx={{ color: '#30364F', opacity: 0.8, mb: 3 }}>
             If you can't find the answer you're looking for, please submit a detailed query.
-          </p>
-          <button
+          </Typography>
+          <Button
             onClick={() => navigate('/query')}
-            className="px-8 py-3 bg-[#30364F] text-[#F0F0DB] font-bold rounded-lg hover:scale-105 transition-transform shadow-lg"
+            variant="contained"
+            size="large"
+            sx={{ 
+              bgcolor: '#30364F', 
+              color: '#F0F0DB', 
+              fontWeight: 'bold', 
+              px: 4, 
+              py: 1.5,
+              borderRadius: 2,
+              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
+              transition: 'transform 0.2s',
+              '&:hover': { 
+                bgcolor: '#1e2336',
+                transform: 'scale(1.05)'
+              }
+            }}
           >
             Submit a Query
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </Box>
+      </Container>
+    </Box>
   );
 };
 
