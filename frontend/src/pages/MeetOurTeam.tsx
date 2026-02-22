@@ -1,10 +1,6 @@
-import {
-  Typography,
-  Box,
-  Grid,
-  Container,
-} from "@mui/material";
-import TeamMemberCard from "../../components/team/TeamMemberCard";
+import { useEffect } from "react";
+import { Typography, Box, Grid, Container } from "@mui/material";
+import TeamMemberCard from "../components/team/TeamMemberCard";
 
 interface Member {
   name: string;
@@ -84,28 +80,35 @@ const mentors: Member[] = [
 ];
 
 export default function MeetOurTeam() {
+  useEffect(() => {
+    document.title = "Meet Our Team | FaceTrack";
+  }, []);
   return (
-    <Box py={{ xs: 4, md: 6 }}>
-      <Container maxWidth="lg">
-        <Typography
-          variant="h4"
-          fontWeight={700}
-          textAlign="center"
-          mb={{ xs: 2, md: 4 }}
-        >
+    <Box sx={{ backgroundColor: "#F0F0DB", minHeight: "100vh" }}>
+      <Box
+        sx={{
+          background: "linear-gradient(135deg, #1e2336, #30364F, #424a6b)",
+          py: { xs: 8, md: 10 },
+          textAlign: "center",
+        }}
+      >
+        <Typography variant="h3" fontWeight={800} color="#F0F0DB" mb={2}>
           Meet Our Team
         </Typography>
 
         <Typography
-          variant="body1"
-          color="text.secondary"
-          textAlign="center"
-          mb={{ xs: 4, md: 6 }}
+          color="#ACBAC4"
+          maxWidth={600}
+          mx="auto"
+          fontSize="1.1rem"
         >
-          A passionate team of developers building FaceTrack under expert mentorship at Argusoft.
+          The people behind FaceTrack, building secure and intelligent attendance
+          solutions.
         </Typography>
+      </Box>
 
-        <Typography variant="h5" fontWeight={600} mb={3}>
+      <Container maxWidth="lg" sx={{ py: { xs: 6, md: 8 } }}>
+        <Typography variant="h5" fontWeight={700} color="#30364F" mb={4}>
           Development Team
         </Typography>
 
@@ -117,7 +120,7 @@ export default function MeetOurTeam() {
           ))}
         </Grid>
 
-        <Typography variant="h5" fontWeight={600} mb={3}>
+        <Typography variant="h5" fontWeight={700} color="#30364F" mb={4}>
           Mentors
         </Typography>
 

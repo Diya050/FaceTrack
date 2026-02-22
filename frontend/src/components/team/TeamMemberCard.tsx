@@ -27,13 +27,14 @@ export default function TeamMemberCard({
   return (
     <Card
       sx={{
-        height: "100%",
-        borderRadius: 4,
+        borderRadius: 7,
         overflow: "hidden",
-        transition: "transform 0.25s ease, box-shadow 0.25s ease",
+        backgroundColor: "#F0F0DB",
+        boxShadow: "0 18px 40px -15px rgba(0,0,0,0.35)",
+        transition: "transform 0.3s ease, box-shadow 0.3s ease",
         "&:hover": {
-          transform: "translateY(-4px)",
-          boxShadow: 6,
+          transform: "translateY(-6px)",
+          boxShadow: "0 28px 55px -18px rgba(0,0,0,0.45)",
         },
       }}
     >
@@ -45,7 +46,6 @@ export default function TeamMemberCard({
           sx={{
             height: 300,
             objectFit: "cover",
-            objectPosition: "center",
           }}
         />
 
@@ -55,29 +55,29 @@ export default function TeamMemberCard({
             bottom: 12,
             left: "50%",
             transform: "translateX(-50%)",
-            backgroundColor: "rgba(255, 255, 255, 0.85)",
+            backgroundColor: "rgba(255,255,255,0.9)",
             borderRadius: 3,
-            px: 2,
-            py: 1.2,
-            minWidth: "78%",
+            px: 2.5,
+            py: 0.85,
+            minWidth: "75%",
             textAlign: "center",
-            boxShadow: 2,
+            border: "1px solid #ACBAC4",
           }}
         >
-          <Typography fontWeight={600} fontSize="0.95rem" lineHeight={1.2}>
+          <Typography fontWeight={600} color="#30364F">
             {name}
           </Typography>
 
           <Typography
             variant="caption"
-            color="text.secondary"
+            color="#30364F"
+            sx={{ opacity: 0.95 }}
             display="block"
-            mb={0.5}
           >
             {role}
           </Typography>
 
-          <Box display="flex" justifyContent="center" gap={1}>
+          <Box display="flex" justifyContent="center" gap={1} mt={0.5}>
             <Tooltip title="LinkedIn">
               <IconButton
                 size="small"
@@ -86,7 +86,7 @@ export default function TeamMemberCard({
                 target="_blank"
                 sx={{ color: "#0A66C2" }}
               >
-                <LinkedInIcon fontSize="small" />
+                <LinkedInIcon fontSize="medium" />
               </IconButton>
             </Tooltip>
 
@@ -95,9 +95,9 @@ export default function TeamMemberCard({
                 size="small"
                 component="a"
                 href={`mailto:${email}`}
-                sx={{ color: "text.primary" }}
+                sx={{ color: "#30364F" }}
               >
-                <EmailIcon fontSize="small" />
+                <EmailIcon fontSize="medium" />
               </IconButton>
             </Tooltip>
           </Box>
