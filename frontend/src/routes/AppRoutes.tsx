@@ -6,6 +6,9 @@ import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
 import MeetOurTeam from "../pages/user/MeetOurTeam";
 import HelpCenterPage from "../pages/user/HelpCenterPage";
+import AdminGuidePage from "../pages/admin/AdminGuidePage";
+import UserGuidePage from "../pages/user/UserGuidePage";
+
 
 export default function AppRoutes() {
   return (
@@ -17,6 +20,10 @@ export default function AppRoutes() {
       <Route path="/pending-approval" element={<PendingApproval />} />
       <Route path="/team" element={<MeetOurTeam />} />
       <Route path="/help-center" element={<HelpCenterPage/>}/>
+      <Route path="/adminsguide" element={<AdminGuidePage/>} />
+      <Route path="/usersguide" element={<UserGuidePage/>}/>
     </Routes>
   );
 }
+
+

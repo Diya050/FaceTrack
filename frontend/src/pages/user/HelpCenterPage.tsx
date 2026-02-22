@@ -18,8 +18,10 @@ import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 import EngineeringIcon from '@mui/icons-material/Engineering';
+import {  useNavigate } from 'react-router-dom';
 
 const HelpCenterPage: React.FC = () => {
+  const NaviGate = useNavigate();
   return (
     <Container
       maxWidth="lg"
@@ -168,6 +170,7 @@ const HelpCenterPage: React.FC = () => {
                 Manage users, facial data, and role-based access control.
               </Typography>
               <Button
+                onClick={() => NaviGate('/adminsguide')}
                 variant="outlined"
                 sx={{
                   color: '#30364F',
@@ -206,6 +209,7 @@ const HelpCenterPage: React.FC = () => {
                 Learn to view attendance records and request corrections.
               </Typography>
               <Button
+              onClick={() => NaviGate('/usersguide')}
                 variant="outlined"
                 sx={{
                   color: '#30364F',
