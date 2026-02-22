@@ -8,6 +8,7 @@ import MeetOurTeam from "../pages/user/MeetOurTeam";
 import HelpCenterPage from "../pages/user/HelpCenterPage";
 import AdminGuidePage from "../pages/admin/AdminGuidePage";
 import UserGuidePage from "../pages/user/UserGuidePage";
+import TermsOfUsePage from "../pages/TermsOfUse";
 
 
 export default function AppRoutes() {
@@ -22,6 +23,7 @@ export default function AppRoutes() {
       <Route path="/help-center" element={<HelpCenterPage/>}/>
       <Route path="/adminsguide" element={<AdminGuidePage/>} />
       <Route path="/usersguide" element={<UserGuidePage/>}/>
+      <Route path="/termsofuse" element={<TermsOfUsePage/>} />
     </Routes>
   );
 }
