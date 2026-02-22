@@ -1,4 +1,7 @@
 import { Routes, Route } from "react-router-dom";
+import FAQ from "../pages/public/FAQ/FAQ";
+import QueryForm from "../pages/public/FAQ/QueryForm";
+
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
@@ -9,6 +12,8 @@ import HelpCenterPage from "../pages/user/HelpCenterPage";
 import AdminGuidePage from "../pages/admin/AdminGuidePage";
 import UserGuidePage from "../pages/user/UserGuidePage";
 import TermsOfUsePage from "../pages/TermsOfUse";
+import MeetOurTeam from "../pages/MeetOurTeam";
+import Features from "../pages/public/Features";
 
 
 export default function AppRoutes() {
@@ -29,3 +34,10 @@ export default function AppRoutes() {
 }
 
 
+      <Route path="/features" element={<Features />} />
+      <Route path="/faqs" element={<FAQ />} />
+      <Route path="/query" element={<QueryForm />} />
+
+    </Routes>
+  );
+}
