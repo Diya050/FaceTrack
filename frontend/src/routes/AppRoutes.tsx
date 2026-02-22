@@ -7,7 +7,7 @@ import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
-import MeetOurTeam from "../pages/user/MeetOurTeam";
+import MeetOurTeam from "../pages/MeetOurTeam";
 import Features from "../pages/public/Features";
 
 
@@ -23,9 +23,6 @@ export default function AppRoutes() {
       <Route path="/features" element={<Features />} />
       <Route path="/" element={<FAQ />} />
       <Route path="/query" element={<QueryForm />} />
-
-
-
 
     </Routes>
   );
