@@ -1,5 +1,11 @@
 import React from "react";
-import { Container, Typography, Box, Paper, Divider } from "@mui/material";
+import {
+  Box,
+  Container,
+  Typography,
+  Paper,
+  Divider,
+} from "@mui/material";
 
 const sections = [
   {
@@ -10,114 +16,120 @@ const sections = [
   {
     title: "2. No Commercial Usage",
     content:
-      "The FaceTrack system, including its software, biometric processing capabilities, and reporting tools, may not be resold, redistributed, licensed, or used for independent commercial purposes without explicit written authorization from the organization or system owner.",
+      "The FaceTrack system may not be resold, redistributed, licensed, or used for independent commercial purposes without explicit written authorization.",
   },
   {
     title: "3. Account Responsibility & Security",
     content:
-      "Users are solely responsible for maintaining the confidentiality of their login credentials. Sharing passwords, forwarding authentication emails, or distributing secure access links is strictly prohibited. Any activity performed under a registered account will be considered the responsibility of the account holder.",
+      "Users are responsible for maintaining the confidentiality of login credentials. Sharing passwords or forwarding authentication emails is strictly prohibited.",
   },
   {
     title: "4. Biometric Data & Attendance Control",
     content:
-      "The system processes facial data (and optional voice data) solely for attendance verification purposes. All attendance records are automatically generated upon successful recognition. Administrators retain full authority to review, modify, approve, or reject attendance records in accordance with organizational policies.",
+      "The system processes facial data solely for attendance verification. Administrators retain authority to review and modify attendance records as per organizational policies.",
   },
   {
     title: "5. Proper Conduct During Attendance Capture",
     content:
-      "Users must ensure their face is clearly visible during recognition. Any attempt to manipulate the system, including hiding behind another individual or allowing another person to bypass recognition, may result in disciplinary action. Users are liable for misconduct occurring under their presence if intentional concealment or facilitation is proven.",
+      "Users must ensure proper visibility during recognition. Any attempt to manipulate attendance may result in disciplinary action.",
   },
   {
     title: "6. Compliance & Consent",
     content:
-      "By using FaceTrack, users acknowledge and consent to the collection and processing of biometric data for attendance management. The system operates in accordance with defined data retention, privacy, and security policies established by the organization.",
+      "By using FaceTrack, users consent to the collection and processing of biometric data for attendance management purposes.",
   },
   {
     title: "7. System Monitoring & Audit",
     content:
-      "All system activities may be logged for security, audit, and compliance purposes. Administrators may review access logs, recognition events, and attendance modifications to ensure system integrity.",
+      "All system activities may be logged and reviewed for security, audit, and compliance purposes.",
   },
 ];
 
 const TermsOfUsePage: React.FC = () => {
   return (
-    <Container
-      maxWidth="lg"
-      sx={{
-        py: 8,
-        minHeight: "100vh",
-        backgroundColor: "#ffffff",
-      }}
-    >
-      <Typography
-        variant="h4"
+    <Box>
+      {/* HERO SECTION */}
+      <Box
         sx={{
-          fontWeight: 700,
-          color: "#30364F",
-          mb: 2,
+          background:
+            "linear-gradient(135deg, #30364F 0%, #3E4565 100%)",
+          py: 12,
+          textAlign: "center",
+          color: "white",
         }}
       >
-        Terms of Use
-      </Typography>
+        <Container maxWidth="md">
+          <Typography variant="h3" fontWeight={700} mb={2}>
+            Terms of Use
+          </Typography>
 
-      <Typography
-        variant="body1"
-        sx={{
-          color: "#30364F",
-          opacity: 0.8,
-          mb: 6,
-          maxWidth: "850px",
-        }}
-      >
-        These Terms of Use govern access to and usage of the FaceTrack Video
-        Stream Attendance Management System. By accessing or using this
-        system, you agree to comply with the following conditions.
-      </Typography>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        {sections.map((section, index) => (
-          <Paper
-            key={index}
-            elevation={0}
-            sx={{
-              p: 5,
-              borderLeft: "6px solid #30364F",
-              borderRadius: "14px",
-              boxShadow: "0 6px 24px rgba(48, 54, 79, 0.08)",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                transform: "translateY(-4px)",
-                boxShadow: "0 10px 32px rgba(48, 54, 79, 0.15)",
-              },
-            }}
+          <Typography
+            variant="h6"
+            sx={{ color: "rgb(172, 186, 196)" }}
           >
-            <Typography
-              variant="h6"
-              sx={{
-                fontWeight: 600,
-                color: "#30364F",
-                mb: 2,
-              }}
-            >
-              {section.title}
-            </Typography>
-
-            <Divider sx={{ mb: 3, borderColor: "#30364F", opacity: 0.15 }} />
-
-            <Typography
-              variant="body2"
-              sx={{
-                color: "#30364F",
-                opacity: 0.9,
-                lineHeight: 1.8,
-              }}
-            >
-              {section.content}
-            </Typography>
-          </Paper>
-        ))}
+            Please read these terms carefully before using FaceTrack.
+          </Typography>
+        </Container>
       </Box>
-    </Container>
+
+      {/* CONTENT SECTION */}
+      <Box
+        sx={{
+          py: 10,
+          backgroundColor: "#F7F8FA",
+        }}
+      >
+        <Container maxWidth="md">
+          {sections.map((section, index) => (
+            <Paper
+              key={index}
+              elevation={0}
+              sx={{
+                p: 5,
+                mb: 4,
+                borderRadius: "14px",
+                backgroundColor: "white",
+                border: "1px solid rgba(48, 54, 79, 0.08)",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "translateY(-3px)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                },
+              }}
+            >
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 600,
+                  color: "#30364F",
+                  mb: 2,
+                }}
+              >
+                {section.title}
+              </Typography>
+
+              <Divider
+                sx={{
+                  mb: 3,
+                  borderColor: "rgb(172, 186, 196)",
+                }}
+              />
+
+              <Typography
+                variant="body1"
+                sx={{
+                  color: "#30364F",
+                  lineHeight: 1.8,
+                }}
+              >
+                {section.content}
+              </Typography>
+            </Paper>
+          ))}
+        </Container>
+      </Box>
+    </Box>
   );
 };
 

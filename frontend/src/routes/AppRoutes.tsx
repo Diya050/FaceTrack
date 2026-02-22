@@ -11,7 +11,7 @@ import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
-// import MeetOurTeam from "../pages/user/MeetOurTeam";
+import MeetOurTeam from "../pages/MeetOurTeam";
 import HelpCenterPage from "../pages/user/HelpCenterPage";
 import AdminGuidePage from "../pages/admin/AdminGuidePage";
 import UserGuidePage from "../pages/user/UserGuidePage";
