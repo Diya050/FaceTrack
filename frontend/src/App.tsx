@@ -1,5 +1,5 @@
 import AppRoutes from "./routes/AppRoutes";
-import FAQ from "./pages/FAQ/FAQ";
+import FAQ from "./pages/public/FAQ/FAQ";
 
 
 function App() {
