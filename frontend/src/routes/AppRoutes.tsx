@@ -21,6 +21,7 @@ import FAQ from "../pages/public/FAQ/FAQ";
 import QueryForm from "../pages/public/FAQ/QueryForm";
 import ContactPage from "../pages/ContactPage";
 import AboutTechnologyPage from "../pages/AboutTechnologyPage";
+import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 
 
 export default function AppRoutes() {
@@ -34,7 +35,7 @@ export default function AppRoutes() {
         <Route path="/contact" element={<ContactPage/>} />
         <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/help-center" />
-        <Route path="/privacy-policy" />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-of-use" element={<TermsOfUsePage/>}/>
         <Route path="/about-technology" element={<AboutTechnologyPage/>} />
         <Route path="/faqs" element={<FAQ/>} />
