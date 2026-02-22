@@ -2,15 +2,14 @@ import { Routes, Route } from "react-router-dom";
 
 import PublicLayout from "../layouts/PublicLayout";
 
-//Public Pages
-import MeetOurTeam from "../pages/MeetOurTeam";
-
 // Auth Pages
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
+
+//Public Pages
 import MeetOurTeam from "../pages/MeetOurTeam";
 import HelpCenterPage from "../pages/user/HelpCenterPage";
 import AdminGuidePage from "../pages/admin/AdminGuidePage";
@@ -18,6 +17,7 @@ import UserGuidePage from "../pages/user/UserGuidePage";
 import TermsOfUsePage from "../pages/TermsOfUse";
 import Features from "../pages/public/Features";
 import FAQ from "../pages/public/FAQ/FAQ";
+import QueryForm from "../pages/public/FAQ/QueryForm";
 
 
 export default function AppRoutes() {
@@ -39,6 +39,7 @@ export default function AppRoutes() {
         <Route path="/help-center" element={<HelpCenterPage/>}/>
         <Route path="/admin-guide" element={<AdminGuidePage/>} />
         <Route path="/user-guide" element={<UserGuidePage/>}/>
+        <Route path="/query" element={<QueryForm/>} />
       </Route>
 
       {/* Auth Pages */}
