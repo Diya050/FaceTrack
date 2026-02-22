@@ -1,5 +1,5 @@
 import React from "react";
-import { Container, Typography, Box, Paper, Divider } from "@mui/material";
+import { Box, Container, Typography, Paper, Divider } from "@mui/material";
 
 const sections = [
   {
@@ -61,91 +61,97 @@ const sections = [
 
 const AdminGuidePage: React.FC = () => {
   return (
-    <Container
-      maxWidth="lg"
-      sx={{
-        py: 8,
-        minHeight: "100vh",
-        backgroundColor: "#ffffff",
-      }}
-    >
-      <Typography
-        variant="h4"
+    <Box>
+      {/* HERO SECTION */}
+      <Box
         sx={{
-          fontWeight: 700,
-          color: "#30364F",
-          mb: 2,
+          background:
+            "linear-gradient(135deg, #30364F 0%, #3E4565 100%)",
+          py: 12,
+          textAlign: "center",
+          color: "white",
         }}
       >
-        Administrator Guide
-      </Typography>
+        <Container maxWidth="md">
+          <Typography variant="h3" fontWeight={700} mb={2}>
+            Administrator Guide
+          </Typography>
 
-      <Typography
-        variant="body1"
-        sx={{
-          color: "#30364F",
-          opacity: 0.8,
-          mb: 6,
-          maxWidth: "800px",
-        }}
-      >
-        The Administrator is responsible for managing system operations,
-        monitoring live recognition events, configuring AI models, ensuring
-        data security, and generating attendance reports within the FaceTrack
-        system.
-      </Typography>
-
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        {sections.map((section, index) => (
-          <Paper
-            key={index}
-            elevation={0}
-            sx={{
-              p: 5,
-              borderLeft: "6px solid #30364F",
-              borderRadius: "14px",
-              boxShadow: "0 6px 24px rgba(48, 54, 79, 0.08)",
-              transition: "all 0.3s ease",
-              "&:hover": {
-                transform: "translateY(-4px)",
-                boxShadow: "0 10px 32px rgba(48, 54, 79, 0.15)",
-              },
-            }}
+          <Typography
+            variant="h6"
+            sx={{ color: "rgb(172,186,196)" }}
           >
-            <Typography
-              variant="h6"
+            Manage system operations, security, AI models, and attendance
+            workflows efficiently.
+          </Typography>
+        </Container>
+      </Box>
+
+      {/* CONTENT SECTION */}
+      <Box
+        sx={{
+          py: 10,
+          backgroundColor: "#F7F8FA",
+        }}
+      >
+        <Container maxWidth="md">
+          {sections.map((section, index) => (
+            <Paper
+              key={index}
+              elevation={0}
               sx={{
-                fontWeight: 600,
-                color: "#30364F",
-                mb: 2,
+                p: 5,
+                mb: 4,
+                borderRadius: "14px",
+                backgroundColor: "white",
+                border: "1px solid rgba(48,54,79,0.08)",
+                boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "translateY(-3px)",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
+                },
               }}
             >
-              {section.title}
-            </Typography>
+              <Typography
+                variant="h6"
+                sx={{
+                  fontWeight: 600,
+                  color: "#30364F",
+                  mb: 2,
+                }}
+              >
+                {section.title}
+              </Typography>
 
-            <Divider sx={{ mb: 3, borderColor: "#30364F", opacity: 0.15 }} />
+              <Divider
+                sx={{
+                  mb: 3,
+                  borderColor: "rgb(172,186,196)",
+                }}
+              />
 
-            <Box component="ul" sx={{ pl: 3, m: 0 }}>
-              {section.points.map((point, i) => (
-                <Typography
-                  component="li"
-                  key={i}
-                  variant="body2"
-                  sx={{
-                    color: "#30364F",
-                    opacity: 0.85,
-                    lineHeight: 1.8,
-                    mb: 1,
-                  }}
-                >
-                  {point}
-                </Typography>
-              ))}
-            </Box>
-          </Paper>
-        ))}
+              <Box component="ul" sx={{ pl: 3, m: 0 }}>
+                {section.points.map((point, i) => (
+                  <Typography
+                    component="li"
+                    key={i}
+                    variant="body1"
+                    sx={{
+                      color: "#30364F",
+                      lineHeight: 1.8,
+                      mb: 1,
+                    }}
+                  >
+                    {point}
+                  </Typography>
+                ))}
+              </Box>
+            </Paper>
+          ))}
+        </Container>
       </Box>
-    </Container>
+    </Box>
   );
 };
 
