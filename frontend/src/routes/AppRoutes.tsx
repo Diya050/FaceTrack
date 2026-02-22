@@ -16,6 +16,7 @@ import AdminGuidePage from "../pages/admin/AdminGuidePage";
 import UserGuidePage from "../pages/user/UserGuidePage";
 import TermsOfUsePage from "../pages/TermsOfUse";
 import Features from "../pages/public/Features";
+import HowItWorks from "../pages/public/HowItWorks";
 import FAQ from "../pages/public/FAQ/FAQ";
 import QueryForm from "../pages/public/FAQ/QueryForm";
 
@@ -29,7 +30,7 @@ export default function AppRoutes() {
         <Route path="/" />
         <Route path="/features" element={<Features />} />
         <Route path="/contact" />
-        <Route path="/how-it-works" />
+        <Route path="/how-it-works" element={<HowItWorks />} />
         <Route path="/help-center" />
         <Route path="/privacy-policy" />
         <Route path="/terms-of-use" element={<TermsOfUsePage/>}/>
