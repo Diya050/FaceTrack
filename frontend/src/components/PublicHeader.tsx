@@ -50,7 +50,7 @@ const PublicHeader: React.FC = () => {
 
   return (
     <>
-      <AppBar position="static" color="inherit" elevation={1}>
+      <AppBar position="fixed" color="inherit" elevation={1}>
         <Toolbar sx={{ justifyContent: "space-between" }}>
 
           {/* Logo-clickable (Redirects to homepage) */}

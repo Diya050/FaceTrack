@@ -12,7 +12,7 @@ import {
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AuthLayout from "../../layouts/AuthLayout";
+import AuthLayout from "../../layout/AuthLayout";
 
 type LoginMode = "user" | "admin";
 

@@ -3,7 +3,7 @@ import {
   Stack,
   Container 
 } from "@mui/material";
-import AuthLayout from "../../layouts/AuthLayout";
+import AuthLayout from "../../layout/AuthLayout";
 
 export default function PendingApproval() {
   return (
