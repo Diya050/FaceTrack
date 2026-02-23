@@ -1,4 +1,14 @@
 "use client";
+import type { Variants } from "framer-motion";
+import { motion } from "framer-motion";
+import {
+    Box,
+    Typography,
+    Container,
+    Paper,
+    Avatar
+} from '@mui/material';
+import Grid from '@mui/material/Grid';
 
 type Step = {
     number: string;
@@ -8,120 +18,190 @@ type Step = {
 };
 
 const steps: Step[] = [
-    {
-        number: "01",
-        title: "User Registration",
-        image: "/HowItWorks/userRegister.png",
-        description:
-            "Users register on the FaceTrack platform by submitting their personal details such as name, ID, role, and department. This creates a secure digital identity within the system.",
-    },
-    {
-        number: "02",
-        title: "Admin Verification & Approval",
-        image: "/HowItWorks/adminApproval.png",
-        description:
-            "Administrators verify user information and approve registrations to ensure secure access control. Only verified users can proceed for facial enrollment and attendance services.",
-    },
-    {
-        number: "03",
-        title: "Facial Enrollment & Data Processing",
-        image: "/HowItWorks/enrollment.png",
-        description:
-            "Approved users enroll their face using live camera capture. The AI model extracts facial features and generates a secure 512-dimensional embedding vector, uniquely representing the user.",
-    },
-    {
-        number: "04",
-        title: "Real-Time Face Detection & Matching",
-        image: "/HowItWorks/recognition.png",
-        description:
-            "Live cameras continuously scan video streams to detect faces. Detected embeddings are compared against stored embeddings using cosine similarity for high-accuracy recognition.",
-    },
-    {
-        number: "05",
-        title: "Automated Attendance Logging",
-        image: "/HowItWorks/attendance.png",
-        description:
-            "Upon successful identity verification, attendance is automatically marked with precise timestamps, camera source details, and confidence scores, eliminating manual effort and proxy attendance.",
-    },
-    {
-        number: "06",
-        title: "Smart Notifications & Alerts",
-        image: "/HowItWorks/alerts.png",
-        description:
-            "The system instantly notifies administrators about unauthorized access, unknown faces, late arrivals, and absentee patterns, ensuring proactive security and monitoring.",
-    },
-    {
-        number: "07",
-        title: "Analytics, Reports & Insights",
-        image: "/HowItWorks/analytics.png",
-        description:
-            "Comprehensive attendance reports are generated with intelligent filters for weekly, monthly, and quarterly analysis, providing deep insights into workforce efficiency and trends.",
-    },
+    { number: "01", title: "User Registration", image: "/HowItWorks/userRegister.png", description: "Users register on the FaceTrack platform by submitting their personal details such as name, ID, role, and department. This creates a secure digital identity within the system." },
+    { number: "02", title: "Admin Verification & Approval", image: "/HowItWorks/adminApproval.png", description: "Administrators verify user information and approve registrations to ensure secure access control. Only verified users can proceed for facial enrollment and attendance services." },
+    { number: "03", title: "Facial Enrollment & Data Processing", image: "/HowItWorks/enrollment.png", description: "Approved users enroll their face using live camera capture. The AI model extracts facial features and generates a secure 512-dimensional embedding vector, uniquely representing the user." },
+    { number: "04", title: "Real-Time Face Detection & Matching", image: "/HowItWorks/recognition.png", description: "Live cameras continuously scan video streams to detect faces. Detected embeddings are compared against stored embeddings using cosine similarity for high-accuracy recognition." },
+    { number: "05", title: "Automated Attendance Logging", image: "/HowItWorks/attendance.png", description: "Upon successful identity verification, attendance is automatically marked with precise timestamps, camera source details, and confidence scores, eliminating manual effort and proxy attendance." },
+    { number: "06", title: "Smart Notifications & Alerts", image: "/HowItWorks/alerts.png", description: "The system instantly notifies administrators about unauthorized access, unknown faces, late arrivals, and absentee patterns, ensuring proactive security and monitoring." },
+    { number: "07", title: "Analytics, Reports & Insights", image: "/HowItWorks/analytics.png", description: "Comprehensive attendance reports are generated with intelligent filters for weekly, monthly, and quarterly analysis, providing deep insights into workforce efficiency and trends." },
 ];
+
+// Animation Variants
+const containerVariants: Variants = {
+    hidden: {},
+    show: {
+        transition: {
+            staggerChildren: 0.15, // Delay between each card appearing
+        },
+    },
+};
+
+const itemVariants: Variants = {
+    hidden: { opacity: 0, x: -20 }, // Slide in slightly from the left
+    show: {
+        opacity: 1,
+        x: 0,
+        transition: {
+            duration: 0.5,
+            ease: "easeOut"
+        }
+    },
+};
 
 export default function HowItWorks() {
     return (
-        <section className="w-full">
+        <Box component="section" sx={{ width: '100%' }}>
 
-            {/* HERO */}
-            <div className="bg-gradient-to-r from-[#343B55] to-[#3C435C] py-14 sm:py-16 md:py-20 px-4 sm:px-6 text-center">
-                <h2 className="text-3xl sm:text-4xl md:text-5xl font-bold text-[#ffffff]">
+            {/* HERO SECTION */}
+            <Box
+                sx={{
+                    background: 'linear-gradient(to right, #343B55, #3C435C)',
+                    py: { xs: 6, sm: 8, md: 9 },
+                    px: 3,
+                    textAlign: 'center'
+                }}
+            >
+                <Typography
+                    variant="h2"
+                    sx={{
+                        fontSize: { xs: '1.875rem', sm: '2.25rem', md: '3rem' },
+                        fontWeight: 700,
+                        color: '#ffffff'
+                    }}
+                >
                     How FaceTrack Works
-                </h2>
-                <p className="mt-4 sm:mt-6 text-base sm:text-lg text-[#f3f2ee] max-w-2xl md:max-w-3xl mx-auto">
+                </Typography>
+                <Typography
+                    sx={{
+                        mt: { xs: 2, sm: 3 },
+                        fontSize: { xs: '1rem', sm: '1.125rem' },
+                        color: '#f3f2ee',
+                        maxWidth: '768px',
+                        mx: 'auto'
+                    }}
+                >
                     A seamless AI-powered experience that transforms how organizations track presence, ensure security, and understand their workforce.
-                </p>
-            </div>
+                </Typography>
+            </Box>
 
-            {/* CONTENT */}
-            <div className="py-10 sm:py-12 px-4 sm:px-6 md:px-10 bg-gradient-to-b from-[#F0F0DB] to-[#E1D9BC]">
-                <div className="max-w-5xl mx-auto relative">
+            {/* CONTENT SECTION */}
+            <Box
+                sx={{
+                    py: { xs: 5, sm: 5 },
+                    px: { xs: 2, sm: 3, md: 5 },
+                    background: 'linear-gradient(to bottom, #F0F0DB, #E1D9BC)',
+                    position: 'relative'
+                }}
+            >
+                <Container maxWidth="lg" sx={{ position: 'relative' }}>
 
-                    {/* timeline */}
-                    <div className="absolute left-6 sm:left-7 top-0 bottom-0 w-px bg-gradient-to-b from-[#9AA6B0] via-[#6F7B87] to-transparent" />
 
-                    <div className="space-y-8 sm:space-y-10">
+                    {/* Animated List Container */}
+                    <Box
+                        component={motion.div}
+                        variants={containerVariants}
+                        initial="hidden"
+                        whileInView="show"
+                        viewport={{ once: true, amount: 0.1 }} // Animates when 10% of section is visible
+                        sx={{ display: 'flex', flexDirection: 'column', gap: { xs: 4, sm: 4 } }}
+                    >
+
+
                         {steps.map((step) => (
-                            <div key={step.number} className="relative flex gap-4 sm:gap-6">
+                            <Box
+                                key={step.number}
+                                component={motion.div}
+                                variants={itemVariants}
+                                sx={{ display: 'flex', gap: { xs: 2, sm: 3 }, position: 'relative' }}
+                            >
 
-                                {/* badge */}
-                                <div className="relative z-10 flex items-center justify-center w-11 h-11 sm:w-14 sm:h-14 rounded-full bg-gradient-to-br from-[#3C435C] to-[#8F9AA6] text-white text-sm sm:text-base font-semibold shadow-md">
+                                {/* TIMELINE VERTICAL LINE */}
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        left: { xs: '20px', sm: '28px' },
+                                        top: 0,
+                                        bottom: 0,
+                                        width: '2px',
+                                        background: 'linear-gradient(to bottom, #9AA6B0, #6F7B87, transparent)'
+                                    }}
+                                />
+
+                                {/* BADGE NUMBER */}
+                                <Avatar
+                                    sx={{
+                                        zIndex: 10,
+                                        width: { xs: 44, sm: 56 },
+                                        height: { xs: 44, sm: 56 },
+                                        background: 'linear-gradient(135deg, #3C435C, #8F9AA6)',
+                                        fontSize: { xs: '0.875rem', sm: '1rem' },
+                                        fontWeight: 600,
+                                        boxShadow: 2
+                                    }}
+                                >
                                     {step.number}
-                                </div>
+                                </Avatar>
 
-                                {/* card */}
-                                <div className="flex-1 rounded-2xl bg-white border border-[#CFC7A8] shadow-sm hover:shadow-lg transition-all p-8 sm:p-6">
-
-                                    <div className="flex flex-col md:grid md:grid-cols-3 gap-5 sm:gap-6 items-center">
-
-                                        {/* image */}
-                                        <div className="w-full flex justify-center">
-                                            <img
+                                {/* CARD */}
+                                <Paper
+                                    elevation={1}
+                                    sx={{
+                                        flex: 1,
+                                        borderRadius: '16px',
+                                        bgcolor: 'white',
+                                        border: '1px solid #CFC7A8',
+                                        p: { xs: 4, sm: 4 },
+                                        transition: 'all 0.3s ease',
+                                        '&:hover': {
+                                            boxShadow: 8,
+                                            transform: 'translateY(-2px)'
+                                        }
+                                    }}
+                                >
+                                    <Grid container spacing={3} alignItems="center">
+                                        <Grid size={{ xs: 12, md: 4 }} sx={{ display: 'flex', justifyContent: 'center' }}>
+                                            <Box
+                                                component="img"
                                                 src={step.image}
                                                 alt={step.title}
-                                                className="h-28 sm:h-32 md:h-36 w-auto object-contain p-2"
-                                                loading="lazy"
+                                                sx={{
+                                                    height: { xs: 120, sm: 136, md: 152 },
+                                                    width: 'auto',
+                                                    objectFit: 'contain'
+                                                }}
                                             />
-                                        </div>
+                                        </Grid>
 
-                                        {/* text */}
-                                        <div className="md:col-span-2 text-center md:text-left mb-2">
-                                            <h3 className="text-lg sm:text-xl md:text-2xl font-semibold text-[#2F374F]">
+                                        <Grid size={{ xs: 12, md: 8 }} sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+                                            <Typography
+                                                variant="h3"
+                                                sx={{
+                                                    fontSize: { xs: '1.125rem', sm: '1.25rem', md: '1.5rem' },
+                                                    fontWeight: 600,
+                                                    color: '#2F374F'
+                                                }}
+                                            >
                                                 {step.title}
-                                            </h3>
-                                            <p className="mt-2 text-sm sm:text-base text-[#5F6674] leading-relaxed">
+                                            </Typography>
+                                            <Typography
+                                                sx={{
+                                                    mt: 2,
+                                                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                                                    color: '#5F6674',
+                                                    lineHeight: 1.6
+                                                }}
+                                            >
                                                 {step.description}
-                                            </p>
-                                        </div>
-
-                                    </div>
-                                </div>
-
-                            </div>
+                                            </Typography>
+                                        </Grid>
+                                    </Grid>
+                                </Paper>
+                            </Box>
                         ))}
-                    </div>
-                </div>
-            </div>
-        </section>
+                    </Box>
+                </Container>
+            </Box>
+        </Box>
     );
 }
