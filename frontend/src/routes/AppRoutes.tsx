@@ -34,7 +34,6 @@ export default function AppRoutes() {
         <Route path="/features" element={<Features />} />
         <Route path="/contact" element={<ContactPage/>} />
         <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/help-center" />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-of-use" element={<TermsOfUsePage/>}/>
         <Route path="/about-technology" element={<AboutTechnologyPage/>} />
