@@ -1,7 +1,7 @@
 import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
 import AdminSidebar from "../components/admin/AdminSidebar";
-import PublicHeader from "../components/PublicHeader";
+import AdminHeader from "../components/header/AdminHeader";
 import Footer from "../components/Footer";
 
 const NAVBAR_HEIGHT = 64;
@@ -10,7 +10,7 @@ const SIDEBAR_WIDTH = 265;
 const AdminLayout = () => {
   return (
     <>
-      <PublicHeader />
+      <AdminHeader />
 
       <AdminSidebar width={SIDEBAR_WIDTH} />
 

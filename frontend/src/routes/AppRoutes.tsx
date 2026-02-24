@@ -2,6 +2,10 @@ import { useRoutes } from "react-router-dom";
 import { adminRoutes } from "./AdminRoute";
 
 import PublicLayout from "../layout/PublicLayout";
+import UserLayout from "../layout/UserLayout";
+import UserDashboardPage from "../pages/user/UserDashboardPage";
+import MyAttendancePage from "../pages/user/MyAttendancePage";
+import UserReportsPage from "../pages/user/UserReportsPage";
 
 // Auth Pages
 import Login from "../pages/auth/Login";
@@ -29,6 +33,20 @@ export default function AppRoutes() {
   return useRoutes([
     // Admin Routes
     adminRoutes,
+
+    //User Routes
+    {
+      path: "/user",
+      element: <UserLayout />,
+      children: [
+        { path: "dashboard", element: <UserDashboardPage /> },
+        { path: "attendance", element: <MyAttendancePage /> },
+        { path: "reports", element: <UserReportsPage /> },
+
+        { path: "help", element: <HelpCenterPage /> },
+        { path: "settings/user-guide", element: <UserGuidePage /> },
+      ],
+    },
 
     // Public Pages
     {
