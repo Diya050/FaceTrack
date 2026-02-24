@@ -32,7 +32,7 @@ export default function AppRoutes() {
   return (
     <>
       {admin}
-
+      <Routes>
       {/* Public Pages With Header */}
       <Route element={<PublicLayout />}>
         <Route path="/" element={<Home />} />
@@ -49,6 +49,7 @@ export default function AppRoutes() {
         <Route path="/user-guide" element={<UserGuidePage/>}/>
         <Route path="/query" element={<QueryForm/>} />
       </Route>
+      </Routes>
       <Routes>
 
         {/* Auth Pages */}
