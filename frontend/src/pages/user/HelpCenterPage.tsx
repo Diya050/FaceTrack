@@ -233,7 +233,7 @@ const HelpCenterPage: React.FC = () => {
                       control.
                     </Typography>
                     <Button
-                      onClick={() => NaviGate("/adminsguide")}
+                      onClick={() => NaviGate("/admin-guide")}
                       variant="outlined"
                       sx={{
                         color: "#30364F",
@@ -291,7 +291,7 @@ const HelpCenterPage: React.FC = () => {
                       corrections.
                     </Typography>
                     <Button
-                      onClick={() => NaviGate("/usersguide")}
+                      onClick={() => NaviGate("/user-guide")}
                       variant="outlined"
                       sx={{
                         color: "#30364F",
