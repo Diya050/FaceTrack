@@ -1,18 +1,61 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useRoutes } from "react-router-dom";
+import { adminRoutes } from "./AdminRoute";
+
+import PublicLayout from "../layout/PublicLayout";
+
+// Auth Pages
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
 
+//Public Pages
+import MeetOurTeam from "../pages/MeetOurTeam";
+import HelpCenterPage from "../pages/user/HelpCenterPage";
+import AdminGuidePage from "../pages/admin/AdminGuidePage";
+import UserGuidePage from "../pages/user/UserGuidePage";
+import TermsOfUsePage from "../pages/TermsOfUse";
+import Features from "../pages/public/Features";
+import HowItWorks from "../pages/public/HowItWorks";
+import FAQ from "../pages/public/FAQ/FAQ";
+import QueryForm from "../pages/public/FAQ/QueryForm";
+import ContactPage from "../pages/ContactPage";
+import AboutTechnologyPage from "../pages/AboutTechnologyPage";
+import PrivacyPolicy from "../pages/public/PrivacyPolicy";
+
 export default function AppRoutes() {
+  const admin = useRoutes([adminRoutes]);
+
   return (
-    <Routes>
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
-      <Route path="/forgot-password" element={<ForgotPassword />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
-      <Route path="/pending-approval" element={<PendingApproval />} />
-    </Routes>
+    <>
+      {admin}
+
+      <Routes>
+        {/* Public Pages */}
+        <Route element={<PublicLayout />}>
+          <Route path="/" />
+          <Route path="/features" element={<Features />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-use" element={<TermsOfUsePage />} />
+          <Route path="/about-technology" element={<AboutTechnologyPage />} />
+          <Route path="/faqs" element={<FAQ />} />
+          <Route path="/team" element={<MeetOurTeam />} />
+          <Route path="/help-center" element={<HelpCenterPage />} />
+          <Route path="/help/user-guide" element={<UserGuidePage />} />
+          <Route path="/help/admin-guide" element={<AdminGuidePage />} />
+          <Route path="/query" element={<QueryForm />} />
+        </Route>
+
+        {/* Auth Pages */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/pending-approval" element={<PendingApproval />} />
+      </Routes>
+    </>
   );
 }
