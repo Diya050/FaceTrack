@@ -11,7 +11,7 @@ export function useSidebarConfig() {
   if (pathname.includes("/dashboard")) return dashboardSidebar;
   if (pathname.includes("/monitoring")) return monitoringSidebar;
   if (pathname.includes("/attendance")) return attendanceSidebar;
-  if (pathname.includes("/department")) return departmentSidebar;
+  if (pathname.includes("/manage")) return departmentSidebar;
   if (pathname.includes("/settings")) return settingsSidebar;
   if (pathname.includes("/settings/system")) return settingsSidebar;
   if (pathname.includes("/settings/security")) return settingsSidebar;

@@ -5,7 +5,7 @@ import PublicHeader from "../components/PublicHeader";
 import Footer from "../components/Footer";
 
 const NAVBAR_HEIGHT = 64;
-const SIDEBAR_WIDTH = 260;
+const SIDEBAR_WIDTH = 265;
 
 const AdminLayout = () => {
   return (

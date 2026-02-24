@@ -38,7 +38,8 @@ const AdminSidebar = ({ width }: Props) => {
           ${theme.palette.primary.dark} 0%)`,
         borderRight: "2px solid rgba(255,255,255,0.08)",
         overflowY: "auto",
-        px: 1.5,
+        pl: 1.5,
+        pr: 2,
         py: 2,
       }}
     >
@@ -99,16 +100,15 @@ const AdminSidebar = ({ width }: Props) => {
                         to={child.path}
                         sx={{
                           pl: 3,
-                          py: 0.70,
+                          py: 0.60,
                           borderRadius: "10px",
                           fontSize: "0.85rem",
-                          color: "#C9D1E3",
                           transition: "0.2s",
-                          "&.active": {
-                            background: "rgba(255,255,255,0.20)",
-                            color: "#FFFFFF",
-                            fontWeight: 600,
-                          },
+                          background: "rgba(255,255,255,0.20)",
+                          color: "#FFFFFF",
+                          fontWeight: 600,
+                          marginBottom: 1 / 2,
+
                           "&:hover": {
                             background: "rgba(255,255,255,0.10)",
                             color: "#FFFFFF",

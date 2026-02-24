@@ -1,26 +1,26 @@
 export const departmentSidebar = [
   {
     label: "Departments",
-    path: "/admin/department/departments",
+    path: "/admin/manage#departments",
   },
   {
     label: "User Profiles",
-    path: "/admin/department/users",
+    path: "/admin/manage#users",
   },
   {
     label: "Bulk Upload",
-    path: "/admin/department/bulk-upload",
+    path: "/admin/manage#bulk-upload",
   },
   {
     label: "Face Gallery",
-    path: "/admin/department/face-gallery",
+    path: "/admin/manage#face-gallery",
   },
   {
     label: "Roles",
-    path: "/admin/department/roles",
+    path: "/admin/manage#roles",
   },
   {
     label: "Access Control",
-    path: "/admin/department/access-control",
+    path: "/admin/manage#access-control",
   },
 ];
