@@ -22,6 +22,8 @@ import FAQ from "../pages/public/FAQ/FAQ";
 import QueryForm from "../pages/public/FAQ/QueryForm";
 import ContactPage from "../pages/ContactPage";
 import AboutTechnologyPage from "../pages/AboutTechnologyPage";
+import Home from "../pages/Home";
+
 import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 
 export default function AppRoutes() {
@@ -31,23 +33,23 @@ export default function AppRoutes() {
     <>
       {admin}
 
+      {/* Public Pages With Header */}
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<Home />} />
+        <Route path="/features" element={<Features />} />
+        <Route path="/contact" element={<ContactPage/>} />
+        <Route path="/how-it-works" element={<HowItWorks />} />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+        <Route path="/terms-of-use" element={<TermsOfUsePage/>}/>
+        <Route path="/about-technology" element={<AboutTechnologyPage/>} />
+        <Route path="/faqs" element={<FAQ/>} />
+        <Route path="/team" element={<MeetOurTeam />} /> 
+        <Route path="/help-center" element={<HelpCenterPage/>}/>
+        <Route path="/admin-guide" element={<AdminGuidePage/>} />
+        <Route path="/user-guide" element={<UserGuidePage/>}/>
+        <Route path="/query" element={<QueryForm/>} />
+      </Route>
       <Routes>
-        {/* Public Pages */}
-        <Route element={<PublicLayout />}>
-          <Route path="/" />
-          <Route path="/features" element={<Features />} />
-          <Route path="/contact" element={<ContactPage />} />
-          <Route path="/how-it-works" element={<HowItWorks />} />
-          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-          <Route path="/terms-of-use" element={<TermsOfUsePage />} />
-          <Route path="/about-technology" element={<AboutTechnologyPage />} />
-          <Route path="/faqs" element={<FAQ />} />
-          <Route path="/team" element={<MeetOurTeam />} />
-          <Route path="/help-center" element={<HelpCenterPage />} />
-          <Route path="/help/user-guide" element={<UserGuidePage />} />
-          <Route path="/help/admin-guide" element={<AdminGuidePage />} />
-          <Route path="/query" element={<QueryForm />} />
-        </Route>
 
         {/* Auth Pages */}
         <Route path="/login" element={<Login />} />
