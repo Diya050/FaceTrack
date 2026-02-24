@@ -44,7 +44,7 @@ const Footer: React.FC = () => {
           ${theme.palette.primary.main} 0%, 
           ${theme.palette.primary.dark} 100%)`,
         color: contrastText,
-        pt: 8,
+        pt: 5,
         pb: 4,
         boxShadow: theme.shadows[6]
       }}

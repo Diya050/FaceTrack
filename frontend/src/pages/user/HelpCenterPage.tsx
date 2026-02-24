@@ -11,8 +11,9 @@ import {
   Alert,
   AlertTitle,
   Box,
+  Divider,
+  Grid, // Reverted to standard Grid
 } from "@mui/material";
-import Grid from "@mui/material/Grid";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SettingsSuggestIcon from "@mui/icons-material/SettingsSuggest";
@@ -24,27 +25,40 @@ const HelpCenterPage: React.FC = () => {
   const NaviGate = useNavigate();
 
   return (
-    <Box>
-      {/* HERO SECTION — Same as FAQ */}
+    <Box sx={{ width: "100%", minHeight: "100vh" }}>
+      
+      {/* HERO SECTION */}
       <Box
         sx={{
-          background:
-            "linear-gradient(135deg, #30364F 0%, #3E4565 100%)",
-          py: { xs: 8, md: 12 },
+          background: "linear-gradient(90deg, #343B55 0%, #3C435C 100%)",
+          py: { xs: 8, md: 14 },
+          px: 4,
           textAlign: "center",
           color: "white",
         }}
       >
         <Container maxWidth="md">
-          <Typography variant="h3" fontWeight={700} mb={2}>
+          <Typography 
+            variant="h3" 
+            sx={{ 
+              fontSize: { xs: "2.25rem", sm: "3rem", md: "3.5rem" }, 
+              fontWeight: 700, 
+              mb: 2 
+            }}
+          >
             Help Center
           </Typography>
-
           <Typography
             variant="h6"
-            sx={{ color: "rgb(172,186,196)" }}
+            sx={{ 
+              color: "#f3f2ee", 
+              opacity: 0.9,
+              fontWeight: 400,
+              maxWidth: "700px",
+              mx: "auto"
+            }}
           >
-            A dashboard to get any kind of help to navigate through the website.
+            Technical support and system guides to help you navigate the FaceTrack ecosystem.
           </Typography>
         </Container>
       </Box>
@@ -52,254 +66,125 @@ const HelpCenterPage: React.FC = () => {
       {/* CONTENT SECTION */}
       <Box
         sx={{
-          py: 10,
-          backgroundColor: "#F7F8FA",
-          minHeight: "100vh",
+          py: { xs: 8, md: 10 },
+          background: "linear-gradient(to bottom, #F0F0DB 0%, #E1D9BC 100%)",
+          minHeight: "60vh",
         }}
       >
         <Container maxWidth="lg">
-          {/* Troubleshooting */}
-          <Box mb={10}>
+          
+          {/* Troubleshooting Section */}
+          <Box sx={{ mb: 8 }}>
             <Alert
               icon={<SettingsSuggestIcon sx={{ color: "#30364F" }} />}
               sx={{
-                backgroundColor: "#ffffff",
-                border: "1px solid rgba(48,54,79,0.15)",
+                backgroundColor: "white",
+                border: "1px solid #CFC7A8",
+                borderRadius: "16px",
+                p: 2,
                 mb: 4,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.03)",
               }}
             >
-              <AlertTitle
-                sx={{ fontWeight: "bold", color: "#30364F" }}
-              >
-                System Troubleshooting & Recovery
+              <AlertTitle sx={{ fontWeight: 700, color: "#2F374F" }}>
+                System Status & Recovery
               </AlertTitle>
-              <Typography sx={{ color: "#30364F" }}>
-                For critical errors, expect system recovery within 24 hours.
+              <Typography variant="body2" sx={{ color: "#5F6674" }}>
+                AI models are operational. Technical support ensures critical recovery within 24 hours.
               </Typography>
             </Alert>
 
-            <Accordion
-              sx={{
-                backgroundColor: "#ffffff",
-                border: "1px solid rgba(48,54,79,0.15)",
-                mb: 2,
-              }}
-            >
-              <AccordionSummary
-                expandIcon={
-                  <ExpandMoreIcon sx={{ color: "#30364F" }} />
-                }
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Accordion
+                elevation={0}
+                sx={{
+                  backgroundColor: "white",
+                  border: "1px solid #CFC7A8",
+                  borderRadius: "16px !important",
+                  "&:before": { display: "none" },
+                }}
               >
-                <Typography
-                  fontWeight="bold"
-                  sx={{ color: "#30364F" }}
-                >
-                  Handling Recognition Failures
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography sx={{ color: "#30364F" }}>
-                  Recognition performance depends on hardware and
-                  lighting. Ensure high-quality facial enrollment images.
-                </Typography>
-              </AccordionDetails>
-            </Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#30364F" }} />}>
+                  <Typography fontWeight={700} sx={{ color: "#2F374F" }}>
+                    Handling Recognition Failures
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography sx={{ color: "#5F6674" }}>
+                    Ensure users enroll with high-resolution images in neutral lighting for best results.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
 
-            <Accordion
-              sx={{
-                backgroundColor: "#ffffff",
-                border: "1px solid rgba(48,54,79,0.15)",
-              }}
-            >
-              <AccordionSummary
-                expandIcon={
-                  <ExpandMoreIcon sx={{ color: "#30364F" }} />
-                }
+              <Accordion
+                elevation={0}
+                sx={{
+                  backgroundColor: "white",
+                  border: "1px solid #CFC7A8",
+                  borderRadius: "16px !important",
+                  "&:before": { display: "none" },
+                }}
               >
-                <Typography
-                  fontWeight="bold"
-                  sx={{ color: "#30364F" }}
-                >
-                  Network & Stream Latency
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Typography sx={{ color: "#30364F" }}>
-                  Network stability affects real-time video transmission.
-                  Ensure reliable bandwidth for camera streams.
-                </Typography>
-              </AccordionDetails>
-            </Accordion>
+                <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: "#30364F" }} />}>
+                  <Typography fontWeight={700} sx={{ color: "#2F374F" }}>
+                    Network & Stream Latency
+                  </Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Divider sx={{ mb: 2 }} />
+                  <Typography sx={{ color: "#5F6674" }}>
+                    Check your IP camera's bandwidth allocation and ensure a wired connection where possible.
+                  </Typography>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
           </Box>
 
-          {/* Guides Section */}
-          <Box sx={{ my: 8 }}>
-            <Grid container spacing={4}>
-              {/* Getting Started */}
-              <Grid size={{ xs: 12, md: 4 }}>
+          {/* Navigation Guides - Updated to standard Grid v1 */}
+          <Grid container spacing={4}>
+  {[
+    { title: "Getting Started", icon: <HelpOutlineIcon />, path: "/how-it-works" },
+    { title: "Admin Guide", icon: <EngineeringIcon />, path: "/admin-guide" },
+    { title: "User Guide", icon: <ContactSupportIcon />, path: "/user-guide" }
+            ].map((item, index) => (
+              <Grid key={index} size={{ xs: 12, md: 4 }}>
                 <Card
                   sx={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid rgba(48,54,79,0.1)",
+                    backgroundColor: "white",
+                    border: "1px solid #CFC7A8",
                     textAlign: "center",
-                    height: "100%",
-                    borderRadius: "14px",
-                    boxShadow:
-                      "0 6px 20px rgba(0,0,0,0.05)",
-                    transition: "all 0.3s ease",
+                    borderRadius: "20px",
+                    p: 2,
+                    transition: "all 0.4s ease",
                     "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow:
-                        "0 10px 30px rgba(0,0,0,0.08)",
+                      transform: "translateY(-8px)",
+                      boxShadow: "0 20px 40px rgba(48, 54, 79, 0.12)",
+                      borderColor: "#30364F",
                     },
                   }}
                 >
-                  <CardContent>
-                    <HelpOutlineIcon
+                  <CardContent sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                    <Box
                       sx={{
-                        fontSize: 50,
-                        color: "#30364F",
-                        mb: 2,
+                        width: 70, height: 70, borderRadius: "50%",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        background: "linear-gradient(135deg, #3C435C 0%, #8F9AA6 100%)",
+                        color: "white",
                       }}
-                    />
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                      sx={{ color: "#30364F", mb: 2 }}
                     >
-                      Getting Started
-                    </Typography>
-                    <Typography
-                      sx={{ color: "#30364F", mb: 3 }}
-                    >
-                      Quick start guide for attendance marking and
-                      camera setup.
+                      {item.icon}
+                    </Box>
+                    <Typography variant="h6" fontWeight={700} sx={{ color: "#2F374F" }}>
+                      {item.title}
                     </Typography>
                     <Button
-                      variant="outlined"
+                      fullWidth
+                      onClick={() => NaviGate(item.path)}
+                      variant="contained"
                       sx={{
-                        color: "#30364F",
-                        borderColor: "#30364F",
-                        "&:hover": {
-                          backgroundColor: "#30364F",
-                          color: "#ffffff",
-                        },
-                      }}
-                    >
-                      View Guide
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* Admin Guide */}
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Card
-                  sx={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid rgba(48,54,79,0.1)",
-                    textAlign: "center",
-                    height: "100%",
-                    borderRadius: "14px",
-                    boxShadow:
-                      "0 6px 20px rgba(0,0,0,0.05)",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow:
-                        "0 10px 30px rgba(0,0,0,0.08)",
-                    },
-                  }}
-                >
-                  <CardContent>
-                    <EngineeringIcon
-                      sx={{
-                        fontSize: 50,
-                        color: "#30364F",
-                        mb: 2,
-                      }}
-                    />
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                      sx={{ color: "#30364F", mb: 2 }}
-                    >
-                      Admin Guide
-                    </Typography>
-                    <Typography
-                      sx={{ color: "#30364F", mb: 3 }}
-                    >
-                      Manage users, facial data, and role-based access
-                      control.
-                    </Typography>
-                    <Button
-                      onClick={() => NaviGate("/admin-guide")}
-                      variant="outlined"
-                      sx={{
-                        color: "#30364F",
-                        borderColor: "#30364F",
-                        "&:hover": {
-                          backgroundColor: "#30364F",
-                          color: "#ffffff",
-                        },
-                      }}
-                    >
-                      Configure
-                    </Button>
-                  </CardContent>
-                </Card>
-              </Grid>
-
-              {/* User Guide */}
-              <Grid size={{ xs: 12, md: 4 }}>
-                <Card
-                  sx={{
-                    backgroundColor: "#ffffff",
-                    border: "1px solid rgba(48,54,79,0.1)",
-                    textAlign: "center",
-                    height: "100%",
-                    borderRadius: "14px",
-                    boxShadow:
-                      "0 6px 20px rgba(0,0,0,0.05)",
-                    transition: "all 0.3s ease",
-                    "&:hover": {
-                      transform: "translateY(-4px)",
-                      boxShadow:
-                        "0 10px 30px rgba(0,0,0,0.08)",
-                    },
-                  }}
-                >
-                  <CardContent>
-                    <ContactSupportIcon
-                      sx={{
-                        fontSize: 50,
-                        color: "#30364F",
-                        mb: 2,
-                      }}
-                    />
-                    <Typography
-                      variant="h6"
-                      fontWeight="bold"
-                      sx={{ color: "#30364F", mb: 2 }}
-                    >
-                      User Guide
-                    </Typography>
-                    <Typography
-                      sx={{ color: "#30364F", mb: 3 }}
-                    >
-                      Learn to view attendance records and request
-                      corrections.
-                    </Typography>
-                    <Button
-                      onClick={() => NaviGate("/user-guide")}
-                      variant="outlined"
-                      sx={{
-                        color: "#30364F",
-                        borderColor: "#30364F",
-                        "&:hover": {
-                          backgroundColor: "#30364F",
-                          color: "#ffffff",
-                        },
+                        mt: 2, backgroundColor: "#30364F", textTransform: "none", borderRadius: "10px",
+                        "&:hover": { backgroundColor: "#3C435C" },
                       }}
                     >
                       Explore
@@ -307,8 +192,8 @@ const HelpCenterPage: React.FC = () => {
                   </CardContent>
                 </Card>
               </Grid>
-            </Grid>
-          </Box>
+            ))}
+          </Grid>
         </Container>
       </Box>
     </Box>

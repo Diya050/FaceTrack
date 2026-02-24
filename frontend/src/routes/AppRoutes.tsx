@@ -1,6 +1,7 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useRoutes } from "react-router-dom";
+import { adminRoutes } from "./AdminRoute";
 
-import PublicLayout from "../layouts/PublicLayout";
+import PublicLayout from "../layout/PublicLayout";
 
 // Auth Pages
 import Login from "../pages/auth/Login";
@@ -23,10 +24,14 @@ import ContactPage from "../pages/ContactPage";
 import AboutTechnologyPage from "../pages/AboutTechnologyPage";
 import Home from "../pages/Home";
 
+import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 
 export default function AppRoutes() {
+  const admin = useRoutes([adminRoutes]);
+
   return (
-    <Routes>
+    <>
+      {admin}
 
       {/* Public Pages With Header */}
       <Route element={<PublicLayout />}>
@@ -34,7 +39,7 @@ export default function AppRoutes() {
         <Route path="/features" element={<Features />} />
         <Route path="/contact" element={<ContactPage/>} />
         <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/privacy-policy" />
+        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-of-use" element={<TermsOfUsePage/>}/>
         <Route path="/about-technology" element={<AboutTechnologyPage/>} />
         <Route path="/faqs" element={<FAQ/>} />
@@ -44,13 +49,15 @@ export default function AppRoutes() {
         <Route path="/user-guide" element={<UserGuidePage/>}/>
         <Route path="/query" element={<QueryForm/>} />
       </Route>
+      <Routes>
 
-      {/* Auth Pages */}
+        {/* Auth Pages */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/pending-approval" element={<PendingApproval />} />
-    </Routes>
+      </Routes>
+    </>
   );
 }
