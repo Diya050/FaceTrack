@@ -1,36 +1,29 @@
 import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
-import AdminSidebar from "../components/admin/AdminSidebar";
-import AdminHeader from "../components/header/AdminHeader";
+import UserHeader from "../components/header/UserHeader";
+import UserSidebar from "../components/user/UserSidebar";
 import Footer from "../components/Footer";
 
 const NAVBAR_HEIGHT = 64;
 const SIDEBAR_WIDTH = 260;
 
-const AdminLayout = () => {
+const UserLayout = () => {
   return (
     <>
-      <AdminHeader />
+      <UserHeader />
 
-      <AdminSidebar width={SIDEBAR_WIDTH} />
+      <UserSidebar width={SIDEBAR_WIDTH} />
 
       <Box
         sx={{
           ml: `${SIDEBAR_WIDTH}px`,
           mt: `${NAVBAR_HEIGHT}px`,
+          minHeight: "calc(100vh - 64px)",
           display: "flex",
           flexDirection: "column",
-          minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
         }}
       >
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            p: 0,
-            bgcolor: "#ffffff",
-          }}
-        >
+        <Box component="main" sx={{ flexGrow: 1 }}>
           <Outlet />
         </Box>
 
@@ -40,4 +33,4 @@ const AdminLayout = () => {
   );
 };
 
-export default AdminLayout;
+export default UserLayout;

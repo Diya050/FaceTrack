@@ -1,7 +1,7 @@
 import { Box, Container, Paper } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import type { ReactNode } from "react";
-import Header from "../components/PublicHeader";
+import Header from "../components/header/PublicHeader";
 import Footer from "../components/Footer";
 
 interface Props {
