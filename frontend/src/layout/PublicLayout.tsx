@@ -13,7 +13,7 @@ const PublicLayout: React.FC = () => {
       }}
     >
       <PublicHeader />
-      <Box sx={{ mt: 6, px: 0, flex: 1 }}>
+      <Box sx={{ px: 0, flex: 1 }}>
         <Outlet />
       </Box>
       <Footer />
