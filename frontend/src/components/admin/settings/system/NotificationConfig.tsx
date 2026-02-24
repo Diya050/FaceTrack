@@ -5,7 +5,7 @@ const NotificationConfig = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "Notification Config" }
       </Typography>
     </Box>
   );

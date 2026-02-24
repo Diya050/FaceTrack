@@ -36,13 +36,13 @@ const AdminSidebar = ({ width }: Props) => {
         background: `linear-gradient(130deg, 
           ${theme.palette.primary.main} 100%, 
           ${theme.palette.primary.dark} 0%)`,
-        borderRight: "1px solid rgba(255,255,255,0.08)",
+        borderRight: "2px solid rgba(255,255,255,0.08)",
         overflowY: "auto",
         px: 1.5,
         py: 2,
       }}
     >
-      {/* Section Title */}
+
       <Typography
         sx={{
           fontSize: "0.9rem",

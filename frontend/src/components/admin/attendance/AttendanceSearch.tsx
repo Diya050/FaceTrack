@@ -5,7 +5,7 @@ const AttendanceSearch = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "Attendance Search and Filters" }
       </Typography>
     </Box>
   );

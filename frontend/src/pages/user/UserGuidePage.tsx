@@ -68,7 +68,7 @@ const UserGuidePage: React.FC = () => {
       <Box
         sx={{
           background: "linear-gradient(90deg, #343B55 0%, #3C435C 100%)",
-          py: { xs: 8, md: 14 },
+          py: { xs: 6, md: 8 },
           px: 4,
           textAlign: "center",
           color: "white",
@@ -76,7 +76,7 @@ const UserGuidePage: React.FC = () => {
       >
         <Container maxWidth="md">
           <Typography 
-            variant="h3" 
+            variant="h5" 
             sx={{ 
                 fontSize: { xs: "2rem", sm: "2.75rem", md: "3.5rem" }, 
                 fontWeight: 700, 
@@ -103,7 +103,7 @@ const UserGuidePage: React.FC = () => {
       {/* CONTENT SECTION - Cream Background with Timeline */}
       <Box
         sx={{
-          py: { xs: 8, md: 12 },
+          py: { xs: 8, md: 6 },
           background: "linear-gradient(to bottom, #F0F0DB 0%, #E1D9BC 100%)",
         }}
       >
@@ -113,7 +113,7 @@ const UserGuidePage: React.FC = () => {
           <Box
             sx={{
               position: "absolute",
-              left: { xs: "28px", sm: "36px" },
+              left: { xs: "32px", sm: "59px" },
               top: 0,
               bottom: 0,
               width: "2px",
@@ -157,7 +157,7 @@ const UserGuidePage: React.FC = () => {
                     flex: 1,
                     backgroundColor: "white",
                     borderRadius: "20px",
-                    p: { xs: 4, sm: 5 },
+                    p: { xs: 4, sm: 4 },
                     border: "1px solid #CFC7A8",
                     boxShadow: "0 4px 6px rgba(0,0,0,0.03)",
                     transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",

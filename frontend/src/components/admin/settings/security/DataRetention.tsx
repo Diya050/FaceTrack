@@ -5,7 +5,7 @@ const DataRetention = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "Data Retention" }
       </Typography>
     </Box>
   );
