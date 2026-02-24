@@ -5,7 +5,7 @@ const CameraGrid = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "Camera Grid" }
       </Typography>
     </Box>
   );

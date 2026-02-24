@@ -5,7 +5,7 @@ const UserProfiles = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "User Profiles" }
       </Typography>
     </Box>
   );

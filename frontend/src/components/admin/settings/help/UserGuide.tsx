@@ -5,7 +5,7 @@ const UserGuide = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "User Guide" }
       </Typography>
     </Box>
   );

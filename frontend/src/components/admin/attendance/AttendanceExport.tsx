@@ -5,7 +5,7 @@ const AttendanceExport = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "Export Reports" }
       </Typography>
     </Box>
   );

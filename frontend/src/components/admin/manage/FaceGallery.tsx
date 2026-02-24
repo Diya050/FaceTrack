@@ -5,7 +5,7 @@ const FaceGallery = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "Face Gallery" }
       </Typography>
     </Box>
   );

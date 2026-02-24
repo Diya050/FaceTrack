@@ -42,8 +42,8 @@ import ConsentManagement from "../components/admin/settings/security/ConsentMana
 import DataRetention from "../components/admin/settings/security/DataRetention";
 
 // Settings - Help
-import UserGuide from "../components/admin/settings/help/UserGuide";
-import AdminGuide from "../components/admin/settings/help/AdminGuide";
+import UserGuide from "../pages/user/UserGuidePage";
+import AdminGuide from "../pages/admin/AdminGuidePage";
 import SystemStatus from "../components/admin/settings/help/SystemStatus";
 
 export const adminRoutes: RouteObject = {

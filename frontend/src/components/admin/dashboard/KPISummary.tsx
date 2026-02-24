@@ -5,7 +5,7 @@ const KPISummary = ({ }) => {
   return (
     <Box p={2}>
       <Typography variant="h6">
-        { "Component Title" }
+        { "KPI Summary" }
       </Typography>
     </Box>
   );
