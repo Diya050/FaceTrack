@@ -13,11 +13,13 @@ import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../../layout/AuthLayout";
+import { useAuth } from "../../context/AuthContext";
 
 type LoginMode = "user" | "admin";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [loginMode, setLoginMode] =
     useState<LoginMode>("user");
@@ -29,27 +31,47 @@ export default function Login() {
 
   const [error, setError] = useState("");
 
+  // const handleSubmit = () => {
+  //   setError("");
+
+  //   if (!form.identifier || !form.password) {
+  //     setError("All fields are required.");
+  //     return;
+  //   }
+
+  //   const credentialType = form.identifier.includes("@")
+  //     ? "email"
+  //     : "employeeId";
+
+  //   const payload = {
+  //     login_mode: loginMode,
+  //     credential_type: credentialType,
+  //     identifier: form.identifier,
+  //     password: form.password,
+  //   };
+
+  //   console.log("Login Payload:", payload);
+  // };
+
   const handleSubmit = () => {
-    setError("");
+  setError("");
 
-    if (!form.identifier || !form.password) {
-      setError("All fields are required.");
-      return;
-    }
+  if (!form.identifier || !form.password) {
+    setError("All fields are required.");
+    return;
+  }
 
-    const credentialType = form.identifier.includes("@")
-      ? "email"
-      : "employeeId";
+  //Mock login, just for until backend in ready
+  login(loginMode, {
+    firstName: loginMode === "admin" ? "Admin" : "User",
+  });
 
-    const payload = {
-      login_mode: loginMode,
-      credential_type: credentialType,
-      identifier: form.identifier,
-      password: form.password,
-    };
-
-    console.log("Login Payload:", payload);
-  };
+  if (loginMode === "admin") {
+    navigate("/admin");
+  } else {
+    navigate("/user/dashboard");
+  }
+};
 
   return (
   <AuthLayout>

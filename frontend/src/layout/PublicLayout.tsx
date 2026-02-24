@@ -1,6 +1,6 @@
 import { Outlet } from "react-router-dom";
 import { Box } from "@mui/material";
-import PublicHeader from "../components/PublicHeader";
+import PublicHeader from "../components/header/PublicHeader";
 import Footer from "../components/Footer";
 
 const PublicLayout: React.FC = () => {
@@ -13,7 +13,7 @@ const PublicLayout: React.FC = () => {
       }}
     >
       <PublicHeader />
-      <Box sx={{ mt: 6, px: 0, flex: 1 }}>
+      <Box sx={{ mt: 0, px: 0, flex: 1 }}>
         <Outlet />
       </Box>
       <Footer />
