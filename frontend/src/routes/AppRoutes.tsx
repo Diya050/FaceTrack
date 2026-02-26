@@ -29,6 +29,7 @@ import AboutTechnologyPage from "../pages/AboutTechnologyPage";
 import Home from "../pages/Home";
 import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 
+
 export default function AppRoutes() {
   return useRoutes([
     // Admin Routes
