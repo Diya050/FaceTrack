@@ -1,0 +1,62 @@
+{
+  "warningState": {
+    "lastUpdated": "2026-02-26T19:48:10Z",
+    "overview": {
+      "status": "warning",
+      "uptimePercent": 99.98,
+      "activeIncidents": [
+        {
+          "id": "INC-842",
+          "severity": "warning",
+          "message": "Camera 3 (Hallway B) experiencing intermittent packet loss."
+        }
+      ]
+    },
+    "infrastructure": {
+      "cpu": { "usagePercent": 68.5 },
+      "memory": { "totalGB": 30.0, "usedGB": 24.5 },
+      "disk": { "totalTB": 2.0, "usedTB": 1.4 },
+      "network": { "inboundMbps": 850, "outboundMbps": 120 }
+    },
+    "faceTrackEngine": {
+      "averageFps": 28.5,
+      "matchingLatencyMs": 115,
+      "livenessFailuresToday": 14,
+      "cameras": [
+        { "id": "CAM-01", "name": "Main Entrance", "status": "online", "fps": 30 },
+        { "id": "CAM-02", "name": "Classroom A", "status": "online", "fps": 29 },
+        { "id": "CAM-03", "name": "Hallway B", "status": "warning", "fps": 12 }
+      ]
+    },
+    "apm": { "averageResponseTimeMs": 45, "p95ResponseTimeMs": 180, "errorRatePercent": 0.04, "requestsPerMinute": 3450, "activeUsers": 112 },
+    "database": { "status": "connected", "activeConnections": 85, "idleConnections": 15, "averageQueryTimeMs": 12, "storagePercentFull": 65 },
+    "queues": { "videoProcessingBacklog": 24, "failedJobsToday": 3, "processingRatePerMinute": 450 }
+  },
+  "healthyState": {
+    "lastUpdated": "2026-02-26T19:55:00Z",
+    "overview": {
+      "status": "healthy",
+      "uptimePercent": 100.0,
+      "activeIncidents": []
+    },
+    "infrastructure": {
+      "cpu": { "usagePercent": 42.1 },
+      "memory": { "totalGB": 30.0, "usedGB": 12.5 },
+      "disk": { "totalTB": 2.0, "usedTB": 1.4 },
+      "network": { "inboundMbps": 650, "outboundMbps": 95 }
+    },
+    "faceTrackEngine": {
+      "averageFps": 30.0,
+      "matchingLatencyMs": 85,
+      "livenessFailuresToday": 2,
+      "cameras": [
+        { "id": "CAM-01", "name": "Main Entrance", "status": "online", "fps": 30 },
+        { "id": "CAM-02", "name": "Classroom A", "status": "online", "fps": 30 },
+        { "id": "CAM-03", "name": "Hallway B", "status": "online", "fps": 30 }
+      ]
+    },
+    "apm": { "averageResponseTimeMs": 35, "p95ResponseTimeMs": 120, "errorRatePercent": 0.00, "requestsPerMinute": 2100, "activeUsers": 112 },
+    "database": { "status": "connected", "activeConnections": 45, "idleConnections": 55, "averageQueryTimeMs": 8, "storagePercentFull": 65 },
+    "queues": { "videoProcessingBacklog": 0, "failedJobsToday": 0, "processingRatePerMinute": 450 }
+  }
+}

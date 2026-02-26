@@ -8,6 +8,7 @@ import AdminGuide from "../pages/admin/AdminGuidePage";
 import SystemStatus from "../components/admin/settings/system/SystemStatus";
 
 import DashboardPage from "../pages/admin/DashboardPage";
+import SystemHealth from "../components/admin/dashboard/SystemHealth";
 import LiveMonitoringPage from "../pages/admin/LiveMonitoringPage";
 import AttendancePage from "../pages/admin/AttendancePage";
 import SystemSettingsPage from "../pages/admin/settings/SystemSettingsPage";
@@ -27,6 +28,7 @@ export const adminRoutes: RouteObject = {
 
     // Dashboard
     { path: "dashboard", element: <DashboardPage /> },
+    { path: "dashboard/system-health", element: <SystemHealth /> },
 
     // Live Monitoring
     { path: "monitoring", element: <LiveMonitoringPage /> },
