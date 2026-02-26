@@ -73,8 +73,8 @@ export const mockCameraStatus: CameraStatusSummary = {
 export const mockRecentAttendance: AttendanceRecord[] = [
   {
     attendance_id: "a1",
-    full_name: "Arjun Mehta",
-    department: "Engineering",
+    full_name: "Komal Sharma",
+    department: "SpringBoot",
     camera_name: "Entry Gate A",
     time_in: "09:02",
     time_out: "18:15",
@@ -83,8 +83,8 @@ export const mockRecentAttendance: AttendanceRecord[] = [
   },
   {
     attendance_id: "a2",
-    full_name: "Priya Sharma",
-    department: "HR",
+    full_name: "Diya Baweja",
+    department: "Nodejs",
     camera_name: "Entry Gate B",
     time_in: "09:31",
     time_out: "18:00",
@@ -93,8 +93,8 @@ export const mockRecentAttendance: AttendanceRecord[] = [
   },
   {
     attendance_id: "a3",
-    full_name: "Rohan Das",
-    department: "Finance",
+    full_name: "Prachi Singh",
+    department: "Angular",
     camera_name: "Entry Gate A",
     time_in: "08:58",
     time_out: null,
@@ -103,8 +103,8 @@ export const mockRecentAttendance: AttendanceRecord[] = [
   },
   {
     attendance_id: "a4",
-    full_name: "Neha Kapoor",
-    department: "Engineering",
+    full_name: "Pranjal Amulani",
+    department: "React",
     camera_name: "Lab Cam 1",
     time_in: "09:05",
     time_out: "17:30",
@@ -113,8 +113,8 @@ export const mockRecentAttendance: AttendanceRecord[] = [
   },
   {
     attendance_id: "a5",
-    full_name: "Vikram Singh",
-    department: "Operations",
+    full_name: "Mridul Hemrajani",
+    department: "Python",
     camera_name: "—",
     time_in: null,
     time_out: null,
