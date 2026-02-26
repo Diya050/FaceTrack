@@ -3,8 +3,8 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 // Dashboard
-import Overview from "../../components/admin/dashboard/Overview";
-import KPISummary from "../../components/admin/dashboard/KPISummary";
+import Overview from "../../components/admin/dashboard/overview/Overview";
+import KPISummary from "../../components/admin/dashboard/Kpisummery/KPISummary";
 import SystemHealth from "../../components/admin/dashboard/SystemHealth";
 import LiveAlerts from "../../components/admin/dashboard/LiveAlerts";
 
@@ -32,10 +32,10 @@ const DashboardPage = () => {
   }, [hash]);
 
   return (
-    <Stack spacing={6}>
-      <Box id="overview">
-        <Overview />
-      </Box>
+   <Stack spacing={6}>
+     <Box id="overview">
+       <Overview />
+     </Box>
 
       <Box id="kpis">
         <KPISummary />

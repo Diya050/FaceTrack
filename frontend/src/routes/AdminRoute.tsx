@@ -23,6 +23,8 @@ export const adminRoutes: RouteObject = {
   children: [
     { index: true, element: <Navigate to="/admin/dashboard" replace /> },
 
+
+
     // Dashboard
     { path: "dashboard", element: <DashboardPage /> },
 
