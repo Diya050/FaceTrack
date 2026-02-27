@@ -5,8 +5,8 @@ import AdminSidebar from "../components/admin/AdminSidebar";
 import AdminHeader from "../components/header/AdminHeader";
 import Footer from "../components/Footer";
 
-const NAVBAR_HEIGHT = 64;
-const SIDEBAR_WIDTH = 265;
+const NAVBAR_HEIGHT = 0;
+const SIDEBAR_WIDTH = 260;
 const COLLAPSED_WIDTH = 64;
 
 const AdminLayout = () => {

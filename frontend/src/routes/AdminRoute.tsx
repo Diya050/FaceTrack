@@ -42,7 +42,7 @@ export const adminRoutes: RouteObject = {
     { path: "manage", element: <ManagePage /> },
 
     // Settings → System
-    { path: "settings", element: <Navigate to="/admin/settings/system" replace /> },
+    { path: "settings", element: <Navigate to="/admin/settings/help/admin-guide" replace /> },
     { path: "settings/system", element: <SystemSettingsPage /> },
     
     // Settings → Security

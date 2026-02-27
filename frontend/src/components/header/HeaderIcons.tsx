@@ -38,7 +38,7 @@ const HeaderIcons = ({ firstName }: Props) => {
 
   const handleSettings = () => {
     if (role === "admin") {
-      navigate("/admin/settings/help/user-guide");
+      navigate("/admin/settings/help/admin-guide");
     } 
     else if (role === "user"){
       navigate("/user/help");
