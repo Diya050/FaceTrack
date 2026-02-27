@@ -4,8 +4,9 @@ import { monitoringSidebar } from "../config/sidebar.monitoring";
 import { attendanceSidebar } from "../config/sidebar.attendance";
 import { departmentSidebar } from "../config/sidebar.department";
 import { settingsSidebar } from "../config/sidebar.settings";
+import type { SidebarItem } from "../types/sidebar";
 
-export function useSidebarConfig() {
+export const useSidebarConfig = (): SidebarItem[] => {
   const { pathname } = useLocation();
 
   if (pathname.includes("/dashboard")) return dashboardSidebar;
