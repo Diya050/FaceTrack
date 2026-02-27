@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 
 // Attendance
 import AttendanceRecords from "../../components/admin/attendance/AttendanceRecords";
-import AttendanceSearch from "../../components/admin/attendance/AttendanceSearch";
 import AttendanceCorrections from "../../components/admin/attendance/AttendanceCorrections";
 import AttendanceExport from "../../components/admin/attendance/AttendanceExport";
 
@@ -35,10 +34,6 @@ const AttendancePage = () => {
     <Stack spacing={6}>
       <Box id="records">
         <AttendanceRecords />
-      </Box>
-
-      <Box id="search">
-        <AttendanceSearch />
       </Box>
 
       <Box id="corrections">
