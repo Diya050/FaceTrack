@@ -99,13 +99,13 @@ const AdminSidebar = ({ width, collapsed = false, onToggle }: Props) => {
                     >
                       <ListItemIcon
                         sx={{
-                          minWidth: 70,
-                          mr: collapsed ? 2 : 1.5,
+                          minWidth: 0,
+                          mr: collapsed ? 0 : 1.5,
                           justifyContent: "center",
                           color: "inherit",
                         }}
                       >
-                        <Icon sx={{ fontSize: 26 }} />
+                        <Icon sx={{ fontSize: 24 }} />
                       </ListItemIcon>
                     </Tooltip>
                   )}
@@ -146,13 +146,13 @@ const AdminSidebar = ({ width, collapsed = false, onToggle }: Props) => {
                             >
                               <ListItemIcon
                                 sx={{
-                                  minWidth: 70,
-                                  mr: collapsed ? 2 : 1.5,
+                                  minWidth: 0,
+                                  mr: collapsed ? 0 : 1.5,
                                   justifyContent: "center",
                                   color: "inherit",
                                 }}
                               >
-                                <ChildIcon fontSize="large" />
+                                <ChildIcon fontSize="small" />
                               </ListItemIcon>
                             </Tooltip>
                           )}
@@ -194,7 +194,7 @@ const AdminSidebar = ({ width, collapsed = false, onToggle }: Props) => {
                       color: "inherit",
                     }}
                   >
-                    <Icon sx={{ fontSize: 26 }} />
+                    <Icon sx={{ fontSize: 24 }} />
                   </ListItemIcon>
                 </Tooltip>
               )}
