@@ -1,7 +1,7 @@
 import {
   GridView,
-  Fullscreen,
-  TrackChanges,
+  PhotoCamera,
+  SensorOccupied,
   History,
 } from "@mui/icons-material";
 import type { SidebarItem } from "../types/sidebar";
@@ -13,18 +13,18 @@ export const monitoringSidebar: SidebarItem[] = [
     icon: GridView,
   },
   {
-    label: "Full Screen View",
-    path: "/admin/monitoring#fullscreen",
-    icon: Fullscreen,
+    label: "Camera Management",
+    path: "/admin/monitoring#manage",
+    icon: PhotoCamera,
   },
   {
     label: "Recognition Events",
     path: "/admin/monitoring#events",
-    icon: TrackChanges,
+    icon: SensorOccupied,
   },
   {
     label: "Event History",
-    path: "/admin/monitoring#events/history",
+    path: "/admin/monitoring#history",
     icon: History,
   },
 ];

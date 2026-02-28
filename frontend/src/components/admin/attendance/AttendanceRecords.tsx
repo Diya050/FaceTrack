@@ -106,7 +106,7 @@ export default function AttendanceRecords() {
   });
 
   return (
-    <Box sx={{ p: 4, bgcolor: "#F8F9FA", minHeight: "100vh" }}>
+    <Box sx={{ mt: 8, p: 4, bgcolor: "#F8F9FA", minHeight: "100vh" }}>
       <Typography
         variant="h5"
         sx={{ fontWeight: 800, color: COLORS.navy, mb: 3 }}

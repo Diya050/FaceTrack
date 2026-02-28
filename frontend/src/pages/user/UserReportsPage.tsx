@@ -81,7 +81,7 @@ const UserReports: React.FC = () => {
           {/* Footer Branding */}
           <Box sx={{ mt: 8, textAlign: 'center', opacity: 0.5 }}>
             <Typography variant="caption" fontWeight="900" sx={{ letterSpacing: 2, color: COLORS.navy }}>
-              FACETREK • INTELLIGENT ATTENDANCE SYSTEM
+              FACETRACK • INTELLIGENT ATTENDANCE SYSTEM
             </Typography>
           </Box>
 

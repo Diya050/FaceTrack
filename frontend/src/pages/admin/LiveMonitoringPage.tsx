@@ -4,7 +4,7 @@ import { useLocation } from "react-router-dom";
 
 // Live Monitoring
 import CameraGrid from "../../components/admin/monitoring/CameraGrid";
-import FullscreenView from "../../components/admin/monitoring/FullscreenView";
+import CameraManagement from "../../components/admin/monitoring/CameraManagement";
 import RecognitionEvents from "../../components/admin/monitoring/RecognitionEvents";
 import EventHistory from "../../components/admin/monitoring/EventHistory";
 
@@ -37,8 +37,8 @@ const LiveMonitoringPage = () => {
         <CameraGrid />
       </Box>
 
-      <Box id="fullscreen">
-        <FullscreenView />
+      <Box id="manage">
+        <CameraManagement />
       </Box>
 
       <Box id="events">
