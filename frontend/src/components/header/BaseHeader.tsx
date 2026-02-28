@@ -77,7 +77,7 @@ const BaseHeader = ({ logoLink, navItems, rightSlot }: BaseHeaderProps) => {
           {!isMobile && (
             <Box sx={{ display: "flex", gap: 2 }}>
               {navItems
-                .filter((item) => !item.hideOnDesktop) // Clean desktop view
+                .filter((item) => !item.hideOnDesktop)
                 .map((item) => (
                   <Button
                     key={item.path}
@@ -206,8 +206,6 @@ const BaseHeader = ({ logoLink, navItems, rightSlot }: BaseHeaderProps) => {
           ))}
         </List>
       </Drawer>
-
-      <Toolbar />
     </>
   );
 };
