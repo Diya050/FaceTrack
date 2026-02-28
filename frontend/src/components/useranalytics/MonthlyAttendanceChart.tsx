@@ -1,7 +1,7 @@
-import React from 'react';
-import { Box, Typography, Stack } from '@mui/material';
-import { Bar } from 'react-chartjs-2';
-import { MOCK_ATTENDANCE_STATS } from '../../data/mockdata.useranalytics';
+import React from "react";
+import { Box, Stack, Typography } from "@mui/material";
+import { Bar } from "react-chartjs-2";
+import { MOCK_ATTENDANCE_STATS } from "../../data/mockdata.useranalytics";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,19 +10,25 @@ import {
   Title,
   Tooltip,
   Legend,
-} from 'chart.js';
+} from "chart.js";
+
+import ChartWrapper from "../admin/dashboard/overview/shared/ChartWrapper";
+import { getChartTooltip, getChartScales } from "../admin/dashboard/overview/shared/ChartConstants";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const MonthlyAttendanceChart: React.FC = () => {
+  const totalDays = MOCK_ATTENDANCE_STATS.reduce((acc, curr) => acc + curr.count, 0);
+
   const data = {
-    labels: MOCK_ATTENDANCE_STATS.map(s => s.status),
+    labels: MOCK_ATTENDANCE_STATS.map((s) => s.status),
     datasets: [
       {
-        label: 'Days',
-        data: MOCK_ATTENDANCE_STATS.map(s => s.count),
-        backgroundColor: MOCK_ATTENDANCE_STATS.map(s => s.color),
-        borderRadius: 4,
+        label: "Days",
+        data: MOCK_ATTENDANCE_STATS.map((s) => s.count),
+        backgroundColor: MOCK_ATTENDANCE_STATS.map((s) => s.color),
+        borderRadius: 6,
+        barThickness: 40,
       },
     ],
   };
@@ -32,33 +38,50 @@ const MonthlyAttendanceChart: React.FC = () => {
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
+      tooltip: getChartTooltip(),
     },
     scales: {
-      y: { beginAtZero: true }
-    }
+      ...getChartScales(),
+      y: {
+        beginAtZero: true,
+        ticks: { stepSize: 2 },
+      },
+    },
   };
 
   return (
-    <Box>
-      <Typography variant="h6" fontWeight="600" sx={{ mb: 2 }}>
-        Monthly Attendance Overview
-      </Typography>
-      
-      <Box sx={{ height: 250, width: '100%' }}>
+    <ChartWrapper
+      label="Attendance"
+      title="Monthly Attendance Overview"
+      action={
+        <Typography variant="caption" fontWeight={600}>
+          Total: {totalDays} Days
+        </Typography>
+      }
+    >
+      <Box sx={{ height: 250, mt: 1 }}>
         <Bar data={data} options={options} />
       </Box>
 
       <Stack direction="row" flexWrap="wrap" spacing={2} sx={{ mt: 3 }}>
         {MOCK_ATTENDANCE_STATS.map((item) => (
-          <Box key={item.status} sx={{ display: 'flex', alignItems: 'center' }}>
-            <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: item.color, mr: 1 }} />
+          <Box key={item.status} sx={{ display: "flex", alignItems: "center" }}>
+            <Box
+              sx={{
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                bgcolor: item.color,
+                mr: 1,
+              }}
+            />
             <Typography variant="caption" color="text.secondary">
               {item.status}: <strong>{item.count}</strong>
             </Typography>
           </Box>
         ))}
       </Stack>
-    </Box>
+    </ChartWrapper>
   );
 };
 
