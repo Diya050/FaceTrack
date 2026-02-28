@@ -1,5 +1,3 @@
-// src/data/liveAlerts.mock.ts
-
 export type AlertSeverity = "critical" | "warning" | "info";
 
 export interface LiveAlert {
