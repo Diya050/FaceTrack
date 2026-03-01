@@ -1,45 +1,151 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey
+import enum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Enum, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, declared_attr
 from sqlalchemy.sql import func
 from app.db.session import Base
 
+#ENUMS 
+class OrganizationStatusEnum(str, enum.Enum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+    INACTIVE = "inactive"
 
-class Department(Base):
+
+class UserStatusEnum(str, enum.Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+    INACTIVE = "inactive"
+    
+#Tenant Mixins
+class TenantMixin:
+    @declared_attr
+    def organization_id(cls):
+        return Column(
+            UUID(as_uuid=True),
+            ForeignKey("organizations.organization_id", ondelete="RESTRICT"),
+            nullable=False,
+            index=True,
+        )
+    
+class Organization(Base):
+    __tablename__ = "organizations"
+    organization_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(255), nullable=False, unique=True)
+    email = Column(String(255), nullable=False, unique=True)
+    contact_number = Column(String(20))
+    address = Column(String(500))
+    status = Column(
+        Enum(OrganizationStatusEnum, name="organization_status_enum"),
+        nullable=False,
+        default=OrganizationStatusEnum.ACTIVE,
+    )
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
+    departments = relationship("Department", back_populates="organization")
+    roles = relationship("Role", back_populates="organization")
+    users = relationship("User", back_populates="organization")
+
+class Department(Base, TenantMixin):
     __tablename__ = "departments"
     department_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String, nullable=False)
+    name = Column(String(255), nullable=False)
     description = Column(String)
     
+    organization = relationship("Organization", back_populates="departments")
     users = relationship("User", back_populates="department")
+    
+    __table_args__ = (
+        UniqueConstraint("organization_id", "name", name="uq_department_org_name"),
+        Index("ix_department_org_name", "organization_id", "name"),
+    )
 
-class Role(Base):
+class Role(Base, TenantMixin):
     __tablename__ = "roles"
     role_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    role_name = Column(String, nullable=False, unique=True)
+    role_name = Column(String(100), nullable=False)
     description = Column(String)
-    
+
+    organization = relationship("Organization", back_populates="roles")
     users = relationship("User", back_populates="role")
 
-class User(Base):
+    __table_args__ = (
+        UniqueConstraint("organization_id", "role_name", name="uq_role_org_name"),
+    )
+
+    
+class User(Base, TenantMixin):
     __tablename__ = "users"
     user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    full_name = Column(String, nullable=False)
-    email = Column(String, unique=True, nullable=False)
-    phone_number = Column(String)
-    password_hash = Column(String, nullable=False)
-    role_id = Column(UUID(as_uuid=True), ForeignKey("roles.role_id"))
-    department_id = Column(UUID(as_uuid=True), ForeignKey("departments.department_id"))
-    status = Column(String, default="Pending") 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    full_name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False)
+    phone_number = Column(String(20))
+    password_hash = Column(String(255), nullable=False)
+    role_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("roles.role_id", ondelete="RESTRICT"),
+        nullable=False,
+        index=True,
+    )
+    department_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("departments.department_id", ondelete="RESTRICT"),
+        nullable=True,  # SUPER_ADMIN has no department
+        index=True,
+    )
+    status = Column(
+        Enum(UserStatusEnum, name="user_status_enum"),
+        nullable=False,
+        default=UserStatusEnum.PENDING,
+        index=True,
+    )
+    is_active = Column(Boolean, default=True, nullable=False, index=True)
+    is_deleted = Column(Boolean, default=False, nullable=False, index=True)
+    face_enrolled = Column(Boolean, default=False, nullable=False)
+    approved_by = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.user_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    approved_at = Column(DateTime(timezone=True))
+    created_by = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.user_id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )
     last_login = Column(DateTime(timezone=True))
 
+    # Relationships
+    organization = relationship("Organization", back_populates="users")
     role = relationship("Role", back_populates="users")
     department = relationship("Department", back_populates="users")
-    face_biometrics = relationship("FacialBiometric", back_populates="user", cascade="all, delete-orphan")
-    voice_biometrics = relationship("VoiceBiometric", back_populates="user", cascade="all, delete-orphan")
+
+    approver = relationship("User", remote_side=[user_id], foreign_keys=[approved_by])
+    creator = relationship("User", remote_side=[user_id], foreign_keys=[created_by])
+
+    face_biometrics = relationship("FacialBiometric", back_populates="user")
+    voice_biometrics = relationship("VoiceBiometric", back_populates="user")
     attendance_records = relationship("Attendance", back_populates="user")
     attendance_events = relationship("AttendanceEvent", back_populates="user")
     attendance_corrections = relationship("AttendanceCorrection", back_populates="user")
+
+    __table_args__ = (
+        UniqueConstraint("organization_id", "email", name="uq_user_org_email"),
+        Index("ix_user_org_role", "organization_id", "role_id"),
+        Index("ix_user_org_department", "organization_id", "department_id"),
+    )
