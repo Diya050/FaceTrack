@@ -154,8 +154,8 @@ const CameraGrid: React.FC = () => {
                     {cam.status === "offline"
                       ? "Camera Offline"
                       : paused[cam.id]
-                      ? "Stream Paused"
-                      : "Live Video Stream"}
+                        ? "Stream Paused"
+                        : "Live Video Stream"}
 
                     {/* Status Overlay */}
                     <Stack
@@ -168,8 +168,26 @@ const CameraGrid: React.FC = () => {
                         color={statusColor(cam.status)}
                         label={statusLabel}
                       />
-                      <Chip size="small" label={`${cam.fps} FPS`} />
-                      <Chip size="small" label={`${cam.latency} ms`} />
+
+                      <Chip
+                        size="small"
+                        label={`${cam.fps} FPS`}
+                        sx={{
+                          color: "#8F9AA6",
+                          bgcolor: "rgba(255,255,255,0.06)",
+                          fontWeight: 500,
+                        }}
+                      />
+
+                      <Chip
+                        size="small"
+                        label={`${cam.latency} ms`}
+                        sx={{
+                          color: "#8F9AA6",
+                          bgcolor: "rgba(255,255,255,0.06)",
+                          fontWeight: 500,
+                        }}
+                      />
                     </Stack>
 
                     {/* Controls */}

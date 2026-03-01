@@ -6,9 +6,9 @@ import { useLocation } from "react-router-dom";
 import Departments from "../../components/admin/manage/Departments";
 import UserProfiles from "../../components/admin/manage/UserProfiles";
 import BulkUpload from "../../components/admin/manage/BulkUpload";
-import FaceGallery from "../../components/admin/manage/FaceGallery";
 import Roles from "../../components/admin/manage/Roles";
-import AccessControl from "../../components/admin/manage/AccessControl";
+import AttendanceRules from "../../components/admin/manage/AttendanceRules";
+import RegistrationRequests from "../../components/admin/manage/RegistrationRequests";
 
 
 const NAVBAR_HEIGHT = 64;
@@ -34,31 +34,33 @@ const ManagePage = () => {
   }, [hash]);
 
   return (
-    <Stack spacing={6}>
-      <Box id="departments">
-        <Departments />
-      </Box>
+    <Box sx={{ bgcolor: "#F8F9FA" }}>
+      <Stack spacing={0}>
+        <Box id="departments">
+          <Departments />
+        </Box>
 
-      <Box id="users">
-        <UserProfiles />
-      </Box>
+        <Box id="users">
+          <UserProfiles />
+        </Box>
 
-      <Box id="bulk-upload">
-        <BulkUpload />
-      </Box>
+        <Box id="bulk-upload">
+          <BulkUpload />
+        </Box>
 
-      <Box id="face-gallery">
-        <FaceGallery />
-      </Box>
+        <Box id="requests">
+          <RegistrationRequests />
+        </Box>
 
-      <Box id="roles">
-        <Roles />
-      </Box>
-      
-      <Box id="access-control">
-        <AccessControl />
-      </Box>
-    </Stack>
+        <Box id="roles">
+          <Roles />
+        </Box>
+
+        <Box id="rules">
+          <AttendanceRules />
+        </Box>
+      </Stack>
+    </Box>
   );
 };
 

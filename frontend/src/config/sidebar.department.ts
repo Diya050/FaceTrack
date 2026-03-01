@@ -2,9 +2,9 @@ import {
   Apartment,
   People,
   CloudUpload,
-  Face,
+  HowToReg,
   Badge,
-  Security,
+  Rule,
 } from "@mui/icons-material";
 import type { SidebarItem } from "../types/sidebar";
 
@@ -25,9 +25,9 @@ export const departmentSidebar: SidebarItem[] = [
     icon: CloudUpload,
   },
   {
-    label: "Face Gallery",
-    path: "/admin/manage#face-gallery",
-    icon: Face,
+    label: "Registration Requests",
+    path: "/admin/manage#requests",
+    icon: HowToReg,
   },
   {
     label: "Roles",
@@ -35,8 +35,8 @@ export const departmentSidebar: SidebarItem[] = [
     icon: Badge,
   },
   {
-    label: "Access Control",
-    path: "/admin/manage#access-control",
-    icon: Security,
+    label: "Attendance Rules",
+    path: "/admin/manage#rules",
+    icon: Rule,
   },
 ];
