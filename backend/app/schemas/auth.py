@@ -1,12 +1,16 @@
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
 
-class LoginRequest(BaseModel):
-    email: EmailStr
+class PlatformLoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class OrgLoginRequest(BaseModel):
+    email: str
     password: str
     organization_name: str
-
-
+    
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

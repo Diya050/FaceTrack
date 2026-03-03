@@ -90,3 +90,4 @@ class AttendanceCorrection(TenantMixin, Base):
 
     attendance_record = relationship("Attendance", back_populates="corrections")
     user = relationship("User", back_populates="attendance_corrections", foreign_keys=[user_id])
+    reviewer = relationship("User", foreign_keys=[reviewed_by])

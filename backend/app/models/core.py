@@ -26,7 +26,7 @@ class TenantMixin:
         return Column(
             UUID(as_uuid=True),
             ForeignKey("organizations.organization_id", ondelete="RESTRICT"),
-            nullable=False,
+            nullable=True,
             index=True,
         )
     
@@ -38,7 +38,7 @@ class Organization(Base):
     contact_number = Column(String(20))
     address = Column(String(500))
     status = Column(
-        Enum(OrganizationStatusEnum, name="organization_status_enum"),
+        Enum(OrganizationStatusEnum, name="organization_status_enum", values_callable=lambda enum_cls: [e.value for e in enum_cls]),
         nullable=False,
         default=OrganizationStatusEnum.ACTIVE,
     )
@@ -102,7 +102,7 @@ class User(Base, TenantMixin):
         index=True,
     )
     status = Column(
-        Enum(UserStatusEnum, name="user_status_enum"),
+        Enum(UserStatusEnum, name="user_status_enum", values_callable=lambda enum_cls: [e.value for e in enum_cls]),
         nullable=False,
         default=UserStatusEnum.PENDING,
         index=True,
@@ -142,7 +142,13 @@ class User(Base, TenantMixin):
     voice_biometrics = relationship("VoiceBiometric", back_populates="user")
     attendance_records = relationship("Attendance", back_populates="user")
     attendance_events = relationship("AttendanceEvent", back_populates="user")
-    attendance_corrections = relationship("AttendanceCorrection", back_populates="user")
+    attendance_corrections = relationship("AttendanceCorrection", foreign_keys="AttendanceCorrection.user_id", back_populates="user")
+    face_enrollment_sessions = relationship("FaceEnrollmentSession",back_populates="user",cascade="all, delete-orphan")
+    consents = relationship("Consent", back_populates="user", cascade="all, delete-orphan")
+    notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
+    support_tickets = relationship("SupportTicket", back_populates="user", cascade="all, delete-orphan")
+    audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
+    login_history = relationship("LoginHistory", back_populates="user", cascade="all, delete-orphan")
 
     __table_args__ = (
         UniqueConstraint("organization_id", "email", name="uq_user_org_email"),
