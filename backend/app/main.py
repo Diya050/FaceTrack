@@ -1,13 +1,19 @@
 from fastapi import FastAPI
-# from app.db import init_db
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.v1.api import api_router
 
 app = FastAPI(title="FaceTrack API")
 
-# @app.on_event("startup")
-# def on_startup():
-#     print("Connecting to Supabase and initializing tables...")
-#     init_db()
-#     print("Database ready.")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # change to frontend domain in production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(api_router, prefix="/api/v1")
 
 @app.get("/")
 def read_root():
