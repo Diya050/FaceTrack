@@ -49,7 +49,7 @@ const MetricValue = ({ value, label, subtext, color = '#30364F' }: any) => (
 const SystemHealth = () => {
   // TOGGLE THIS VARIABLE 
   // Options: healthData.warningState OR healthData.healthyState
-  const currentData = healthData.healthyState; 
+  const currentData = healthData.warningState; 
 
   // Boolean to check if system is healthy
   const isHealthy = currentData.overview.activeIncidents.length === 0;
