@@ -1,5 +1,6 @@
 import {
   Apartment,
+  AddCircle,
   People,
   CloudUpload,
   HowToReg,
@@ -9,6 +10,11 @@ import {
 import type { SidebarItem } from "../types/sidebar";
 
 export const departmentSidebar: SidebarItem[] = [
+  {
+    label: "Create Organisation",
+    path: "/admin/manage#create-org",
+    icon: AddCircle,
+  },
   {
     label: "Departments",
     path: "/admin/manage#departments",

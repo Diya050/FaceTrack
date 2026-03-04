@@ -3,7 +3,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.schemas.auth import RegisterRequest, PlatformLoginRequest, OrgLoginRequest, TokenResponse
 from app.services.auth_service import AuthService
-# from app.services.auth_service import platform_login, org_login
 from fastapi.security import OAuth2PasswordRequestForm
 
 
