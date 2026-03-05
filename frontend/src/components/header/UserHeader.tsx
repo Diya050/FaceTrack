@@ -11,10 +11,10 @@ const userNavItems = [
       { label: "My Attendance", path: "/user/dashboard#attendance" },
     ],
   },
-  { label: "My Profile", path: "/user/me" },
   { label: "Analytics", path: "/user/reports" },
 
   /* Hidden on Desktop — visible in hamburger */
+  { label: "My Profile", path: "/user/me", hideOnDesktop: true,},
   {
     label: "Help & Support",
     path: "/user/help",
