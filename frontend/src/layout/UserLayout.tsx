@@ -1,24 +1,43 @@
-import { Box } from "@mui/material";
+import { useState } from "react";
+import { Box, useMediaQuery, useTheme } from "@mui/material";
 import { Outlet } from "react-router-dom";
+
 import UserHeader from "../components/header/UserHeader";
 import UserSidebar from "../components/user/UserSidebar";
 import Footer from "../components/Footer";
 
 const NAVBAR_HEIGHT = 64;
 const SIDEBAR_WIDTH = 260;
+const COLLAPSED_WIDTH = 64;
 
 const UserLayout = () => {
+  const [collapsed, setCollapsed] = useState(false);
+
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+
   return (
     <>
       <UserHeader />
 
-      <UserSidebar width={SIDEBAR_WIDTH} />
+      {!isMobile && (
+        <UserSidebar
+          width={SIDEBAR_WIDTH}
+          collapsed={collapsed}
+          onToggle={() => setCollapsed((prev) => !prev)}
+        />
+      )}
 
       <Box
         sx={{
-          ml: `${SIDEBAR_WIDTH}px`,
+          ml: isMobile
+            ? 0
+            : collapsed
+            ? `${COLLAPSED_WIDTH}px`
+            : `${SIDEBAR_WIDTH}px`,
           mt: `${NAVBAR_HEIGHT}px`,
-          minHeight: "calc(100vh - 64px)",
+          transition: "margin-left 0.25s ease",
+          minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
           display: "flex",
           flexDirection: "column",
         }}
