@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, useMediaQuery, useTheme } from "@mui/material";
+import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
 
 import UserHeader from "../components/header/UserHeader";
@@ -8,39 +8,42 @@ import Footer from "../components/Footer";
 
 const NAVBAR_HEIGHT = 64;
 const SIDEBAR_WIDTH = 260;
-const COLLAPSED_WIDTH = 64;
-
 const SIDEBAR_COLLAPSED = 80;
 
 const UserLayout = () => {
-
   const [collapsed, setCollapsed] = useState(false);
 
   const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH;
 
-
   return (
-    <>
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      
+      {/* Top Header */}
       <UserHeader />
 
-      <UserSidebar
-        collapsed={collapsed}
-        setCollapsed={setCollapsed}
-      />
+      {/* Sidebar */}
+      <UserSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
+      {/* Main Content */}
       <Box
         sx={{
           ml: `${sidebarWidth}px`,
           mt: `${NAVBAR_HEIGHT}px`,
-          minHeight: "calc(100vh - 64px)",
-          transition: "margin-left 0.3s"
-
+          px: { xs: 2, md: 3 },
+          py: 3,
+          minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
+          transition: "margin-left 0.3s ease",
+          backgroundColor: "#f5f6fa"
         }}
       >
+        {/* Page Content */}
         <Outlet />
+
+        {/* Footer */}
         <Footer />
       </Box>
-    </>
+
+    </Box>
   );
 };
 

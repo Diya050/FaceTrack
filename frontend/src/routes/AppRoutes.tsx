@@ -6,6 +6,7 @@ import UserLayout from "../layout/UserLayout";
 import UserDashboardPage from "../pages/user/UserDashboardPage";
 import MyAttendancePage from "../pages/user/MyAttendancePage";
 import UserReportsPage from "../pages/user/UserReportsPage";
+import Profiles from "../pages/user/Profiles";
 
 // Auth Pages
 import Login from "../pages/auth/Login";
@@ -28,7 +29,7 @@ import ContactPage from "../pages/ContactPage";
 import AboutTechnologyPage from "../pages/AboutTechnologyPage";
 import Home from "../pages/Home";
 import PrivacyPolicy from "../pages/public/PrivacyPolicy";
-import Profiles from "../pages/user/Profiles";
+
 
 
 export default function AppRoutes() {
@@ -45,7 +46,6 @@ export default function AppRoutes() {
         { path: "me", element: <Profiles /> },
         { path: "attendance", element: <MyAttendancePage /> },
         { path: "reports", element: <UserReportsPage /> },
-
         { path: "help", element: <HelpCenterPage /> },
         { path: "settings/user-guide", element: <UserGuidePage /> },
       ],

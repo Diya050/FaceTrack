@@ -1,15 +1,13 @@
-
 import React from "react";
 import {
   Box,
   IconButton,
   List,
-  ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
-<<<<<<< HEAD
-  Typography
+  Typography,
+  Tooltip
 } from "@mui/material";
 
 import MenuIcon from "@mui/icons-material/Menu";
@@ -18,6 +16,7 @@ import AssignmentTurnedInIcon from "@mui/icons-material/AssignmentTurnedIn";
 import BarChartIcon from "@mui/icons-material/BarChart";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
+import AccountCircleIcon from "@mui/icons-material/AccountCircle";
 
 import { Link, useLocation } from "react-router-dom";
 
@@ -27,241 +26,127 @@ interface Props {
 }
 
 const SIDEBAR_WIDTH = 260;
-const SIDEBAR_COLLAPSED = 80;
+const SIDEBAR_COLLAPSED = 70;
 
 const menuItems = [
   { label: "Dashboard", icon: <DashboardIcon />, path: "/user/dashboard" },
   { label: "My Attendance", icon: <AssignmentTurnedInIcon />, path: "/user/attendance" },
   { label: "Reports", icon: <BarChartIcon />, path: "/user/reports" },
-  
+  { label: "Profile", icon: <AccountCircleIcon />, path: "/user/me" },
   { label: "Help Center", icon: <HelpOutlineIcon />, path: "/user/help" },
   { label: "User Guide", icon: <MenuBookIcon />, path: "/user/settings/user-guide" },
 ];
 
 const UserSidebar: React.FC<Props> = ({ collapsed, setCollapsed }) => {
-=======
-  Typography,
-  IconButton,
-  Tooltip,
-} from "@mui/material";
-
-import MenuIcon from "@mui/icons-material/Menu";
-import DashboardIcon from "@mui/icons-material/Dashboard";
-import FactCheckIcon from "@mui/icons-material/FactCheck";
-import PersonIcon from "@mui/icons-material/Person";
-import AssessmentIcon from "@mui/icons-material/Assessment";
-import HelpCenterIcon from "@mui/icons-material/HelpCenter";
-import MenuBookIcon from "@mui/icons-material/MenuBook";
-
-import { NavLink, useLocation } from "react-router-dom";
-import { useTheme } from "@mui/material/styles";
-
-import {
-  sidebarContainer,
-  sidebarPanelTitle,
-  sidebarItemBase,
-} from "../../theme/sidebarStyles";
-
-type Props = {
-  width?: number;
-  collapsed?: boolean;
-  onToggle?: () => void;
-};
-
-const sections = [
-  {
-    matches: ["/user/dashboard", "/user/attendance", "/user/me"],
-    items: [
-      {
-        label: "Dashboard",
-        path: "/user/dashboard",
-        icon: DashboardIcon,
-      },
-      {
-        label: "My Attendance",
-        path: "/user/attendance",
-        icon: FactCheckIcon,
-      },
-      {
-        label: "My Profile",
-        path: "/user/me",
-        icon: PersonIcon,
-      },
-    ],
-  },
-  {
-    matches: ["/user/reports"],
-    items: [
-      {
-        label: "Reports",
-        path: "/user/reports",
-        icon: AssessmentIcon,
-      },
-    ],
-  },
-  {
-    matches: ["/user/help", "/user/settings"],
-    items: [
-      {
-        label: "Help Center",
-        path: "/user/help",
-        icon: HelpCenterIcon,
-      },
-      {
-        label: "User Guide",
-        path: "/user/settings/user-guide",
-        icon: MenuBookIcon,
-      },
-    ],
-  },
-];
-
-const UserSidebar = ({ width = 260, collapsed = false, onToggle }: Props) => {
-  const { pathname } = useLocation();
-  const theme = useTheme();
->>>>>>> 7930d24df0e9bb9c7459bdcf6eb6965a7e25c49d
-
   const location = useLocation();
   const width = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH;
 
   return (
     <Box
       sx={{
-<<<<<<< HEAD
         width,
         height: "100vh",
         position: "fixed",
         top: 64,
         left: 0,
-        bgcolor: "#404a66",
-        color: "white",
-        transition: "width 0.3s"
-      }}
-    >
-
-      {/* Sidebar Header */}
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: collapsed ? "center" : "space-between",
-          px: 2,
-          py: 2
-        }}
-      >
-        {!collapsed && (
-          <Typography fontWeight={700}>
-            USER PANEL
-          </Typography>
-        )}
-
-        <IconButton
-          onClick={() => setCollapsed(!collapsed)}
-          sx={{ color: "white" }}
-        >
-          <MenuIcon />
-        </IconButton>
-      </Box>
-
-      {/* Menu */}
-      <List>
-        {menuItems.map((item) => {
-
-          const active = location.pathname === item.path;
-
-          return (
-            <ListItem key={item.label} disablePadding>
-
-              <ListItemButton
-                component={Link}
-                to={item.path}
-                selected={active}
-                sx={{
-                  px: collapsed ? 2 : 3,
-                  py: 1.5,
-                  justifyContent: collapsed ? "center" : "flex-start"
-                }}
-              >
-
-                <ListItemIcon
-                  sx={{
-                    color: "white",
-                    minWidth: collapsed ? "auto" : 36
-                  }}
-                >
-                  {item.icon}
-                </ListItemIcon>
-
-                {!collapsed && (
-                  <ListItemText primary={item.label} />
-                )}
-
-              </ListItemButton>
-
-            </ListItem>
-=======
-        width: collapsed ? 65 : width,
+        bgcolor: "#2f3b52",
+        color: "#D7DCE8",
         transition: "width 0.25s ease",
         overflowX: "hidden",
-        ...sidebarContainer(theme),
+        borderRight: "1px solid rgba(255,255,255,0.05)"
       }}
     >
+
       {/* HEADER */}
       <Box
         display="flex"
         alignItems="center"
         justifyContent={collapsed ? "center" : "space-between"}
         px={1.5}
+        py={2}
       >
         {!collapsed && (
-          <Typography sx={sidebarPanelTitle}>USER PANEL</Typography>
+          <Typography
+            sx={{
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: 1.2,
+              color: "#C9D1E3"
+            }}
+          >
+            USER PANEL
+          </Typography>
         )}
 
         <Tooltip title={collapsed ? "Expand Sidebar" : "Collapse Sidebar"}>
           <IconButton
-            onClick={onToggle}
-            sx={{ minWidth: 36, color: "gray", mb: 1.5 }}
+            onClick={() => setCollapsed(!collapsed)}
+            sx={{ color: "#C9D1E3" }}
           >
             <MenuIcon />
           </IconButton>
         </Tooltip>
       </Box>
 
-      <List disablePadding>
-        {activeSection.items.map((item) => {
-          const Icon = item.icon;
+      {/* MENU */}
+      <List disablePadding sx={{ px: 1 }}>
+        {menuItems.map((item) => {
+          const active = location.pathname === item.path;
 
           return (
-            <ListItemButton
-              key={item.path}
-              component={NavLink}
-              to={item.path}
-              sx={{
-                ...sidebarItemBase,
-                justifyContent: collapsed ? "center" : "flex-start",
-              }}
+            <Tooltip
+              key={item.label}
+              title={collapsed ? item.label : ""}
+              placement="right"
             >
-              <Tooltip title={collapsed ? item.label : ""} placement="right">
+              <ListItemButton
+                component={Link}
+                to={item.path}
+                selected={active}
+                sx={{
+                  borderRadius: 2,
+                  mb: 0.5,
+                  py: 1.3,
+                  px: collapsed ? 1 : 2,
+                  justifyContent: collapsed ? "center" : "flex-start",
+                  transition: "all 0.2s",
+
+                  color: active ? "#fff" : "#C9D1E3",
+
+                  "&.Mui-selected": {
+                    bgcolor: "#404c67",
+                  },
+
+                  "&:hover": {
+                    bgcolor: "#404c67",
+                  }
+                }}
+              >
                 <ListItemIcon
                   sx={{
                     minWidth: 0,
-                    mr: collapsed ? 0 : 1.5,
+                    mr: collapsed ? 0 : 1.8,
                     justifyContent: "center",
-                    color: "inherit",
+                    color: "inherit"
                   }}
                 >
-                  <Icon sx={{ fontSize: 24 }} />
+                  {item.icon}
                 </ListItemIcon>
-              </Tooltip>
 
-              {!collapsed && <ListItemText primary={item.label} />}
-            </ListItemButton>
->>>>>>> 7930d24df0e9bb9c7459bdcf6eb6965a7e25c49d
+                {!collapsed && (
+                  <ListItemText
+                    primary={item.label}
+                    primaryTypographyProps={{
+                      fontSize: 14,
+                      fontWeight: 500
+                    }}
+                  />
+                )}
+              </ListItemButton>
+            </Tooltip>
           );
         })}
       </List>
-
-
     </Box>
   );
 };

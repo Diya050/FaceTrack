@@ -22,10 +22,13 @@ const UserAttendanceCard = ({ data }: Props) => {
       sx={{
         p: 2,
         borderRadius: 3,
-        transition: "0.3s",
-        "&:hover": { transform: "translateY(-5px)" },
+        transition: "0.2s",
+        "&:hover": {
+          transform: "translateY(-4px)",
+          boxShadow: 4,
+        },
       }}
-      elevation={3}
+      elevation={2}
     >
       <Typography fontWeight="bold">{data.date}</Typography>
 
