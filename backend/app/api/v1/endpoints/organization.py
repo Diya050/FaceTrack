@@ -4,6 +4,8 @@ from app.db.session import get_db
 from app.schemas.organization import OrganizationCreate, OrganizationResponse
 from app.services.organization_service import create_organization
 from app.core.permissions import require_roles
+from sqlalchemy import select
+from app.models.core import Organization
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
@@ -15,3 +17,13 @@ def create_org(
     user=Depends(require_roles(["SUPER_ADMIN"]))
 ):
     return create_organization(db, data)
+
+@router.get("", response_model=list[OrganizationResponse])
+def list_orgs(
+    db=Depends(get_db),
+    user=Depends(require_roles(["SUPER_ADMIN"]))
+):
+    result = db.execute(
+        select(Organization).where(Organization.is_deleted == False)
+    )
+    return result.scalars().all()

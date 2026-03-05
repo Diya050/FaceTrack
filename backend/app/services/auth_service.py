@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
-from app.models.core import User
-from app.models.core import Role, Department, Organization, OrganizationStatusEnum, UserStatusEnum, Department
+from app.models.core import User, Role, Department, Organization
+from app.models.core import OrganizationStatusEnum, UserStatusEnum
 from app.core.security import (
     verify_password,
     get_password_hash,
@@ -105,10 +105,10 @@ class AuthService:
                 f"{role_name} role not configured for this organization"
             )
 
-        # 5️⃣ Hash password
+        # Hash password
         hashed_password = get_password_hash(data.password)
 
-        # 6️⃣ Create user
+        # Create user
         new_user = User(
             full_name=data.full_name,
             email=data.email,

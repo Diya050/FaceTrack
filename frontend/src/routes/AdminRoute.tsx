@@ -5,7 +5,6 @@ import { Navigate } from "react-router-dom";
 // Settings - Help
 import UserGuide from "../pages/user/UserGuidePage";
 import AdminGuide from "../pages/admin/AdminGuidePage";
-import SystemStatus from "../components/admin/settings/system/SystemStatus";
 
 import DashboardPage from "../pages/admin/DashboardPage";
 import SystemHealth from "../components/admin/dashboard/SystemHealth";
@@ -42,15 +41,14 @@ export const adminRoutes: RouteObject = {
     { path: "manage", element: <ManagePage /> },
 
     // Settings → System
-    { path: "settings", element: <Navigate to="/admin/settings/help/admin-guide" replace /> },
+    { path: "settings", element: <Navigate to="/admin/settings/system" replace /> },
     { path: "settings/system", element: <SystemSettingsPage /> },
-    
+
     // Settings → Security
     { path: "settings/security", element: <SecuritySettingsPage /> },
 
     // Settings → Help
     { path: "settings/help/user-guide", element: <UserGuide /> },
     { path: "settings/help/admin-guide", element: <AdminGuide /> },
-    { path: "settings/help/system-status", element: <SystemStatus /> },
   ],
 };

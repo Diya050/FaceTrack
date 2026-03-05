@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 // Manage Department
+import CreateOrganization from "../../components/admin/manage/CreateOrganization";
 import Departments from "../../components/admin/manage/Departments";
 import UserProfiles from "../../components/admin/manage/UserProfiles";
 import BulkUpload from "../../components/admin/manage/BulkUpload";
@@ -36,6 +37,9 @@ const ManagePage = () => {
   return (
     <Box sx={{ bgcolor: "#F8F9FA" }}>
       <Stack spacing={0}>
+        <Box id="create-org">
+          <CreateOrganization />
+        </Box>
         <Box id="departments">
           <Departments />
         </Box>

@@ -55,7 +55,7 @@ def create_super_admin():
             db.add(superuser)
             db.commit()
 
-        print("✅ SUPER_ADMIN created successfully")
+        print("SUPER_ADMIN created successfully")
 
     finally:
         db.close()
