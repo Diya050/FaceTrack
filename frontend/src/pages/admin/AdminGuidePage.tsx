@@ -1,9 +1,18 @@
 import React from "react";
-import { Box, Container, Typography, Paper, Divider } from "@mui/material";
+import { Box, Container, Typography, Divider } from "@mui/material";
+// Icons for Admin Actions
+import PeopleAltIcon from '@mui/icons-material/PeopleAlt';
+import LinkedCameraIcon from '@mui/icons-material/LinkedCamera';
+import FactCheckIcon from '@mui/icons-material/FactCheck';
+import QueryStatsIcon from '@mui/icons-material/QueryStats';
+import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 
 const sections = [
   {
-    title: "1. User Enrollment & Profile Management",
+    number: "01",
+    title: "User Enrollment & Profile Management",
+    icon: <PeopleAltIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
     points: [
       "Create, update, or delete user profiles.",
       "Upload facial images and manage facial encodings.",
@@ -12,7 +21,9 @@ const sections = [
     ],
   },
   {
-    title: "2. Live Monitoring & Camera Management",
+    number: "02",
+    title: "Live Monitoring & Camera Management",
+    icon: <LinkedCameraIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
     points: [
       "Configure CCTV, IP cameras, and webcams.",
       "Monitor full-screen camera feeds.",
@@ -21,7 +32,9 @@ const sections = [
     ],
   },
   {
-    title: "3. Attendance Management",
+    number: "03",
+    title: "Attendance Management",
+    icon: <FactCheckIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
     points: [
       "Automatically record attendance upon recognition.",
       "Prevent duplicate session entries.",
@@ -31,7 +44,9 @@ const sections = [
     ],
   },
   {
-    title: "4. Reports & Analytics",
+    number: "04",
+    title: "Reports & Analytics",
+    icon: <QueryStatsIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
     points: [
       "Generate daily, weekly, and monthly reports.",
       "Department-based performance analysis.",
@@ -40,7 +55,9 @@ const sections = [
     ],
   },
   {
-    title: "5. Security & Privacy Controls",
+    number: "05",
+    title: "Security & Privacy Controls",
+    icon: <AdminPanelSettingsIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
     points: [
       "Monitor encryption status.",
       "Access audit and system logs.",
@@ -49,7 +66,9 @@ const sections = [
     ],
   },
   {
-    title: "6. System Settings & AI Configuration",
+    number: "06",
+    title: "System Settings & AI Configuration",
+    icon: <SettingsSuggestIcon sx={{ fontSize: { xs: 24, sm: 28 } }} />,
     points: [
       "Configure recognition sensitivity threshold.",
       "Switch or update AI models.",
@@ -61,28 +80,40 @@ const sections = [
 
 const AdminGuidePage: React.FC = () => {
   return (
-    <Box>
+    <Box sx={{ width: "100%", minHeight: "100vh" }}>
+      
       {/* HERO SECTION */}
       <Box
         sx={{
-          background:
-            "linear-gradient(135deg, #30364F 0%, #3E4565 100%)",
-          py: 12,
+          background: "linear-gradient(90deg, #343B55 0%, #3C435C 100%)",
+          py: { xs: 6, md: 8 },
+          px: 4,
           textAlign: "center",
           color: "white",
         }}
       >
         <Container maxWidth="md">
-          <Typography variant="h3" fontWeight={700} mb={2}>
+          <Typography 
+            variant="h5" 
+            sx={{ 
+                fontSize: { xs: "2rem", sm: "2.75rem", md: "3.5rem" }, 
+                fontWeight: 700, 
+                mb: 2 
+            }}
+          >
             Administrator Guide
           </Typography>
-
           <Typography
-            variant="h6"
-            sx={{ color: "rgb(172,186,196)" }}
+            variant="body1"
+            sx={{ 
+                color: "#f3f2ee", 
+                fontSize: { xs: "1rem", sm: "1.25rem" },
+                maxWidth: "700px",
+                mx: "auto",
+                opacity: 0.9
+            }}
           >
-            Manage system operations, security, AI models, and attendance
-            workflows efficiently.
+            Configure system parameters, manage camera feeds, and oversee the entire FaceTrack organization ecosystem.
           </Typography>
         </Container>
       </Box>
@@ -90,65 +121,107 @@ const AdminGuidePage: React.FC = () => {
       {/* CONTENT SECTION */}
       <Box
         sx={{
-          py: 10,
-          backgroundColor: "#F7F8FA",
+          py: { xs: 8, md: 6 },
+          background: "linear-gradient(to bottom, #F0F0DB 0%, #E1D9BC 100%)",
         }}
       >
-        <Container maxWidth="md">
-          {sections.map((section, index) => (
-            <Paper
-              key={index}
-              elevation={0}
-              sx={{
-                p: 5,
-                mb: 4,
-                borderRadius: "14px",
-                backgroundColor: "white",
-                border: "1px solid rgba(48,54,79,0.08)",
-                boxShadow: "0 6px 20px rgba(0,0,0,0.05)",
-                transition: "all 0.3s ease",
-                "&:hover": {
-                  transform: "translateY(-3px)",
-                  boxShadow: "0 10px 30px rgba(0,0,0,0.08)",
-                },
-              }}
-            >
-              <Typography
-                variant="h6"
-                sx={{
-                  fontWeight: 600,
-                  color: "#30364F",
-                  mb: 2,
+        <Container maxWidth="md" sx={{ position: "relative" }}>
+          
+          {/* VERTICAL TIMELINE LINE */}
+          <Box
+            sx={{
+              position: "absolute",
+              left: { xs: "32px", sm: "58px" },
+              top: 0,
+              bottom: 0,
+              width: "2px",
+              background: "linear-gradient(to bottom, #9AA6B0, #6F7B87, transparent)",
+            }}
+          />
+
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {sections.map((section, index) => (
+              <Box 
+                key={index} 
+                sx={{ 
+                    display: "flex", 
+                    gap: { xs: 3, sm: 6 }, 
+                    position: "relative",
+                    alignItems: "flex-start" 
                 }}
               >
-                {section.title}
-              </Typography>
+                {/* ICON BADGE */}
+                <Box
+                  sx={{
+                    flexShrink: 0,
+                    zIndex: 10,
+                    width: { xs: 56, sm: 72 },
+                    height: { xs: 56, sm: 72 },
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "linear-gradient(135deg, #3C435C 0%, #8F9AA6 100%)",
+                    color: "white",
+                    boxShadow: "0 6px 12px rgba(48, 54, 79, 0.2)",
+                  }}
+                >
+                  {section.icon}
+                </Box>
 
-              <Divider
-                sx={{
-                  mb: 3,
-                  borderColor: "rgb(172,186,196)",
-                }}
-              />
-
-              <Box component="ul" sx={{ pl: 3, m: 0 }}>
-                {section.points.map((point, i) => (
+                {/* CONTENT CARD */}
+                <Box
+                  sx={{
+                    flex: 1,
+                    backgroundColor: "white",
+                    borderRadius: "20px",
+                    p: { xs: 4, sm: 4 },
+                    border: "1px solid #CFC7A8",
+                    boxShadow: "0 4px 6px rgba(0,0,0,0.03)",
+                    transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                    "&:hover": {
+                      boxShadow: "0 15px 35px rgba(0,0,0,0.1)",
+                      transform: "translateY(-5px)",
+                      borderColor: "#30364F",
+                    },
+                  }}
+                >
                   <Typography
-                    component="li"
-                    key={i}
-                    variant="body1"
+                    variant="h5"
                     sx={{
-                      color: "#30364F",
-                      lineHeight: 1.8,
+                      fontWeight: 700,
+                      color: "#2F374F",
                       mb: 1,
+                      fontSize: { xs: "1.25rem", sm: "1.5rem" },
                     }}
                   >
-                    {point}
+                    {section.title}
                   </Typography>
-                ))}
+
+                  <Divider sx={{ mb: 3, borderColor: "rgba(0,0,0,0.06)" }} />
+
+                  <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                    {section.points.map((point, i) => (
+                      <Typography
+                        component="li"
+                        key={i}
+                        variant="body1"
+                        sx={{
+                          color: "#5F6674",
+                          lineHeight: 1.8,
+                          mb: 1.5,
+                          fontSize: { xs: "0.95rem", sm: "1rem" },
+                          "&::marker": { color: "#8F9AA6" }
+                        }}
+                      >
+                        {point}
+                      </Typography>
+                    ))}
+                  </Box>
+                </Box>
               </Box>
-            </Paper>
-          ))}
+            ))}
+          </Box>
         </Container>
       </Box>
     </Box>

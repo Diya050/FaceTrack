@@ -1,5 +1,3 @@
-<<<<<<< Updated upstream
-=======
 import { Box, Typography, Grid } from "@mui/material";
 
 import UserContextPanel from "../../components/user/UserContextPanel";
@@ -63,4 +61,4 @@ const UserDashboardPage = () => {
 };
 
 export default UserDashboardPage;
->>>>>>> Stashed changes
+

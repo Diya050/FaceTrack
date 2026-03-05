@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import AuthLayout from "../../layouts/AuthLayout";
+import AuthLayout from "../../layout/AuthLayout";
 
 export default function ResetPassword() {
   const navigate = useNavigate();

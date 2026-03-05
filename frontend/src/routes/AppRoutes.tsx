@@ -1,6 +1,11 @@
-import { Routes, Route } from "react-router-dom";
+import { useRoutes } from "react-router-dom";
+import { adminRoutes } from "./AdminRoute";
 
-import PublicLayout from "../layouts/PublicLayout";
+import PublicLayout from "../layout/PublicLayout";
+import UserLayout from "../layout/UserLayout";
+import UserDashboardPage from "../pages/user/UserDashboardPage";
+import MyAttendancePage from "../pages/user/MyAttendancePage";
+import UserReportsPage from "../pages/user/UserReportsPage";
 
 // Auth Pages
 import Login from "../pages/auth/Login";
@@ -9,7 +14,7 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
 
-//Public Pages
+// Public Pages
 import MeetOurTeam from "../pages/MeetOurTeam";
 import HelpCenterPage from "../pages/user/HelpCenterPage";
 import AdminGuidePage from "../pages/admin/AdminGuidePage";
@@ -21,51 +26,26 @@ import FAQ from "../pages/public/FAQ/FAQ";
 import QueryForm from "../pages/public/FAQ/QueryForm";
 import ContactPage from "../pages/ContactPage";
 import AboutTechnologyPage from "../pages/AboutTechnologyPage";
+import Home from "../pages/Home";
+import PrivacyPolicy from "../pages/public/PrivacyPolicy";
+import Profiles from "../pages/user/Profiles";
 
 
 export default function AppRoutes() {
-  return (
-    <Routes>
+  return useRoutes([
+    // Admin Routes
+    adminRoutes,
 
-<<<<<<< Updated upstream
-      {/* Public Pages With Header */}
-      <Route element={<PublicLayout />}>
-        <Route path="/" />
-        <Route path="/features" element={<Features />} />
-        <Route path="/contact" element={<ContactPage/>} />
-        <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/help-center" />
-        <Route path="/privacy-policy" />
-        <Route path="/terms-of-use" element={<TermsOfUsePage/>}/>
-        <Route path="/about-technology" element={<AboutTechnologyPage/>} />
-        <Route path="/faqs" element={<FAQ/>} />
-        <Route path="/team" element={<MeetOurTeam />} /> 
-        <Route path="/help-center" element={<HelpCenterPage/>}/>
-        <Route path="/admin-guide" element={<AdminGuidePage/>} />
-        <Route path="/user-guide" element={<UserGuidePage/>}/>
-        <Route path="/query" element={<QueryForm/>} />
-      </Route>
-
-      {/* Auth Pages */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/pending-approval" element={<PendingApproval />} />
-    </Routes>
-  );
-}
-=======
     //User Routes
     {
       path: "/user",
       element: <UserLayout />,
       children: [
         { path: "dashboard", element: <UserDashboardPage /> },
+        { path: "me", element: <Profiles /> },
         { path: "attendance", element: <MyAttendancePage /> },
         { path: "reports", element: <UserReportsPage /> },
-        
-      
+
         { path: "help", element: <HelpCenterPage /> },
         { path: "settings/user-guide", element: <UserGuidePage /> },
       ],
@@ -99,4 +79,3 @@ export default function AppRoutes() {
     { path: "/pending-approval", element: <PendingApproval /> },
   ]);
 }
->>>>>>> Stashed changes

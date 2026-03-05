@@ -44,7 +44,7 @@ export default function TeamMemberCard({
           image={image}
           alt={name}
           sx={{
-            height: 300,
+            height: 400,
             objectFit: "cover",
           }}
         />

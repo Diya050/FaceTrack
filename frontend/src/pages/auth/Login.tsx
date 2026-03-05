@@ -12,12 +12,15 @@ import {
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import AuthLayout from "../../layouts/AuthLayout";
+import AuthLayout from "../../layout/AuthLayout";
+import { useAuth } from "../../context/AuthContext";
+import { orgLogin, platformLogin } from "../../services/authService";
 
 type LoginMode = "user" | "admin";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [loginMode, setLoginMode] =
     useState<LoginMode>("user");
@@ -29,27 +32,73 @@ export default function Login() {
 
   const [error, setError] = useState("");
 
-  const handleSubmit = () => {
-    setError("");
+  // const handleSubmit = () => {
+  //   setError("");
 
-    if (!form.identifier || !form.password) {
-      setError("All fields are required.");
-      return;
+  //   if (!form.identifier || !form.password) {
+  //     setError("All fields are required.");
+  //     return;
+  //   }
+
+  //   const credentialType = form.identifier.includes("@")
+  //     ? "email"
+  //     : "employeeId";
+
+  //   const payload = {
+  //     login_mode: loginMode,
+  //     credential_type: credentialType,
+  //     identifier: form.identifier,
+  //     password: form.password,
+  //   };
+
+  //   console.log("Login Payload:", payload);
+  // };
+
+const handleSubmit = async () => {
+  setError("");
+
+  if (!form.identifier || !form.password) {
+    setError("All fields are required.");
+    return;
+  }
+
+  try {
+    let response;
+
+    if (loginMode === "admin") {
+      response = await platformLogin(
+        form.identifier,
+        form.password
+      );
+    } else {
+      // temporary org name until UI added
+      response = await orgLogin({
+        email: form.identifier,
+        password: form.password,
+        organization_name: "Argusoft",
+      });
     }
 
-    const credentialType = form.identifier.includes("@")
-      ? "email"
-      : "employeeId";
+    const token = response.access_token;
 
-    const payload = {
-      login_mode: loginMode,
-      credential_type: credentialType,
-      identifier: form.identifier,
-      password: form.password,
-    };
+    localStorage.setItem("token", token);
+    console.log(token)
+    login(loginMode, {
+      firstName: loginMode === "admin" ? "Admin" : "User",
+    });
 
-    console.log("Login Payload:", payload);
-  };
+    if (loginMode === "admin") {
+      navigate("/admin");
+    } else {
+      navigate("/user/dashboard");
+    }
+
+  } catch (err: any) {
+    setError(
+      err.response?.data?.detail || "Login failed"
+    );
+  }
+};
 
   return (
   <AuthLayout>
