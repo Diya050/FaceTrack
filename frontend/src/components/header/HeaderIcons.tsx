@@ -5,10 +5,12 @@ import {
   Tooltip,
   Menu,
   MenuItem,
+  Divider,
 } from "@mui/material";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutIcon from "@mui/icons-material/Logout";
+import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useState } from "react";
@@ -36,20 +38,24 @@ const HeaderIcons = ({ firstName }: Props) => {
     navigate("/login");
   };
 
+  const handleMyProfile = () => {
+    handleClose();
+    navigate("/user/me");
+  };
+
   const handleSettings = () => {
     if (role === "admin") {
       navigate("/admin/settings/help/admin-guide");
-    } 
-    else if (role === "user"){
+    } else if (role === "user") {
       navigate("/user/help");
-    }
-    else{
-      navigate("/login")
+    } else {
+      navigate("/login");
     }
   };
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+      
       <Tooltip title="Notifications">
         <IconButton>
           <NotificationsNoneIcon />
@@ -62,6 +68,7 @@ const HeaderIcons = ({ firstName }: Props) => {
         </IconButton>
       </Tooltip>
 
+      {/* Avatar */}
       <Tooltip title="Profile">
         <IconButton onClick={handleProfileClick}>
           <Avatar
@@ -72,7 +79,7 @@ const HeaderIcons = ({ firstName }: Props) => {
               fontWeight: 600,
             }}
           >
-            {firstName.charAt(0).toUpperCase()}
+            {firstName?.charAt(0).toUpperCase()}
           </Avatar>
         </IconButton>
       </Tooltip>
@@ -84,6 +91,19 @@ const HeaderIcons = ({ firstName }: Props) => {
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
+        {/* Only for normal users */}
+        {role === "user" && (
+          <>
+            <MenuItem onClick={handleMyProfile}>
+              <PersonOutlineIcon fontSize="small" sx={{ mr: 1 }} />
+              My Profile
+            </MenuItem>
+
+            <Divider />
+          </>
+        )}
+
+        {/* For both admin & user */}
         <MenuItem onClick={handleLogout}>
           <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
           Logout

@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AuthLayout from "../../layout/AuthLayout";
 import { useAuth } from "../../context/AuthContext";
+import { orgLogin, platformLogin } from "../../services/authService";
 
 type LoginMode = "user" | "admin";
 
@@ -53,7 +54,7 @@ export default function Login() {
   //   console.log("Login Payload:", payload);
   // };
 
-  const handleSubmit = () => {
+const handleSubmit = async () => {
   setError("");
 
   if (!form.identifier || !form.password) {
@@ -61,15 +62,41 @@ export default function Login() {
     return;
   }
 
-  //Mock login, just for until backend in ready
-  login(loginMode, {
-    firstName: loginMode === "admin" ? "Admin" : "User",
-  });
+  try {
+    let response;
 
-  if (loginMode === "admin") {
-    navigate("/admin");
-  } else {
-    navigate("/user/dashboard");
+    if (loginMode === "admin") {
+      response = await platformLogin(
+        form.identifier,
+        form.password
+      );
+    } else {
+      // temporary org name until UI added
+      response = await orgLogin({
+        email: form.identifier,
+        password: form.password,
+        organization_name: "Argusoft",
+      });
+    }
+
+    const token = response.access_token;
+
+    localStorage.setItem("token", token);
+    console.log(token)
+    login(loginMode, {
+      firstName: loginMode === "admin" ? "Admin" : "User",
+    });
+
+    if (loginMode === "admin") {
+      navigate("/admin");
+    } else {
+      navigate("/user/dashboard");
+    }
+
+  } catch (err: any) {
+    setError(
+      err.response?.data?.detail || "Login failed"
+    );
   }
 };
 
