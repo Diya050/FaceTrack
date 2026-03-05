@@ -82,12 +82,12 @@ class AuthService:
                 )
             )
 
-        hr_department = hr_dept_result.scalars().first()
+            hr_department = hr_dept_result.scalars().first()
 
-        if not hr_department:
-            raise HTTPException(500, "HR department missing for organization")
+            if not hr_department:
+                raise HTTPException(500, "HR department missing for organization")
 
-        department = hr_department
+            department = hr_department
 
 
         # Fetch default USER role for this organization

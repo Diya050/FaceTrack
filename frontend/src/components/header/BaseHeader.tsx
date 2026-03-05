@@ -133,7 +133,7 @@ const BaseHeader = ({ logoLink, navItems, rightSlot }: BaseHeaderProps) => {
           }}
         >
 
-          <Typography fontWeight={600} color="dark">ADMIN PANEL</Typography>
+          <Typography fontWeight={600} color="dark">CONTROL PANEL</Typography>
           <IconButton onClick={toggleDrawer(false)}>
             <CloseIcon />
           </IconButton>

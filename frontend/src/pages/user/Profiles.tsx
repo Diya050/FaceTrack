@@ -96,13 +96,14 @@ export default function ProfilePage() {
         <Stack
           direction={{ xs: "column", sm: "row" }}
           spacing={3}
-          alignItems={{ xs: "flex-start", sm: "center" }}
+          alignItems="center"
+          textAlign={{ xs: "center", sm: "left" }}
         >
           <Avatar
             sx={{
-              width: 100,
-              height: 100,
-              fontSize: 50,
+              width: { xs: 80, sm: 100 },
+              height: { xs: 80, sm: 100 },
+              fontSize: { xs: 36, sm: 50 },
               bgcolor: "primary.main",
             }}
           >
@@ -110,7 +111,7 @@ export default function ProfilePage() {
           </Avatar>
 
           <Box flex={1}>
-            <Typography fontSize={35} fontWeight={600}>
+            <Typography fontSize={{ xs: 26, sm: 35 }} fontWeight={600}>
               {user.full_name}
             </Typography>
 
@@ -118,17 +119,24 @@ export default function ProfilePage() {
               {user.email}
             </Typography>
 
-            <Stack direction="row" spacing={1} mt={1.5} flexWrap="wrap">
+            <Stack
+              direction="row"
+              spacing={1}
+              mt={1.5}
+              flexWrap="wrap"
+              justifyContent={{ xs: "center", sm: "flex-start" }}
+            >
               <Chip label={formatRole(user.role)} size="small" color="primary" />
+
               {user.department && (
                 <Chip label={user.department} size="small" />
               )}
+
               {user.organization && (
                 <Chip label={user.organization} size="small" />
               )}
             </Stack>
           </Box>
-
         </Stack>
       </Paper>
 
@@ -148,7 +156,7 @@ export default function ProfilePage() {
               </Typography>
 
               <Chip
-                label={user.status}
+                label={formatRole(user.status)}
                 color={user.status === "approved" ? "success" : "warning"}
                 size="small"
               />
@@ -194,7 +202,7 @@ export default function ProfilePage() {
 
             <Grid size={{ xs: 12, md: 4 }}>
               <Typography variant="caption">Organization</Typography>
-              <Typography>{user.organization || "—"}</Typography>
+              <Typography >{user.organization || "—"}</Typography>
             </Grid>
 
             <Grid size={{ xs: 12, md: 4 }}>
