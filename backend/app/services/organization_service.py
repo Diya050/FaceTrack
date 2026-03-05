@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from fastapi import HTTPException
-from app.models.core import Organization, Role
+from app.models.core import Organization, Role, Department
 from sqlalchemy.exc import IntegrityError
 from app.models.core import OrganizationStatusEnum  # wherever your enum lives
 
@@ -51,6 +51,13 @@ def create_organization(db, data):
 
     db.add(new_org)
     db.flush()  # important (get organization_id before commit)
+
+    hr_department=Department(
+        name="HR",
+        organization_id=new_org.organization_id,
+        description="Human Resources Department"
+    )
+    db.add(hr_department)
 
         # Auto-create default roles
     default_roles = [

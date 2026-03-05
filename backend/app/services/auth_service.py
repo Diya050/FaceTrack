@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from app.models.core import User
-from app.models.core import Role, Department, Organization, OrganizationStatusEnum, UserStatusEnum
+from app.models.core import Role, Department, Organization, OrganizationStatusEnum, UserStatusEnum, Department
 from app.core.security import (
     verify_password,
     get_password_hash,
@@ -74,6 +74,21 @@ class AuthService:
         else:
             role_name = "USER"
 
+        if role_name == "HR_ADMIN":
+            hr_dept_result = db.execute(
+                select(Department).where(
+                    Department.organization_id == organization.organization_id,
+                    Department.name == "HR"
+                )
+            )
+
+        hr_department = hr_dept_result.scalars().first()
+
+        if not hr_department:
+            raise HTTPException(500, "HR department missing for organization")
+
+        department = hr_department
+
 
         # Fetch default USER role for this organization
         role_result = db.execute(
@@ -101,7 +116,11 @@ class AuthService:
             role_id=user_role.role_id,
             department_id=department.department_id,
             organization_id=organization.organization_id,
-            status=UserStatusEnum.PENDING,
+            status = (
+                UserStatusEnum.APPROVED
+                if role_name == "HR_ADMIN"
+                else UserStatusEnum.PENDING
+            ),
             face_enrolled=False,
             is_active=True
         )

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, EmailStr
+from uuid import UUID
 
 
 class OrganizationCreate(BaseModel):
@@ -9,7 +10,7 @@ class OrganizationCreate(BaseModel):
 
 
 class OrganizationResponse(BaseModel):
-    organization_id: str
+    organization_id: UUID
     name: str
     email: EmailStr
     contact_number: str
