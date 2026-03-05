@@ -26,6 +26,7 @@ export default function AppRoutes() {
   return (
     <Routes>
 
+<<<<<<< Updated upstream
       {/* Public Pages With Header */}
       <Route element={<PublicLayout />}>
         <Route path="/" />
@@ -53,3 +54,48 @@ export default function AppRoutes() {
     </Routes>
   );
 }
+=======
+    //User Routes
+    {
+      path: "/user",
+      element: <UserLayout />,
+      children: [
+        { path: "dashboard", element: <UserDashboardPage /> },
+        { path: "attendance", element: <MyAttendancePage /> },
+        { path: "reports", element: <UserReportsPage /> },
+        
+      
+        { path: "help", element: <HelpCenterPage /> },
+        { path: "settings/user-guide", element: <UserGuidePage /> },
+      ],
+    },
+
+    // Public Pages
+    {
+      element: <PublicLayout />,
+      children: [
+        { path: "/", element: <Home /> },
+        { path: "/features", element: <Features /> },
+        { path: "/contact", element: <ContactPage /> },
+        { path: "/how-it-works", element: <HowItWorks /> },
+        { path: "/privacy-policy", element: <PrivacyPolicy /> },
+        { path: "/terms-of-use", element: <TermsOfUsePage /> },
+        { path: "/about-technology", element: <AboutTechnologyPage /> },
+        { path: "/faqs", element: <FAQ /> },
+        { path: "/team", element: <MeetOurTeam /> },
+        { path: "/help-center", element: <HelpCenterPage /> },
+        { path: "/admin-guide", element: <AdminGuidePage /> },
+        { path: "/user-guide", element: <UserGuidePage /> },
+        { path: "/query", element: <QueryForm /> },
+      ],
+    },
+
+    // Auth Pages
+    { path: "/login", element: <Login /> },
+    { path: "/register", element: <Register /> },
+    { path: "/forgot-password", element: <ForgotPassword /> },
+    { path: "/reset-password", element: <ResetPassword /> },
+    { path: "/pending-approval", element: <PendingApproval /> },
+  ]);
+}
+>>>>>>> Stashed changes
