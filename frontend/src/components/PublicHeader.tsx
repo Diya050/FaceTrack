@@ -69,9 +69,9 @@ const PublicHeader: React.FC = () => {
                 alt="FaceTrack Logo"
                 sx={{
                     height: {
-                        xs: 32,
-                        sm: 36,
-                        md: 40
+                        xs: 52,
+                        sm: 56,
+                        md: 60
                     },
                     width: "auto",
                     objectFit: "contain"

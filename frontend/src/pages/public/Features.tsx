@@ -98,7 +98,7 @@ export default function Features() {
             </div>
 
             {/* Content Area */}
-            <div className="py-12 px-6 bg-gradient-to-b from-[#F0F0DB] to-[#F0F0DB]">
+            <div className="py-12 px-6 bg-gradient-to-b from-[#F0F0DB] to-[#E1D9BC]">
                 <div className="max-w-6xl mx-auto">
 
                     <motion.div
