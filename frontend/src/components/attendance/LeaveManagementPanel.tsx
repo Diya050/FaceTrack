@@ -2,7 +2,7 @@ import { Paper, Typography, Grid, TextField, Button } from "@mui/material";
 import { useState } from "react";
 import AppSnackbar from "../notifications/AppSnackbar";
 
-const CorrectionForm = () => {
+const LeaveManagementPanel = () => {
 
   const [open,setOpen] = useState(false);
 
@@ -15,32 +15,36 @@ const CorrectionForm = () => {
       <Paper sx={{ p:3, borderRadius:3 }}>
 
         <Typography variant="h6" fontWeight="bold" mb={2}>
-          Raise Attendance Dispute
+          Apply Leave
         </Typography>
 
         <Grid container spacing={2}>
 
-          <Grid size={{ xs:12, md:4 }}>
+          <Grid size={{ xs:12, md:3 }}>
             <TextField
               type="date"
-              label="Date"
+              label="Start Date"
               fullWidth
               InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
-          <Grid size={{ xs:12, md:8 }}>
+          <Grid size={{ xs:12, md:3 }}>
             <TextField
-              label="Explanation"
-              multiline
-              rows={3}
+              type="date"
+              label="End Date"
               fullWidth
+              InputLabelProps={{ shrink: true }}
             />
           </Grid>
 
-          <Grid size={{ xs:12 }}>
-            <Button variant="contained" onClick={handleSubmit}>
-              Submit Request
+          <Grid size={{ xs:12, md:4 }}>
+            <TextField label="Reason" fullWidth />
+          </Grid>
+
+          <Grid size={{ xs:12, md:2 }}>
+            <Button variant="contained" fullWidth onClick={handleSubmit}>
+              Submit
             </Button>
           </Grid>
 
@@ -50,12 +54,12 @@ const CorrectionForm = () => {
 
       <AppSnackbar
         open={open}
-        message="Attendance dispute submitted"
-        severity="warning"
+        message="Leave request submitted successfully"
+        severity="success"
         onClose={()=>setOpen(false)}
       />
     </>
   );
 };
 
-export default CorrectionForm;
+export default LeaveManagementPanel;

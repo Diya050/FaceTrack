@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Box, useMediaQuery, useTheme } from "@mui/material";
+import { Box } from "@mui/material";
 import { Outlet } from "react-router-dom";
 
 import UserHeader from "../components/header/UserHeader";
@@ -8,47 +8,42 @@ import Footer from "../components/Footer";
 
 const NAVBAR_HEIGHT = 64;
 const SIDEBAR_WIDTH = 260;
-const COLLAPSED_WIDTH = 64;
+const SIDEBAR_COLLAPSED = 80;
 
 const UserLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const sidebarWidth = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH;
 
   return (
-    <>
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      
+      {/* Top Header */}
       <UserHeader />
 
-      {!isMobile && (
-        <UserSidebar
-          width={SIDEBAR_WIDTH}
-          collapsed={collapsed}
-          onToggle={() => setCollapsed((prev) => !prev)}
-        />
-      )}
+      {/* Sidebar */}
+      <UserSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
 
+      {/* Main Content */}
       <Box
         sx={{
-          ml: isMobile
-            ? 0
-            : collapsed
-            ? `${COLLAPSED_WIDTH}px`
-            : `${SIDEBAR_WIDTH}px`,
+          ml: `${sidebarWidth}px`,
           mt: `${NAVBAR_HEIGHT}px`,
-          transition: "margin-left 0.25s ease",
+          px: { xs: 2, md: 3 },
+          py: 3,
           minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
-          display: "flex",
-          flexDirection: "column",
+          transition: "margin-left 0.3s ease",
+          backgroundColor: "#f5f6fa"
         }}
       >
-        <Box component="main" sx={{ flexGrow: 1 }}>
-          <Outlet />
-        </Box>
+        {/* Page Content */}
+        <Outlet />
 
+        {/* Footer */}
         <Footer />
       </Box>
-    </>
+
+    </Box>
   );
 };
 
