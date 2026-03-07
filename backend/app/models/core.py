@@ -12,7 +12,6 @@ class OrganizationStatusEnum(str, enum.Enum):
     SUSPENDED = "suspended"
     INACTIVE = "inactive"
 
-
 class UserStatusEnum(str, enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
