@@ -35,7 +35,7 @@ const SystemSettingsPage = () => {
   }, [hash]);
 
   return (
-    <Stack spacing={6}>
+    <Stack spacing={6} sx={{ pt: 8, px: 4, pb: 6 }}>
       <Box id="ai-models">
         <AIModels />
       </Box>
