@@ -3,6 +3,6 @@
 .env
 
 .venv
-
+backend/venv/
 __pycache__
 
