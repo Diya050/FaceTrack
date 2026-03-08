@@ -8,7 +8,7 @@ import Footer from "../components/Footer";
 
 const NAVBAR_HEIGHT = 64;
 const SIDEBAR_WIDTH = 260;
-const SIDEBAR_COLLAPSED = 80;
+const SIDEBAR_COLLAPSED = 70;
 
 const UserLayout = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -29,8 +29,7 @@ const UserLayout = () => {
         sx={{
           ml: `${sidebarWidth}px`,
           mt: `${NAVBAR_HEIGHT}px`,
-          px: { xs: 2, md: 3 },
-          py: 3,
+          p: 0,
           minHeight: `calc(100vh - ${NAVBAR_HEIGHT}px)`,
           transition: "margin-left 0.3s ease",
           backgroundColor: "#f5f6fa"
