@@ -62,7 +62,7 @@ const sections = [
 
 const UserGuidePage: React.FC = () => {
   return (
-    <Box sx={{ width: "100%", minHeight: "100vh" }}>
+    <Box sx={{ width: "100%", minHeight: "100vh", mt:7 }}>
       
       {/* HERO SECTION - Deep Navy Gradient */}
       <Box
