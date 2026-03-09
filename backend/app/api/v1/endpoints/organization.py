@@ -27,3 +27,13 @@ def list_orgs(
         select(Organization).where(Organization.is_deleted == False)
     )
     return result.scalars().all()
+
+@router.get("/public", response_model=list[OrganizationResponse])
+def list_orgs_public(
+    db= Depends(get_db),
+):
+    result = db.execute(
+        select(Organization).where(Organization.is_deleted == False)
+    )
+
+    return result.scalars().all()
