@@ -4,7 +4,7 @@ from datetime import datetime
 from app.models.core import User
 from app.models.attendance import Attendance, AttendanceCorrection
 
-async def list_attendance_corrections(db, current_user):
+def list_attendance_corrections(db, current_user):
     query = (
         select(AttendanceCorrection)
         .join(User, AttendanceCorrection.user_id == User.user_id)
@@ -22,11 +22,11 @@ async def list_attendance_corrections(db, current_user):
         query = query.where(
             AttendanceCorrection.user_id == current_user.user_id
         )
-    result = await db.execute(query.order_by(AttendanceCorrection.created_at.desc()))
+    result = db.execute(query.order_by(AttendanceCorrection.created_at.desc()))
     return result.scalars().all()
 
-async def request_attendance_correction(db, current_user, data):
-    result = await db.execute(
+def request_attendance_correction(db, current_user, data):
+    result = db.execute(
         select(Attendance).where(
             Attendance.attendance_id == data.attendance_id,
             Attendance.user_id == current_user.user_id,
@@ -38,7 +38,7 @@ async def request_attendance_correction(db, current_user, data):
     if not attendance:
         raise HTTPException(404, "Attendance record not found")
     
-    result = await db.execute(
+    result = db.execute(
         select(AttendanceCorrection).where(
             and_(
                 AttendanceCorrection.attendance_id == data.attendance_id,
@@ -61,12 +61,12 @@ async def request_attendance_correction(db, current_user, data):
         reason=data.reason,
     )
     db.add(correction)
-    await db.commit()
-    await db.refresh(correction)
+    db.commit()
+    db.refresh(correction)
     return correction
 
-async def review_attendance_correction(db, current_user, correction_id, data):
-    result = await db.execute(
+def review_attendance_correction(db, current_user, correction_id, data):
+    result = db.execute(
         select(AttendanceCorrection).where(
             AttendanceCorrection.correction_id == correction_id,
             AttendanceCorrection.organization_id == current_user.organization_id
@@ -81,7 +81,7 @@ async def review_attendance_correction(db, current_user, correction_id, data):
         raise HTTPException(400, "Correction already reviewed")
 
     # Fetch user who made the request
-    result = await db.execute(
+    result = db.execute(
         select(User).where(User.user_id == correction.user_id)
     )
     request_user = result.scalar_one()
@@ -104,6 +104,6 @@ async def review_attendance_correction(db, current_user, correction_id, data):
     correction.status = data.status
     correction.reviewed_by = current_user.user_id
     correction.reviewed_at = datetime.utcnow()
-    await db.commit()
-    await db.refresh(correction)
+    db.commit()
+    db.refresh(correction)
     return correction
