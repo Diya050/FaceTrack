@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.v1.endpoints import auth, organization, department, profiles, face_enrollment_request, roles, users
+from app.api.v1.endpoints import auth, organization, department, profiles, face_enrollment_request, roles, users, unknown_faces
 
 
 api_router = APIRouter()
@@ -12,4 +12,4 @@ api_router.include_router(profiles.router)
 api_router.include_router(face_enrollment_request.router)
 api_router.include_router(roles.router)
 api_router.include_router(users.router)
-
+api_router.include_router(unknown_faces.router)
