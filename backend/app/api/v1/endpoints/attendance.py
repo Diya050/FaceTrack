@@ -13,7 +13,6 @@ from app.core.permissions import require_roles
 from app.services.daily_attendance_service import DailyAttendanceService
 from app.schemas.daily_attendance import AttendanceGenerateResponse
 
-
 router = APIRouter(prefix="/attendance", tags=["Attendance"])
 
 @router.post("/corrections")
