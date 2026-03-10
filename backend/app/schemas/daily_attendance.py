@@ -21,3 +21,15 @@ class AttendanceRecordResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UserAttendanceResponse(BaseModel):
+    attendance_id: UUID
+    user_id: UUID
+    attendance_date: date
+    first_check_in: Optional[time] = None
+    last_check_out: Optional[time] = None
+    status: str
+    organization_id: Optional[UUID] = None
+
+    class Config:
+        from_attributes = True

@@ -1,8 +1,34 @@
 from sqlalchemy import select, and_
 from fastapi import HTTPException
-from datetime import datetime
+from datetime import datetime, date
+from typing import Optional
 from app.models.core import User
 from app.models.attendance import Attendance, AttendanceCorrection
+
+
+def get_user_attendance(
+    db,
+    current_user,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+):
+    query = select(Attendance).where(
+        Attendance.user_id == current_user.user_id,
+        Attendance.is_deleted == False,
+    )
+
+    if start_date:
+        query = query.where(Attendance.attendance_date >= start_date)
+    if end_date:
+        query = query.where(Attendance.attendance_date <= end_date)
+    if status:
+        query = query.where(Attendance.status == status)
+
+    query = query.order_by(Attendance.attendance_date.desc()).offset(skip).limit(limit)
+    return db.execute(query).scalars().all()
 
 def list_attendance_corrections(db, current_user):
     query = (
