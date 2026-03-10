@@ -12,7 +12,7 @@ from app.models.core import UserStatusEnum
 
 router = APIRouter(prefix="/profile", tags=["Profile"])
 
-# --- EXISTING: Get / Update Own Profile ---
+\
 
 @router.get("/users/me", response_model=ProfileResponse)
 def get_my_profile(
@@ -30,7 +30,7 @@ def update_profile(
 ):
     return ProfileService.update_profile(db, current_user.user_id, data)
 
-# --- NEW: Admin User Status Features ---
+
 
 @router.get("/users", response_model=List[ProfileResponse])
 def list_organization_users(

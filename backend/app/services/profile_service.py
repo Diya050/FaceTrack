@@ -67,17 +67,17 @@ class ProfileService:
     @staticmethod
     def get_organization_users(db, current_user, status=None):
         """Fetches users based on Admin privileges"""
-        # Base query: users in the same organization
+       
         query = select(User).where(
             User.organization_id == current_user.organization_id,
             User.is_deleted == False
         )
         
-        # An ADMIN can only see users within their specific department
+       
         if current_user.role.role_name == "ADMIN":
             query = query.where(User.department_id == current_user.department_id)
 
-        # Filter by status if provided (e.g., 'pending')
+       
         if status:
             query = query.where(User.status == status)
 
