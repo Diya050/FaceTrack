@@ -4,6 +4,9 @@ from datetime import datetime, date
 from typing import Optional
 from app.models.core import User
 from app.models.attendance import Attendance, AttendanceCorrection
+from app.models.attendance import AttendanceEvent
+from uuid import uuid4
+from datetime import datetime
 
 
 def get_user_attendance(
@@ -133,3 +136,28 @@ def review_attendance_correction(db, current_user, correction_id, data):
     db.commit()
     db.refresh(correction)
     return correction
+
+async def record_attendance_event(
+    db,
+    user_id,
+    camera_id,
+    organization_id,
+    confidence_score,
+    recognition_method,
+    event_type="scan",
+):
+    event = AttendanceEvent(
+        user_id=user_id,
+        camera_id=camera_id,
+        organization_id=organization_id,
+        scan_timestamp=datetime.utcnow(),
+        confidence_score=confidence_score,
+        recognition_method=recognition_method,
+        event_type=event_type,
+    )
+
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+
+    return event

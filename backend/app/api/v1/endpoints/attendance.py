@@ -132,3 +132,4 @@ def generate_daily_attendance(
     )
 
     return result
+
