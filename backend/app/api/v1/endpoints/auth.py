@@ -5,7 +5,6 @@ from app.schemas.auth import RegisterRequest, PlatformLoginRequest, OrgLoginRequ
 from app.services.auth_service import AuthService
 from fastapi.security import OAuth2PasswordRequestForm
 
-
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
 
@@ -50,3 +49,5 @@ def org_login_route(
         "access_token": token,
         "token_type": "bearer"
     }
+
+
