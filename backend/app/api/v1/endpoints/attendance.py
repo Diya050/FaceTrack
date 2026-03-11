@@ -58,7 +58,7 @@ def generate_daily_attendance(
     target_date: date = Query(
         ...,
         description="Date for which attendance should be generated (YYYY-MM-DD)",
-        example="2026-03-10",
+        openapi_examples="2026-03-10",
     ),
     current_user: User = Depends(
         require_roles(["SUPER_ADMIN", "HR_ADMIN"])
