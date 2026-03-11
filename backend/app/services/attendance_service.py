@@ -1,8 +1,38 @@
 from sqlalchemy import select, and_
 from fastapi import HTTPException
-from datetime import datetime
-from app.models.core import User
+from datetime import datetime, date
+from typing import Optional
+from uuid import UUID
+from app.models.core import User, Department
 from app.models.attendance import Attendance, AttendanceCorrection
+from app.models.attendance import AttendanceEvent
+from uuid import uuid4
+from datetime import datetime
+
+
+def get_user_attendance(
+    db,
+    current_user,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+):
+    query = select(Attendance).where(
+        Attendance.user_id == current_user.user_id,
+        Attendance.is_deleted == False,
+    )
+
+    if start_date:
+        query = query.where(Attendance.attendance_date >= start_date)
+    if end_date:
+        query = query.where(Attendance.attendance_date <= end_date)
+    if status:
+        query = query.where(Attendance.status == status)
+
+    query = query.order_by(Attendance.attendance_date.desc()).offset(skip).limit(limit)
+    return db.execute(query).scalars().all()
 
 def list_attendance_corrections(db, current_user):
     query = (
@@ -107,3 +137,100 @@ def review_attendance_correction(db, current_user, correction_id, data):
     db.commit()
     db.refresh(correction)
     return correction
+
+
+
+def get_department_attendance(
+    db,
+    current_user,
+    department_id: UUID,
+    target_date: Optional[date] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+):
+    role_name = current_user.role.role_name
+
+    # ADMIN can only access their own department
+    if role_name == "ADMIN":
+        if str(current_user.department_id) != str(department_id):
+            raise HTTPException(
+                status_code=403,
+                detail="You can only view attendance for your own department",
+            )
+
+    # Verify the department belongs to the current user's organization
+    dept = db.execute(
+        select(Department).where(
+            Department.department_id == department_id,
+            Department.organization_id == current_user.organization_id,
+        )
+    ).scalar_one_or_none()
+
+    if not dept:
+        raise HTTPException(status_code=404, detail="Department not found")
+
+    query = (
+        select(Attendance, User)
+        .join(User, Attendance.user_id == User.user_id)
+        .where(
+            User.department_id == department_id,
+            User.organization_id == current_user.organization_id,
+            User.is_deleted == False,
+            Attendance.is_deleted == False,
+        )
+    )
+
+    if target_date:
+        query = query.where(Attendance.attendance_date == target_date)
+    if start_date:
+        query = query.where(Attendance.attendance_date >= start_date)
+    if end_date:
+        query = query.where(Attendance.attendance_date <= end_date)
+    if status:
+        query = query.where(Attendance.status == status)
+
+    query = query.order_by(Attendance.attendance_date.desc(), User.full_name).offset(skip).limit(limit)
+
+    rows = db.execute(query).all()
+
+    return [
+        {
+            "user_id": row.User.user_id,
+            "full_name": row.User.full_name,
+            "attendance_id": row.Attendance.attendance_id,
+            "attendance_date": row.Attendance.attendance_date,
+            "first_check_in": row.Attendance.first_check_in,
+            "last_check_out": row.Attendance.last_check_out,
+            "status": row.Attendance.status,
+        }
+        for row in rows
+    ]
+
+async def record_attendance_event(
+    db,
+    user_id,
+    camera_id,
+    organization_id,
+    confidence_score,
+    recognition_method,
+    event_type="scan",
+):
+    event = AttendanceEvent(
+        user_id=user_id,
+        camera_id=camera_id,
+        organization_id=organization_id,
+        scan_timestamp=datetime.utcnow(),
+        confidence_score=confidence_score,
+        recognition_method=recognition_method,
+        event_type=event_type,
+    )
+
+    db.add(event)
+    await db.commit()
+    await db.refresh(event)
+
+    return event
+
