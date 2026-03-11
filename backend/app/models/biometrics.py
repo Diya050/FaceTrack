@@ -1,5 +1,5 @@
 import uuid
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Index, UniqueConstraint, text 
+from sqlalchemy import Integer, Column, String, DateTime, ForeignKey, Boolean, Index, UniqueConstraint, text 
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -10,11 +10,30 @@ from app.models.core import TenantMixin
 
 face_enrollment_status_enum = ENUM(
     "started",
+    "pending_approval",
     "completed",
     "failed",
     name="face_enrollment_status_enum",
     create_type=False
 )
+
+
+class FaceEnrollmentImage(Base):
+
+    __tablename__ = "face_enrollment_images"
+
+    id = Column(Integer, primary_key=True)
+    session_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("face_enrollment_sessions.session_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+    user_id = Column(UUID, nullable=False)
+
+    image_path = Column(String, nullable=False)
+    session = relationship("FaceEnrollmentSession", back_populates="images")
+    
 
 class FacialBiometric(TenantMixin, Base):
     __tablename__ = "facial_biometrics"
@@ -79,11 +98,40 @@ class VoiceBiometric(TenantMixin, Base):
     
 class FaceEnrollmentSession(TenantMixin, Base):
     __tablename__ = "face_enrollment_sessions"
+
     session_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
-    status = Column(face_enrollment_status_enum, nullable=False, default="started")
-    embedding_id = Column(UUID(as_uuid=True), ForeignKey("facial_biometrics.biometric_id", ondelete="SET NULL"), nullable=True, index=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+
+
+    user_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.user_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
+    )
+
+    status = Column(
+        face_enrollment_status_enum,
+        nullable=False,
+        default="started"
+    )
+
+    embedding_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("facial_biometrics.biometric_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    updated_at = Column(
+        DateTime(timezone=True),
+        onupdate=func.now()
+    )
 
     __table_args__ = (
         Index(
@@ -93,8 +141,22 @@ class FaceEnrollmentSession(TenantMixin, Base):
         ),
         Index(
             "ix_face_enrollment_sessions_status",
-            "status",
-        )
+            "status"
+        ),
     )
-    user = relationship("User", back_populates="face_enrollment_sessions")
-    embedding = relationship("FacialBiometric", back_populates="enrollment_sessions")
+
+    user = relationship(
+        "User",
+        back_populates="face_enrollment_sessions"
+    )
+
+    embedding = relationship(
+        "FacialBiometric",
+        back_populates="enrollment_sessions"
+    )
+
+    images = relationship(
+        "FaceEnrollmentImage",
+        back_populates="session",
+        cascade="all, delete-orphan"
+    )

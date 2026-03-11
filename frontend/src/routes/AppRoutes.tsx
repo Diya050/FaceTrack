@@ -29,6 +29,7 @@ import ContactPage from "../pages/ContactPage";
 import AboutTechnologyPage from "../pages/AboutTechnologyPage";
 import Home from "../pages/Home";
 import PrivacyPolicy from "../pages/public/PrivacyPolicy";
+import FaceEnrollment from "../pages/user/FaceEnrollment";
 
 
 
@@ -48,6 +49,8 @@ export default function AppRoutes() {
         { path: "reports", element: <UserReportsPage /> },
         { path: "help", element: <HelpCenterPage /> },
         { path: "settings/user-guide", element: <UserGuidePage /> },
+        { path: "capture", element: <FaceEnrollment /> },
+
       ],
     },
 

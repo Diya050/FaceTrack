@@ -197,8 +197,8 @@ class AuthService:
         if not verify_password(password, user.password_hash):
             raise HTTPException(401, "Invalid credentials")
 
-        if user.status != UserStatusEnum.APPROVED:
-            raise HTTPException(403, "Account not approved")
+        if user.status not in [UserStatusEnum.APPROVED, UserStatusEnum.ACTIVE]:
+            raise HTTPException(403, "Account not yet approved by Admin")
 
         user.last_login = datetime.now(timezone.utc)
         db.commit()
@@ -208,3 +208,14 @@ class AuthService:
             organization_id=user.organization_id,
             role_name=user.role.role_name
         )
+    
+    @staticmethod
+    async def initial_admin_approval(db, user_id):
+        user = db.execute(select(User).where(User.user_id == user_id)).scalars().first()
+        if not user:
+            raise HTTPException(404, "User not found")
+    
+        # Change status to APPROVED so they can now upload images
+        user.status = UserStatusEnum.APPROVED
+        db.commit()
+        return {"message": "User approved. They can now proceed to face enrollment."}

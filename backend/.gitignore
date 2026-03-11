@@ -5,4 +5,5 @@
 .venv
 backend/venv/
 __pycache__
+uploads/
 

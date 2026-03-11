@@ -14,6 +14,7 @@ import AttendancePage from "../pages/admin/AttendancePage";
 import SystemSettingsPage from "../pages/admin/settings/SystemSettingsPage";
 import SecuritySettingsPage from "../pages/admin/settings/SecuritySettingsPage";
 import ManagePage from "../pages/admin/ManagePage";
+import FaceEnrollmentRequests from "../pages/admin/FaceEnrollmentRequests";
 
 
 
@@ -23,7 +24,6 @@ export const adminRoutes: RouteObject = {
   element: <AdminLayout />,
   children: [
     { index: true, element: <Navigate to="/admin/dashboard" replace /> },
-
 
 
     // Dashboard
@@ -39,6 +39,8 @@ export const adminRoutes: RouteObject = {
 
     // Manage Department
     { path: "manage", element: <ManagePage /> },
+    { path: "face-enrollment-requests", element: <FaceEnrollmentRequests /> },
+
 
     // Settings → System
     { path: "settings", element: <Navigate to="/admin/settings/system" replace /> },

@@ -16,6 +16,7 @@ class UserStatusEnum(str, enum.Enum):
     PENDING = "pending"
     APPROVED = "approved"
     REJECTED = "rejected"
+    ACTIVE = "active"
     INACTIVE = "inactive"
     
 #Tenant Mixins

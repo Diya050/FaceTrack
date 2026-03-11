@@ -1,105 +1,92 @@
 from sqlalchemy import select
 from fastapi import HTTPException
-from datetime import datetime
+from typing import List, Dict, Any
 
-from app.models.core import User, UserStatusEnum
-from app.models.biometrics import FaceEnrollmentSession
-import uuid
+from app.models.core import User
+from app.models.biometrics import (
+    FaceEnrollmentSession,
+    FaceEnrollmentImage
+)
 
 
 class FaceEnrollmentRequestService:
 
-    @staticmethod
-    def get_pending_requests(db, current_user):
 
-        query = select(User).where(
-            User.organization_id == current_user.organization_id,
-            User.status == UserStatusEnum.PENDING,
-            User.is_deleted == False
+    @staticmethod
+    def get_pending_requests(db, current_user) -> List[Dict[str, Any]]:
+
+        query = (
+            select(FaceEnrollmentSession)
+            .join(User, FaceEnrollmentSession.user_id == User.user_id)
+            .where(
+                FaceEnrollmentSession.status == "pending_approval"
+            )
         )
 
-        users = db.execute(query).scalars().all()
+        sessions = db.execute(query).scalars().all()
 
-        pending = []
+        pending_requests = []
 
-        for user in users:
+        for session in sessions:
 
-            existing = db.execute(
-                select(FaceEnrollmentSession.session_id).where(
-                    FaceEnrollmentSession.user_id == user.user_id
-                )
-            ).scalar()
+            user = session.user
 
-            if not existing:
-                pending.append({
-                    "user_id": user.user_id,
-                    "full_name": user.full_name,
-                    "email": user.email,
-                    "department": user.department.name if user.department else None,
-                    "created_at": user.created_at
-                })
+            image_query = (
+                select(FaceEnrollmentImage.image_path)
+                .where(FaceEnrollmentImage.session_id == session.session_id)
+            )
 
-        return pending
+            images = db.execute(image_query).scalars().all()
+
+            pending_requests.append({
+                "session_id": session.session_id,
+                "user_id": user.user_id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "status": session.status,
+                "created_at": session.created_at,
+                "images": images
+            })
+
+        return pending_requests
 
 
     @staticmethod
-    def approve_request(db, current_user, user_id):
+    def approve_enrollment(db, session_id):
 
-        user = db.execute(
-            select(User).where(
-                User.user_id == user_id,
-                User.organization_id == current_user.organization_id
+        session = db.execute(
+            select(FaceEnrollmentSession).where(
+                FaceEnrollmentSession.session_id == session_id
             )
         ).scalars().first()
 
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
 
-        if user.status != UserStatusEnum.PENDING:
-            raise HTTPException(status_code=400, detail="User is not pending")
+        if session.status != "pending_approval":
+            raise HTTPException(status_code=400, detail="Session not pending approval")
 
-        # Check if enrollment session already exists
-        existing = db.execute(
-            select(FaceEnrollmentSession.session_id).where(
-                FaceEnrollmentSession.user_id == user_id
-            )
-        ).scalar()
-
-        if existing:
-            raise HTTPException(status_code=400, detail="Enrollment already approved")
-
-        session = FaceEnrollmentSession(
-            session_id=uuid.uuid4(),
-            user_id=user.user_id,
-            organization_id=user.organization_id,
-            status="started"
-        )
-
-        db.add(session)
-
-        user.approved_by = current_user.user_id
-        user.approved_at = datetime.utcnow()
+        session.status = "completed"
 
         db.commit()
 
-        return {"message": "Face enrollment request approved"}
+        return {"message": "Face enrollment approved"}
 
 
     @staticmethod
-    def reject_request(db, current_user, user_id):
+    def reject_enrollment(db, session_id):
 
-        user = db.execute(
-            select(User).where(
-                User.user_id == user_id,
-                User.organization_id == current_user.organization_id
+        session = db.execute(
+            select(FaceEnrollmentSession).where(
+                FaceEnrollmentSession.session_id == session_id
             )
         ).scalars().first()
 
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+        if not session:
+            raise HTTPException(status_code=404, detail="Session not found")
 
-        user.status = UserStatusEnum.REJECTED
+        session.status = "failed"
 
         db.commit()
 
-        return {"message": "Request rejected"}
+        return {"message": "Face enrollment rejected"}
