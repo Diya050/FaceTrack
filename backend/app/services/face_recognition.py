@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from sqlalchemy import select
 from insightface.app import FaceAnalysis
+from app.models.streams import Camera
 
 from app.models.biometrics import FacialBiometric
 from app.services.attendance_service import record_attendance_event
@@ -16,13 +17,14 @@ face_app.prepare(ctx_id=-1, det_size=(640, 640))
 def recognize_frame(
     db,
     frame,
-    camera_id,
-    organization_id
+    camera_id
 ):
     """
     Detect faces in frame and attempt recognition
     """
 
+    camera=db.query(Camera).filter(Camera.camera_id==camera_id).first()
+    organization_id = camera.organization_id
     faces = face_app.get(frame)
     print("ORG ID:", organization_id)
     print("Faces detected:", len(faces))
