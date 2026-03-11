@@ -10,11 +10,11 @@ from app.models.core import User
 from app.core.security import get_current_user
 from app.core.permissions import require_roles
 
-from app.services.attendance_service import request_attendance_correction, get_user_attendance
+from app.services.attendance_service import request_attendance_correction, get_user_attendance, get_organization_attendance
 from app.services.daily_attendance_service import DailyAttendanceService
 
 from app.schemas.attendance_correction import AttendanceCorrectionRequest
-from app.schemas.daily_attendance import AttendanceGenerateResponse, UserAttendanceResponse
+from app.schemas.daily_attendance import AttendanceGenerateResponse, UserAttendanceResponse, OrgAttendanceRecord
 
 
 router = APIRouter(
@@ -132,4 +132,55 @@ def generate_daily_attendance(
     )
 
     return result
+
+
+# -------------------------------------------------------------------------
+# Get Organization Attendance
+# -------------------------------------------------------------------------
+
+@router.get("/organization", response_model=List[OrgAttendanceRecord])
+def get_org_attendance(
+    attendance_date: Optional[date] = Query(
+        None,
+        description="Filter by a specific date (YYYY-MM-DD). Overrides start_date/end_date.",
+        examples=["2026-03-11"],
+    ),
+    start_date: Optional[date] = Query(
+        None,
+        description="Filter attendance from this date (inclusive), format: YYYY-MM-DD",
+        examples=["2026-03-01"],
+    ),
+    end_date: Optional[date] = Query(
+        None,
+        description="Filter attendance up to this date (inclusive), format: YYYY-MM-DD",
+        examples=["2026-03-11"],
+    ),
+    status: Optional[str] = Query(
+        None,
+        description="Filter by attendance status: present, absent, half_day, on_leave",
+        examples=["present"],
+    ),
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(50, ge=1, le=200, description="Maximum number of records to return"),
+    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve attendance records for the entire organization.
+
+    Restricted to **HR_ADMIN** only. Returns attendance for all users
+    in the HR admin's organization, enriched with user and department info.
+
+    Supports optional filtering by date range and attendance status.
+    """
+    return get_organization_attendance(
+        db=db,
+        current_user=current_user,
+        attendance_date=attendance_date,
+        start_date=start_date,
+        end_date=end_date,
+        status=status,
+        skip=skip,
+        limit=limit,
+    )
 
