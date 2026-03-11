@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from fastapi import APIRouter, UploadFile, File, Depends, Form
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import Session
 
 from app.db.session import get_db
 from app.services.face_recognition import recognize_frame
@@ -10,19 +10,19 @@ router = APIRouter(prefix="/recognition", tags=["Face Recognition"])
 
 
 @router.post("/camera")
-async def recognize_camera_frame(
+def recognize_camera_frame(
     file: UploadFile = File(...),
     camera_id: str = Form(...),
     organization_id: str = Form(...),
-    db: AsyncSession = Depends(get_db)
+    db: Session = Depends(get_db)
 ):
 
-    image_bytes = await file.read()
+    image_bytes = file.read()
 
     nparr = np.frombuffer(image_bytes, np.uint8)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
-    results = await recognize_frame(
+    results = recognize_frame(
         db=db,
         frame=frame,
         camera_id=camera_id,

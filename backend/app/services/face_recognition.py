@@ -13,7 +13,7 @@ face_app = FaceAnalysis(name="buffalo_l")
 face_app.prepare(ctx_id=-1, det_size=(640, 640))
 
 
-async def recognize_frame(
+def recognize_frame(
     db,
     frame,
     camera_id,
@@ -57,7 +57,7 @@ async def recognize_frame(
 
         print(similarity_score)
 
-        recognition_result = await process_recognition(
+        recognition_result = process_recognition(
             db=db,
             matched_user=matched_user,
             camera_id=camera_id,
@@ -69,7 +69,7 @@ async def recognize_frame(
     return results
 
 
-async def process_recognition(
+def process_recognition(
     db,
     matched_user,
     camera_id,
