@@ -30,6 +30,7 @@ export default function FaceEnrollment() {
         ]);
         setStatusMessage("Models loaded. Start camera.");
       } catch (err) {
+        console.error(err);
         setStatusMessage("Error loading models.");
       }
     };
@@ -45,6 +46,7 @@ export default function FaceEnrollment() {
         videoRef.current.onloadedmetadata = () => runDetection();
       }
     } catch (err) {
+      console.error(err);
       alert("Could not access camera.");
     }
   };
@@ -160,7 +162,7 @@ export default function FaceEnrollment() {
       await api.post("/face-enrollment/capture", formData);
       alert("Success!");
       setImages([]);
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Look at the console to see the ACTUAL error message from the backend
       console.error(err.response?.data);
       alert(err.response?.data?.detail || "Upload failed.");
