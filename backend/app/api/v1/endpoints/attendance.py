@@ -11,6 +11,11 @@ from app.models.core import User
 from app.core.security import get_current_user
 from app.core.permissions import require_roles
 
+
+from app.core.dependencies import get_db
+from app.services.attendance_service import get_monthly_attendance_stats
+from app.schemas.monthly_attendance import MonthlyAttendanceStats
+
 from app.services.attendance_service import (
     request_attendance_correction,
     get_user_attendance,
@@ -248,3 +253,15 @@ def get_department_attendance_endpoint(
         limit=limit,
     )
 
+# -------------------------------------------------------------------------
+# Get Monthly Attendance
+# -------------------------------------------------------------------------
+
+@router.get("/monthly/{user_id}", response_model=MonthlyAttendanceStats)
+def monthly_attendance(
+    user_id: str,
+    year: int,
+    month: int,
+    db: Session = Depends(get_db)
+):
+    return get_monthly_attendance_stats(db, user_id, year, month)

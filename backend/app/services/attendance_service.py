@@ -8,6 +8,9 @@ from app.models.attendance import Attendance, AttendanceCorrection
 from app.models.attendance import AttendanceEvent
 from uuid import uuid4
 from datetime import datetime
+from sqlalchemy.orm import Session
+from sqlalchemy import extract, func
+
 
 
 def get_user_attendance(
@@ -284,3 +287,37 @@ async def record_attendance_event(
 
     return event
 
+
+def get_monthly_attendance_stats(db: Session, user_id, year: int, month: int):
+
+    records = (
+        db.query(Attendance)
+        .filter(
+            Attendance.user_id == user_id,
+            extract("year", Attendance.attendance_date) == year,
+            extract("month", Attendance.attendance_date) == month,
+            Attendance.is_deleted == False
+        )
+        .all()
+    )
+
+    total_days = len(records)
+
+    present_days = len([r for r in records if r.status == "present"])
+    absent_days = len([r for r in records if r.status == "absent"])
+    late_days = len([r for r in records if r.status == "late"])
+
+    attendance_percentage = 0
+    if total_days > 0:
+        attendance_percentage = (present_days / total_days) * 100
+
+    return {
+        "user_id": user_id,
+        "year": year,
+        "month": month,
+        "total_days": total_days,
+        "present_days": present_days,
+        "absent_days": absent_days,
+        "late_days": late_days,
+        "attendance_percentage": round(attendance_percentage, 2)
+    }
