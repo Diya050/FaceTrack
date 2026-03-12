@@ -45,6 +45,10 @@ const adminNavItems = [
       { label: "Access Control", path: "/admin/manage#access" },
     ],
   },
+  {
+    label: "Support Ticket",
+    path: "/admin/support-ticket"
+  },
   // THESE WILL BE HIDDEN ON DESKTOP
   {
     label: "System Settings",
