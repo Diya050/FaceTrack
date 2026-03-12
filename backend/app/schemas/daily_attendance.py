@@ -45,3 +45,17 @@ class DepartmentAttendanceUserRecord(BaseModel):
 
     class Config:
         from_attributes = True
+
+class OrgAttendanceRecord(BaseModel):
+    user_id: UUID
+    full_name: str
+    department_name: Optional[str] = None
+    attendance_id: UUID
+    attendance_date: date
+    first_check_in: Optional[time] = None
+    last_check_out: Optional[time] = None
+    status: str
+    organization_id: Optional[UUID] = None
+
+    class Config:
+        from_attributes = True

@@ -209,6 +209,56 @@ def get_department_attendance(
         for row in rows
     ]
 
+def get_organization_attendance(
+    db,
+    current_user,
+    attendance_date: Optional[date] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
+):
+    query = (
+        select(Attendance, User, Department)
+        .join(User, Attendance.user_id == User.user_id)
+        .outerjoin(Department, User.department_id == Department.department_id)
+        .where(
+            User.organization_id == current_user.organization_id,
+            Attendance.is_deleted == False,
+            User.is_deleted == False,
+        )
+    )
+
+    if attendance_date:
+        query = query.where(Attendance.attendance_date == attendance_date)
+    if start_date:
+        query = query.where(Attendance.attendance_date >= start_date)
+    if end_date:
+        query = query.where(Attendance.attendance_date <= end_date)
+    if status:
+        query = query.where(Attendance.status == status)
+
+    query = query.order_by(Attendance.attendance_date.desc(), User.full_name).offset(skip).limit(limit)
+
+    rows = db.execute(query).all()
+
+    return [
+        {
+            "user_id": row.User.user_id,
+            "full_name": row.User.full_name,
+            "department_name": row.Department.name if row.Department else None,
+            "attendance_id": row.Attendance.attendance_id,
+            "attendance_date": row.Attendance.attendance_date,
+            "first_check_in": row.Attendance.first_check_in,
+            "last_check_out": row.Attendance.last_check_out,
+            "status": row.Attendance.status,
+            "organization_id": row.Attendance.organization_id,
+        }
+        for row in rows
+    ]
+
+
 async def record_attendance_event(
     db,
     user_id,

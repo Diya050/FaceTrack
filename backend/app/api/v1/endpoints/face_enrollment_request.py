@@ -22,7 +22,7 @@ router = APIRouter(
 )
 async def get_requests(
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["SUPER_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
 ):
     return FaceEnrollmentRequestService.get_pending_requests(db, current_user)
 
@@ -31,7 +31,7 @@ async def get_requests(
 async def approve_request(
     session_id: UUID,
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["SUPER_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
 ):
     return await AdminFaceApprovalService.approve_enrollment(
         db,
@@ -43,7 +43,7 @@ async def approve_request(
 async def reject_request(
     session_id: UUID,
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["SUPER_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
 ):
     return await AdminFaceApprovalService.reject_enrollment(
         db,

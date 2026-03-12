@@ -13,6 +13,7 @@ class Camera(TenantMixin, Base):
     camera_type = Column(String) 
     location = Column(String)
     ip_address = Column(String)
+    device_identifier=Column(String, nullable=False, unique=True, index=True)
     status = Column(String, nullable=False, server_default="online")
     last_heartbeat = Column(DateTime(timezone=True))
 
