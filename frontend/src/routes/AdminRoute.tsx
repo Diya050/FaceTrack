@@ -16,7 +16,8 @@ import SecuritySettingsPage from "../pages/admin/settings/SecuritySettingsPage";
 import ManagePage from "../pages/admin/ManagePage";
 import FaceEnrollmentRequests from "../pages/admin/FaceEnrollmentRequests";
 
-
+// support ticket
+import SupportTickets from "../pages/admin/SupportTickets";
 
 
 export const adminRoutes: RouteObject = {
@@ -40,7 +41,9 @@ export const adminRoutes: RouteObject = {
     // Manage Department
     { path: "manage", element: <ManagePage /> },
     { path: "face-enrollment-requests", element: <FaceEnrollmentRequests /> },
-
+   
+    // support ticket
+    { path: "support-ticket", element: <SupportTickets />},
 
     // Settings → System
     { path: "settings", element: <Navigate to="/admin/settings/system" replace /> },
@@ -52,5 +55,6 @@ export const adminRoutes: RouteObject = {
     // Settings → Help
     { path: "settings/help/user-guide", element: <UserGuide /> },
     { path: "settings/help/admin-guide", element: <AdminGuide /> },
+
   ],
 };

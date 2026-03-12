@@ -17,6 +17,7 @@ import BarChartIcon from "@mui/icons-material/BarChart";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import MenuBookIcon from "@mui/icons-material/MenuBook";
 import AccountCircleIcon from "@mui/icons-material/AccountCircle";
+import SupportAgentIcon from "@mui/icons-material/SupportAgent";
 
 import { Link, useLocation } from "react-router-dom";
 
@@ -34,6 +35,7 @@ const menuItems = [
   { label: "Reports", icon: <BarChartIcon />, path: "/user/reports" },
   { label: "Profile", icon: <AccountCircleIcon />, path: "/user/me" },
   { label: "Help Center", icon: <HelpOutlineIcon />, path: "/user/help" },
+  { label: "Support Ticket", icon: <SupportAgentIcon />, path: "/user/support" },
   { label: "User Guide", icon: <MenuBookIcon />, path: "/user/settings/user-guide" },
 ];
 
@@ -82,6 +84,7 @@ const UserSidebar: React.FC<Props> = ({ collapsed, setCollapsed }) => {
           <IconButton
             onClick={() => setCollapsed(!collapsed)}
             sx={{ color: "#C9D1E3" }}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <MenuIcon />
           </IconButton>
@@ -110,13 +113,10 @@ const UserSidebar: React.FC<Props> = ({ collapsed, setCollapsed }) => {
                   px: collapsed ? 1 : 2,
                   justifyContent: collapsed ? "center" : "flex-start",
                   transition: "all 0.2s",
-
                   color: active ? "#fff" : "#C9D1E3",
-
                   "&.Mui-selected": {
                     bgcolor: "#404c67",
                   },
-
                   "&:hover": {
                     bgcolor: "#404c67",
                   }

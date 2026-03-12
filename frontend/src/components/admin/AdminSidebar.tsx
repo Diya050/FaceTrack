@@ -1,3 +1,4 @@
+ import { useState, forwardRef, useEffect } from "react";
 import {
   Box,
   List,
@@ -11,7 +12,6 @@ import {
 } from "@mui/material";
 import { ExpandLess, ExpandMore } from "@mui/icons-material";
 import MenuIcon from "@mui/icons-material/Menu";
-import { useState, forwardRef, useEffect } from "react";
 import type { NavLinkProps } from "react-router-dom";
 import { NavLink } from "react-router-dom";
 import { useSidebarConfig } from "../../hooks/useSidebarConfig";
@@ -71,6 +71,7 @@ const AdminSidebar = ({ width, collapsed = false, onToggle }: Props) => {
           <IconButton
             onClick={onToggle}
             sx={{ minWidth: 36, color: "gray", mb: 1.5 }}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
             <MenuIcon />
           </IconButton>
@@ -157,9 +158,7 @@ const AdminSidebar = ({ width, collapsed = false, onToggle }: Props) => {
                             </Tooltip>
                           )}
 
-                          {!collapsed && (
-                            <ListItemText primary={child.label} />
-                          )}
+                          {!collapsed && <ListItemText primary={child.label} />}
                         </ListItemButton>
                       );
                     })}
@@ -203,6 +202,7 @@ const AdminSidebar = ({ width, collapsed = false, onToggle }: Props) => {
             </ListItemButton>
           );
         })}
+        
       </List>
     </Box>
   );
