@@ -37,25 +37,25 @@ const CreateTicket: React.FC = () => {
   const MAX_DESCRIPTION = 1000;
 
   const styles = useMemo(
-    () => ({
-      page: { backgroundColor: COLORS.cream, minHeight: "100vh", py: 6 },
-      title: { color: COLORS.dark, mb: 4 },
-      card: {
-        borderRadius: 8,
-        boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
-      },
-      cardContent: { p: { xs: 3, sm: 4 } },
-      submitBtn: {
-        backgroundColor: COLORS.dark,
-        px: 4,
-        py: 1.2,
-        fontWeight: 600,
-        "&:hover": { backgroundColor: COLORS.darker },
-      },
-      helperText: { color: "text.secondary" as const },
-    }),
-    []
-  );
+  () => ({
+    page: { backgroundColor: "#F8F9FA", minHeight: "100vh", py: 6 },
+    title: { color: COLORS.dark, mb: 4 },
+    card: {
+      borderRadius: 8,
+      boxShadow: "0 12px 30px rgba(0,0,0,0.08)",
+    },
+    cardContent: { p: { xs: 3, sm: 4 } },
+    submitBtn: {
+      backgroundColor: COLORS.dark,
+      px: 4,
+      py: 1.2,
+      fontWeight: 600,
+      "&:hover": { backgroundColor: COLORS.darker },
+    },
+    helperText: { color: "text.secondary" as const },
+  }),
+  []
+);
 
   useEffect(() => {
     let timer: number | undefined;
@@ -101,7 +101,8 @@ const CreateTicket: React.FC = () => {
   }, [form]);
 
   return (
-    <Box sx={styles.page}>
+    
+    <Box  sx={styles.page}>
       <Container maxWidth="md">
         <Typography variant="h4" fontWeight="bold" sx={styles.title}>
           Create Support Ticket
@@ -215,6 +216,7 @@ const CreateTicket: React.FC = () => {
         </Card>
       </Container>
     </Box>
+   
   );
 }
 export default CreateTicket;

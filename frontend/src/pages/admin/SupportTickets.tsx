@@ -117,7 +117,7 @@ export default function SupportTickets() {
   ];
 
   return (
-    <Box sx={{ backgroundColor: COLORS.cream, minHeight: "100vh", pt: 12, pb: 6 }}>
+    <Box sx={{ backgroundColor:  '#F8F9FA', minHeight: "100vh", pt: 12, pb: 6 }}>
       <Container maxWidth="lg">
         <Typography
           variant="h4"
