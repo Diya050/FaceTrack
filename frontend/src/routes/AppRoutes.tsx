@@ -31,7 +31,8 @@ import Home from "../pages/Home";
 import PrivacyPolicy from "../pages/public/PrivacyPolicy";
 import FaceEnrollment from "../pages/user/FaceEnrollment";
 
-
+//support ticket
+import CreateTicket from "../pages/user/CreateTicket";
 
 export default function AppRoutes() {
   return useRoutes([
@@ -50,7 +51,7 @@ export default function AppRoutes() {
         { path: "help", element: <HelpCenterPage /> },
         { path: "settings/user-guide", element: <UserGuidePage /> },
         { path: "capture", element: <FaceEnrollment /> },
-
+        { path: "support", element: <CreateTicket />}
       ],
     },
 
@@ -70,7 +71,8 @@ export default function AppRoutes() {
         { path: "/help-center", element: <HelpCenterPage /> },
         { path: "/admin-guide", element: <AdminGuidePage /> },
         { path: "/user-guide", element: <UserGuidePage /> },
-        { path: "/query", element: <QueryForm /> },
+        { path: "/query", element: <QueryForm /> }
+        
       ],
     },
 

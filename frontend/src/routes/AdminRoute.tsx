@@ -16,7 +16,8 @@ import SecuritySettingsPage from "../pages/admin/settings/SecuritySettingsPage";
 import ManagePage from "../pages/admin/ManagePage";
 import FaceEnrollmentRequests from "../pages/admin/FaceEnrollmentRequests";
 
-
+// settings - support ticket
+import SupportTickets from "../pages/admin/SupportTickets";
 
 
 export const adminRoutes: RouteObject = {
@@ -52,5 +53,8 @@ export const adminRoutes: RouteObject = {
     // Settings → Help
     { path: "settings/help/user-guide", element: <UserGuide /> },
     { path: "settings/help/admin-guide", element: <AdminGuide /> },
+
+    // Setting -> Tickets
+    { path: "settings/support-tickets", element: <SupportTickets />},
   ],
 };
