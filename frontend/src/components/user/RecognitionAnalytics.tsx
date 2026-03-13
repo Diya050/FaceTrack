@@ -13,6 +13,7 @@ const RecognitionAnalytics = () => {
         Recognition Analytics
       </Typography>
 
+      {/* This Box controls the exact size of the chart! */}
       <Box
         sx={{
           width: "100%",

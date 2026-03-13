@@ -160,5 +160,41 @@ def get_today_attendance_details(db: Session, user_id: str) -> dict:
 
 
 
+"""
+recongnistion analysis
+"""
+
+def get_attendance_distribution(db: Session, user_id: str) -> dict:
+    today = date.today()
+    start_of_month = today.replace(day=1)
+
+    records = db.query(Attendance).filter(
+        Attendance.user_id == user_id,
+        Attendance.attendance_date >= start_of_month,
+        Attendance.attendance_date <= today,
+        Attendance.is_deleted == False
+    ).all()
+
+    distribution = {
+        "on_time": 0,
+        "late": 0,
+        "early_out": 0,
+        "absent": 0
+    }
+
+    for record in records:
+        status_val = str(record.status).lower() if record.status else ""
+        
+        if "on time" in status_val or status_val == "present":
+            distribution["on_time"] += 1
+        elif "late" in status_val:
+            distribution["late"] += 1
+        elif "early" in status_val:
+            distribution["early_out"] += 1
+        elif "absent" in status_val:
+            distribution["absent"] += 1
+
+    return distribution
+
 
 
