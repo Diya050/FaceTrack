@@ -1,5 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import List
+from fastapi import Query
 
 from app.db.session import get_db
 from app.core.security import get_current_user
@@ -7,7 +9,7 @@ from app.core.security import get_current_user
 from app.services import user_dashboard_service
 from app.core.dependencies import User
 
-from app.schemas.user_dashboard import UserKPIResponse,TodayAttendanceResponse,DashboardUserResponse,AttendanceDistributionResponse
+from app.schemas.user_dashboard import UserKPIResponse,TodayAttendanceResponse,DashboardUserResponse,AttendanceDistributionResponse,AttendanceHistoryResponse
 
 
 router = APIRouter(
@@ -70,4 +72,20 @@ def get_chart_distribution(
     return user_dashboard_service.get_attendance_distribution(
         db=db, 
         user_id=current_user.user_id
+    )
+
+
+@router.get("/history", response_model=List[AttendanceHistoryResponse])
+def get_attendance_history(
+    limit: int = Query(7, description="Number of past records to fetch"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve the recent attendance history cards for the logged-in user.
+    """
+    return user_dashboard_service.get_user_attendance_history(
+        db=db, 
+        user_id=current_user.user_id, 
+        limit=limit
     )

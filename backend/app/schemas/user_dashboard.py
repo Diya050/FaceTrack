@@ -32,6 +32,12 @@ class AttendanceDistributionResponse(BaseModel):
     early_out: int
     absent: int
 
+class AttendanceHistoryResponse(BaseModel):
+    date: str
+    checkIn: str
+    checkOut: str
+    total: str
+    status: str
 
 class Config:
         from_attributes = True
