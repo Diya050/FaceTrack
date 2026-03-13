@@ -80,6 +80,7 @@ class AdminFaceApprovalService:
             db.delete(img_record)
 
         session.status = "completed"
+        user.face_enrolled = True
         user = db.execute(select(User).where(User.user_id == session.user_id)).scalars().first()
         if user:
             user.status = UserStatusEnum.ACTIVE
