@@ -42,8 +42,4 @@ export const getTodayAttendance = async (): Promise<TodayAttendanceData> => {
   return res.data;
 };
 
-//user summery 
-export const getUserSummary = async (): Promise<UserSummaryData> => {
-  const res = await api.get("/user-dashboard/summary");
-  return res.data;
-};
+

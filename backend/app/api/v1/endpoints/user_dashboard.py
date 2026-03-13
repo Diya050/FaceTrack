@@ -45,20 +45,4 @@ def get_today_attendance(
     return user_dashboard_service.get_today_attendance_details(db=db, user_id=current_user.user_id)
 
 
-@router.get("/summary", response_model=UserSummaryResponse)
-def get_user_summary(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
-):
-    """
-    TEMPORARY MOCK DATA TO TEST FRONTEND <-> BACKEND CONNECTION
-    """
-    print("API /summary WAS HIT! Sending mock data...")
-    
-    return {
-        "total_attendance": 142,
-        "total_hours": "1,140h",
-        "avg_check_in": "09:05 AM",
-        "avg_check_out": "06:15 PM"
-    }
 

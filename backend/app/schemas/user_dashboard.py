@@ -22,12 +22,3 @@ class TodayAttendanceResponse(BaseModel):
     confidence_score: float
     ai_similarity_score: float
 
-
-class UserSummaryResponse(BaseModel):
-    total_attendance: int
-    total_hours: str
-    avg_check_in: str
-    avg_check_out: str
-
-    class Config:
-        from_attributes = True
