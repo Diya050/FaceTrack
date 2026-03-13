@@ -7,6 +7,7 @@ import QuickActionsPanel from "../../components/user/QuickActionsPanel";
 import RecognitionAnalytics from "../../components/user/RecognitionAnalytics";
 import UserAttendanceCard from "../../components/user/UserAttendanceCard";
 
+
 import { userDailyAttendance } from "../../data/userDashboard.mock";
 
 const UserDashboardPage = () => {
@@ -20,6 +21,7 @@ const UserDashboardPage = () => {
         gap: 4,
       }}
     >
+     
       {/* USER CONTEXT PANEL */}
       <UserContextPanel />
 
