@@ -5,6 +5,7 @@ from uuid import UUID
 class DepartmentCreate(BaseModel):
     name: str
     description: str | None = None
+    organization_id: UUID | None = None
 
 class DepartmentResponse(BaseModel):
     department_id: UUID
