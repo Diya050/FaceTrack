@@ -1,13 +1,11 @@
 from fastapi import APIRouter, Depends, Query
 from uuid import UUID
-from typing import List
 from app.schemas.department import DepartmentCreate, DepartmentResponse
 from app.services.department_service import DepartmentService
 from app.db.session import get_db
 from app.core.permissions import require_roles
 from sqlalchemy import select
 from app.models.core import Department, Organization
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/departments", tags=["Departments"])
 
@@ -16,9 +14,18 @@ router = APIRouter(prefix="/departments", tags=["Departments"])
 def create_department(
     data: DepartmentCreate,
     db=Depends(get_db),
-    user=Depends(require_roles(["HR_ADMIN"]))
+    user=Depends(require_roles(["SUPER_ADMIN", "ADMIN", "HR_ADMIN"]))
 ):
     return DepartmentService.create_department(db, data, user)
+
+
+@router.get("", response_model=list[DepartmentResponse])
+def list_departments(
+    organization_id: UUID | None = Query(default=None),
+    db=Depends(get_db),
+    user=Depends(require_roles(["SUPER_ADMIN", "ADMIN", "HR_ADMIN"]))
+):
+    return DepartmentService.list_departments(db, user, organization_id)
 
 
 @router.get("/public/{organization_id}", response_model=list[DepartmentResponse])
