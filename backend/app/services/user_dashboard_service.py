@@ -160,5 +160,87 @@ def get_today_attendance_details(db: Session, user_id: str) -> dict:
 
 
 
+"""
+recongnistion analysis
+"""
+
+def get_attendance_distribution(db: Session, user_id: str) -> dict:
+    today = date.today()
+    start_of_month = today.replace(day=1)
+
+    records = db.query(Attendance).filter(
+        Attendance.user_id == user_id,
+        Attendance.attendance_date >= start_of_month,
+        Attendance.attendance_date <= today,
+        Attendance.is_deleted == False
+    ).all()
+
+    distribution = {
+        "on_time": 0,
+        "late": 0,
+        "early_out": 0,
+        "absent": 0
+    }
+
+    for record in records:
+        status_val = str(record.status).lower() if record.status else ""
+        
+        if "on time" in status_val or status_val == "present":
+            distribution["on_time"] += 1
+        elif "late" in status_val:
+            distribution["late"] += 1
+        elif "early" in status_val:
+            distribution["early_out"] += 1
+        elif "absent" in status_val:
+            distribution["absent"] += 1
+
+    return distribution
 
 
+
+
+def get_user_attendance_history(db: Session, user_id: str, limit: int = 10) -> list[dict]:
+    # Fetch recent records, newest first
+    records = db.query(Attendance).filter(
+        Attendance.user_id == user_id,
+        Attendance.is_deleted == False
+    ).order_by(Attendance.attendance_date.desc()).limit(limit).all()
+
+    history = []
+    
+    for record in records:
+        # Format Date: e.g., "12 Mar 2026"
+        date_str = record.attendance_date.strftime("%d %b %Y")
+
+        # Format CheckIn/CheckOut to 12-hour AM/PM format
+        check_in_str = record.first_check_in.strftime("%I:%M %p") if record.first_check_in else "--"
+        check_out_str = record.last_check_out.strftime("%I:%M %p") if record.last_check_out else "--"
+
+        # Calculate Total Duration
+        total_str = "--"
+        if record.first_check_in and record.last_check_out:
+            t1 = datetime.combine(record.attendance_date, record.first_check_in)
+            t2 = datetime.combine(record.attendance_date, record.last_check_out)
+            
+            if t2 < t1: # Handle overnight shifts
+                from datetime import timedelta
+                t2 += timedelta(days=1)
+                
+            diff = t2 - t1
+            hours, remainder = divmod(diff.seconds, 3600)
+            minutes, _ = divmod(remainder, 60)
+            total_str = f"{hours}h {minutes}m"
+
+        # Format Status (e.g., "on_time" -> "On Time")
+        raw_status = str(record.status) if record.status else "Absent"
+        status_str = raw_status.replace("_", " ").title()
+
+        history.append({
+            "date": date_str,
+            "checkIn": check_in_str,
+            "checkOut": check_out_str,
+            "total": total_str,
+            "status": status_str
+        })
+
+    return history

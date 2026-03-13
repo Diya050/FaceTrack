@@ -1,5 +1,6 @@
 
 import api from "./api"; 
+
 export interface KPIData {
   present_days: number;
   absent_days: number;
@@ -34,6 +35,20 @@ export interface DashboardUser {
   full_name: string;
 }
 
+export interface ChartDistributionData {
+  on_time: number;
+  late: number;
+  early_out: number;
+  absent: number;
+}
+
+export interface AttendanceHistoryData {
+  date: string;
+  checkIn: string;
+  checkOut: string;
+  total: string;
+  status: string;
+}
 
 //kpi serivce 
 export const getMyKPIs = async (): Promise<KPIData> => {
@@ -49,5 +64,15 @@ export const getTodayAttendance = async (): Promise<TodayAttendanceData> => {
 
 export const getDashboardUser = async (): Promise<DashboardUser> => {
   const res = await api.get("/user-dashboard/user-info");
+  return res.data;
+};
+
+export const getChartDistribution = async (): Promise<ChartDistributionData> => {
+  const res = await api.get("/user-dashboard/chart-distribution");
+  return res.data;
+};
+
+export const getAttendanceHistory = async (limit: number = 7): Promise<AttendanceHistoryData[]> => {
+  const res = await api.get(`/user-dashboard/history?limit=${limit}`);
   return res.data;
 };
