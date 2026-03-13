@@ -81,7 +81,7 @@ export default function ProfilePage() {
     );
 
   return (
-    <Box maxWidth={1000} mx="auto" px={2} py={3}>
+    <Box maxWidth={1000} mx="auto" px={2} py={3} mt={8}>
 
       {/* PROFILE HEADER */}
       <Paper

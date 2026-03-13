@@ -23,7 +23,7 @@ const UserReports: React.FC = () => {
   return (
     <ThemeProvider theme={dashboardTheme}>
       <CssBaseline />
-      <Box sx={{ bgcolor: "background.default", minHeight: "100vh", py: 6 }}>
+      <Box sx={{ bgcolor: "background.default", minHeight: "100vh", py: 6, mt:8 }}>
         <Container maxWidth="lg">
           
           {/* Header Area */}

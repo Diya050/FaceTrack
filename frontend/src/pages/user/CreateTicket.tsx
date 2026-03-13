@@ -102,7 +102,7 @@ const CreateTicket: React.FC = () => {
 
   return (
     
-    <Box  sx={styles.page}>
+    <Box  sx={styles.page} mt={8}>
       <Container maxWidth="md">
         <Typography variant="h4" fontWeight="bold" sx={styles.title}>
           Create Support Ticket

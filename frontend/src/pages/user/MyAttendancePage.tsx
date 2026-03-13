@@ -97,7 +97,7 @@ const MyAttendancePage = () => {
   ];
 
   return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: "auto" }}>
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: "auto", mt:8 }}>
 
       <Typography
         variant="h4"
