@@ -1,14 +1,16 @@
-import { Paper, Typography, Box } from "@mui/material";
+import { Paper, Typography, Box, CircularProgress } from "@mui/material";
 import { useEffect, useState } from "react";
 
+// Assuming your chart is in the same relative path
 import UserAttendanceChart from "../charts/UserAttendanceChart";
-import { userSummary } from "../../data/userDashboard.mock";
+import {  type UserSummaryData } from "../../services/userDashboardService";
 
 /* Animated Counter */
 const useCounter = (target: number, duration = 800) => {
   const [count, setCount] = useState(0);
 
   useEffect(() => {
+    if (target === 0) return;
     let start = 0;
     const step = target / (duration / 16);
 
@@ -29,7 +31,23 @@ const useCounter = (target: number, duration = 800) => {
 };
 
 const UserSummarySection = () => {
-  const attendance = useCounter(userSummary.totalAttendance);
+  const [summaryData, ] = useState<UserSummaryData | null>(null);
+  const [loading, ] = useState(true);
+
+  
+
+  // Pass the dynamic target to the counter (defaults to 0 if data is loading)
+  const attendance = useCounter(summaryData?.total_attendance || 0);
+
+  if (loading) {
+    return (
+      <Paper sx={{ p: 3, borderRadius: 3, mt: 2, display: "flex", justifyContent: "center", alignItems: "center", minHeight: 300 }}>
+        <CircularProgress />
+      </Paper>
+    );
+  }
+
+  if (!summaryData) return null;
 
   return (
     <Paper
@@ -87,7 +105,7 @@ const UserSummarySection = () => {
               Total Hours
             </Typography>
             <Typography variant="h6" fontWeight="bold">
-              {userSummary.totalHours}
+              {summaryData.total_hours}
             </Typography>
           </Box>
 
@@ -96,7 +114,7 @@ const UserSummarySection = () => {
               Avg Check In
             </Typography>
             <Typography variant="h6" fontWeight="bold">
-              {userSummary.avgCheckIn}
+              {summaryData.avg_check_in}
             </Typography>
           </Box>
 
@@ -105,7 +123,7 @@ const UserSummarySection = () => {
               Avg Check Out
             </Typography>
             <Typography variant="h6" fontWeight="bold">
-              {userSummary.avgCheckOut}
+              {summaryData.avg_check_out}
             </Typography>
           </Box>
         </Box>

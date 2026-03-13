@@ -1,5 +1,8 @@
-import { Grid, Paper, Typography, Box, LinearProgress } from "@mui/material";
+import { useState, useEffect } from "react";
+import { Grid, Paper, Typography, Box, LinearProgress, CircularProgress } from "@mui/material";
 
+
+// Icons
 import EventAvailableIcon from "@mui/icons-material/EventAvailable";
 import EventBusyIcon from "@mui/icons-material/EventBusy";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
@@ -7,58 +10,99 @@ import BeachAccessIcon from "@mui/icons-material/BeachAccess";
 import PercentIcon from "@mui/icons-material/Percent";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 
-const metrics = [
-  {
-    title: "Present Days",
-    value: 18,
-    subtitle: "Current month",
-    progress: 80,
-    icon: <EventAvailableIcon />,
-    color: "#4CAF50",
-  },
-  {
-    title: "Absent Days",
-    value: 2,
-    subtitle: "This month",
-    progress: 10,
-    icon: <EventBusyIcon />,
-    color: "#F44336",
-  },
-  {
-    title: "Late Marks",
-    value: 3,
-    subtitle: "After grace",
-    progress: 15,
-    icon: <AccessTimeIcon />,
-    color: "#FB8C00",
-  },
-  {
-    title: "Leave Taken",
-    value: 1,
-    subtitle: "Approved leave",
-    progress: 5,
-    icon: <BeachAccessIcon />,
-    color: "#2196F3",
-  },
-  {
-    title: "Attendance %",
-    value: "90%",
-    subtitle: "Monthly rate",
-    progress: 90,
-    icon: <PercentIcon />,
-    color: "#7E57C2",
-  },
-  {
-    title: "Avg Work Hours",
-    value: "7.8h",
-    subtitle: "Per day",
-    progress: 78,
-    icon: <ScheduleIcon />,
-    color: "#009688",
-  },
-];
+// Import our new service
+import { getMyKPIs,type KPIData } from "../../services/userDashboardService";
 
 const UserKPISection = () => {
+  const [kpiData, setKpiData] = useState<KPIData | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+ useEffect(() => {
+  const fetchKPIs = async () => {
+    try {
+      setLoading(true);
+      const data = await getMyKPIs();
+      setKpiData(data);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        console.error("Error fetching KPIs:", err.message);
+      } else {
+        console.error("Unknown error fetching KPIs:", err);
+      }
+      setError("Failed to load metrics.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchKPIs();
+}, []);
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height={160}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !kpiData) {
+    return <Typography color="error">{error}</Typography>;
+  }
+
+  // Map the dynamic API data to your UI metrics format
+  const metrics = [
+    {
+      title: "Present Days",
+      value: kpiData.present_days,
+      subtitle: "Current month",
+      progress: (kpiData.present_days / 30) * 100, // Assuming 30 days scale
+      icon: <EventAvailableIcon />,
+      color: "#4CAF50",
+    },
+    {
+      title: "Absent Days",
+      value: kpiData.absent_days,
+      subtitle: "This month",
+      progress: (kpiData.absent_days / 30) * 100,
+      icon: <EventBusyIcon />,
+      color: "#F44336",
+    },
+    {
+      title: "Late Marks",
+      value: kpiData.late_marks,
+      subtitle: "After grace",
+      progress: (kpiData.late_marks / 10) * 100, // Example 10 limit scale
+      icon: <AccessTimeIcon />,
+      color: "#FB8C00",
+    },
+    {
+      title: "Leave Taken",
+      value: kpiData.leave_taken,
+      subtitle: "Approved leave",
+      progress: (kpiData.leave_taken / 10) * 100,
+      icon: <BeachAccessIcon />,
+      color: "#2196F3",
+    },
+    {
+      title: "Attendance %",
+      value: `${kpiData.attendance_percentage}%`,
+      subtitle: "Monthly rate",
+      progress: kpiData.attendance_percentage,
+      icon: <PercentIcon />,
+      color: "#7E57C2",
+    },
+    {
+      title: "Avg Work Hours",
+      value: `${kpiData.avg_work_hours}h`,
+      subtitle: "Per day",
+      progress: (kpiData.avg_work_hours / 9) * 100, // Assuming 9 hour workday scale
+      icon: <ScheduleIcon />,
+      color: "#009688",
+    },
+  ];
+
   return (
     <Grid container spacing={3} mb={4}>
       {metrics.map((metric) => (
@@ -136,12 +180,12 @@ const UserKPISection = () => {
                 }}
               >
                 Progress
-                <span>{metric.progress}%</span>
+                <span>{Math.round(metric.progress)}%</span>
               </Typography>
 
               <LinearProgress
                 variant="determinate"
-                value={metric.progress}
+                value={Math.min(100, metric.progress)}
                 sx={{
                   mt: 0.7,
                   height: 8,
