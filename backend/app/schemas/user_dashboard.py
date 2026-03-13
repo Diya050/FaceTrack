@@ -22,3 +22,5 @@ class TodayAttendanceResponse(BaseModel):
     confidence_score: float
     ai_similarity_score: float
 
+class DashboardUserResponse(BaseModel):
+    full_name: str

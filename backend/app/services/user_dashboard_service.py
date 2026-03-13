@@ -160,3 +160,5 @@ def get_today_attendance_details(db: Session, user_id: str) -> dict:
 
 
 
+
+

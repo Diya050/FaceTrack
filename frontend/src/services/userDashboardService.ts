@@ -30,6 +30,11 @@ export interface UserSummaryData {
 }
 
 
+export interface DashboardUser {
+  full_name: string;
+}
+
+
 //kpi serivce 
 export const getMyKPIs = async (): Promise<KPIData> => {
   const res = await api.get("/user-dashboard/kpi/me");
@@ -42,4 +47,7 @@ export const getTodayAttendance = async (): Promise<TodayAttendanceData> => {
   return res.data;
 };
 
-
+export const getDashboardUser = async (): Promise<DashboardUser> => {
+  const res = await api.get("/user-dashboard/user-info");
+  return res.data;
+};

@@ -3,11 +3,12 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.security import get_current_user
-from app.schemas.user_dashboard import UserKPIResponse,TodayAttendanceResponse
+
 from app.services import user_dashboard_service
 from app.core.dependencies import User
 
-from app.schemas.user_dashboard import UserSummaryResponse
+from app.schemas.user_dashboard import DashboardUserResponse
+from app.schemas.user_dashboard import UserKPIResponse,TodayAttendanceResponse
 
 router = APIRouter(
     prefix="/user-dashboard",
@@ -46,3 +47,13 @@ def get_today_attendance(
 
 
 
+@router.get("/user-info", response_model=DashboardUserResponse)
+def get_dashboard_user_info(
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Retrieve the currently logged-in user's basic profile info.
+    """
+    return {
+        "full_name": current_user.full_name
+    }
