@@ -1,78 +1,117 @@
 import os
 from fastapi import HTTPException
-from datetime import datetime
 from uuid import uuid4
 from sqlalchemy import select
 from PIL import Image
 import io
+import traceback
 
+from app.utils.supabase_storage import upload_image
 from app.models.biometrics import FaceEnrollmentSession, FaceEnrollmentImage
-
-UPLOAD_DIR = "uploads/faces"
 
 
 class FaceEnrollmentService:
 
     @staticmethod
-    async def store_images(db, current_user, files):
+    def store_images(db, current_user, files):
 
-        if len(files) < 5 or len(files) > 7:
-            raise HTTPException(
-                status_code=400,
-                detail="Upload between 5 and 7 images"
-            )
-        
-        existing = db.execute(
+        print("DEBUG: Starting face enrollment")
+
+        try:
+
+            if len(files) < 5 or len(files) > 7:
+                print("DEBUG: Invalid number of images:", len(files))
+                raise HTTPException(
+                    status_code=400,
+                    detail="Upload between 5 and 7 images"
+                )
+
+            print("DEBUG: Checking existing enrollment session")
+
+            existing = db.execute(
                 select(FaceEnrollmentSession).where(
                     FaceEnrollmentSession.user_id == current_user.user_id,
                     FaceEnrollmentSession.status.in_(["started", "pending_approval"])
                 )
             ).scalars().first()
 
-        if existing:
-            raise HTTPException(400, "Enrollment already in progress")
+            if existing:
+                print("DEBUG: Enrollment already in progress")
+                raise HTTPException(400, "Enrollment already in progress")
 
-        # Create session FIRST
-        session = FaceEnrollmentSession(
-            user_id=current_user.user_id,
-            organization_id=current_user.organization_id,
-            status="started"
-        )
+            print("DEBUG: Creating enrollment session")
 
-        db.add(session)
-        db.commit()
-        db.refresh(session)
-
-        # Ensure upload folder exists
-        os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-        # Store images
-        for file in files:
-
-            contents = await file.read()
-            image = Image.open(io.BytesIO(contents))
-
-            if image.width < 100 or image.height < 100:
-                raise HTTPException(400, "Image resolution too small")
-
-            filename = f"{uuid4()}.jpg"
-            filepath = os.path.join(UPLOAD_DIR, filename)
-
-            with open(filepath, "wb") as f:
-                f.write(contents)
-
-            image_record = FaceEnrollmentImage(
-                session_id=session.session_id,
+            session = FaceEnrollmentSession(
                 user_id=current_user.user_id,
-                image_path=filename
+                organization_id=current_user.organization_id,
+                status="started"
             )
 
-            db.add(image_record)
+            db.add(session)
+            db.flush()
 
-        session.status = "pending_approval"
-        db.commit()
+            print("DEBUG: Session created with ID:", session.session_id)
 
-        return {
-            "session_id": str(session.session_id),
-            "message": "Images uploaded successfully. Waiting for HR approval."
-        }
+            MAX_IMAGE_SIZE = 5 * 1024 * 1024
+
+            for idx, file in enumerate(files):
+
+                print(f"DEBUG: Processing file {idx+1}")
+
+                contents = file.read()
+
+                print("DEBUG: File size:", len(contents))
+
+                if len(contents) > MAX_IMAGE_SIZE:
+                    print("DEBUG: Image too large")
+                    raise HTTPException(400, "Image size exceeds 5MB")
+
+                try:
+                    image = Image.open(io.BytesIO(contents))
+                except Exception as e:
+                    print("DEBUG: Failed to open image:", e)
+                    raise HTTPException(400, "Invalid image format")
+
+                print("DEBUG: Image resolution:", image.width, image.height)
+
+                if image.width < 100 or image.height < 100:
+                    raise HTTPException(400, "Image resolution too small")
+
+                filename = f"{uuid4()}.jpg"
+                path = f"{current_user.organization_id}/{current_user.user_id}/{filename}"
+
+                print("DEBUG: Uploading image to Supabase path:", path)
+
+                try:
+                    upload_image(contents, path)
+                    print("DEBUG: Upload successful")
+                except Exception as e:
+                    print("UPLOAD ERROR:", e)
+                    traceback.print_exc()
+                    raise HTTPException(500, "Image upload failed")
+
+                image_record = FaceEnrollmentImage(
+                    session_id=session.session_id,
+                    user_id=current_user.user_id,
+                    image_path=path
+                )
+
+                db.add(image_record)
+
+            session.status = "pending_approval"
+
+            print("DEBUG: Committing database transaction")
+
+            db.commit()
+
+            print("DEBUG: Enrollment completed successfully")
+
+            return {
+                "session_id": str(session.session_id),
+                "message": "Images uploaded successfully. Waiting for HR approval."
+            }
+
+        except Exception as e:
+            print("CRITICAL ERROR:", e)
+            traceback.print_exc()
+            raise

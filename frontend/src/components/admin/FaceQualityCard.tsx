@@ -19,8 +19,8 @@ type Props = {
 export default function FaceQualityCard({ image }: Props) {
   const [open, setOpen] = useState(false);
   
-  const API_BASE_URL = "http://localhost:8000";
-  const fullImageUrl = `${API_BASE_URL}/uploads/faces/${image}`;
+
+  const fullImageUrl = image;
 
   return (
     <>
