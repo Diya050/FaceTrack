@@ -7,6 +7,24 @@ from app.models.biometrics import FaceEnrollmentSession
 
 
 class UserService:
+    
+    @staticmethod
+    def get_pending_users(db, current_user):
+
+        query = select(User).where(
+            User.organization_id == current_user.organization_id,
+            User.status == UserStatusEnum.PENDING,
+            User.is_deleted == False
+        )
+
+        if current_user.role.role_name == "ADMIN":
+            query = query.where(
+                User.department_id == current_user.department_id
+            )
+
+        result = db.execute(query)
+
+        return result.scalars().all()
 
     @staticmethod
     def approve_user(db, current_user, target_user_id):
@@ -35,21 +53,6 @@ class UserService:
         if user.status != UserStatusEnum.PENDING:
             raise HTTPException(400, "User is not pending approval")
 
-        # Verify face enrollment completed
-        enrollment = db.execute(
-            select(FaceEnrollmentSession).where(
-                FaceEnrollmentSession.user_id == user.user_id,
-                FaceEnrollmentSession.organization_id == current_user.organization_id,
-                FaceEnrollmentSession.status == "completed"
-            )
-        ).scalars().first()
-
-        if not enrollment:
-            raise HTTPException(
-                400,
-                "Face enrollment not completed"
-            )
-
         user.status = UserStatusEnum.APPROVED
         user.approved_by = current_user.user_id
         user.approved_at = datetime.utcnow()
@@ -61,3 +64,22 @@ class UserService:
             "message": "User approved successfully",
             "user_id": user.user_id
         }
+        
+    @staticmethod
+    def reject_user(db, current_user, user_id):
+
+        user = db.get(User, user_id)
+
+        if not user:
+            raise Exception("User not found")
+
+        if user.organization_id != current_user.organization_id:
+            raise Exception("Unauthorized")
+
+        user.status = UserStatusEnum.REJECTED
+        user.approved_by = current_user.user_id
+        user.approved_at = datetime.utcnow()
+
+        db.commit()
+
+        return {"message": "User rejected"}

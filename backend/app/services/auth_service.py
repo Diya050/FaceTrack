@@ -122,7 +122,7 @@ class AuthService:
                 else UserStatusEnum.PENDING
             ),
             face_enrolled=False,
-            is_active=True
+            is_active=False
         )
 
         db.add(new_user)
