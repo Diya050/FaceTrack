@@ -6,13 +6,27 @@ from insightface.app import FaceAnalysis
 # Relaxed Constants
 MAX_YAW = 40
 MAX_PITCH = 40
-MAX_IMAGE_SIZE = 8 * 1024 * 1024  # 8MB
-BLUR_THRESHOLD = 15  # allow slightly blurry images
+MAX_IMAGE_SIZE = 8 * 1024 * 1024
+BLUR_THRESHOLD = 15
 MIN_FACE_SIZE = 60
 
-# Initialize InsightFace
-app = FaceAnalysis(name="buffalo_l")
-app.prepare(ctx_id=-1, det_size=(640, 640))
+# Global model holder
+face_app = None
+
+
+def get_face_app():
+    """
+    Lazy-load InsightFace model once globally.
+    """
+    global face_app
+
+    if face_app is None:
+        print("Loading InsightFace model...")
+        face_app = FaceAnalysis(name="buffalo_l", providers=["CPUExecutionProvider"])
+        face_app.prepare(ctx_id=-1, det_size=(640, 640))
+        print("InsightFace model loaded")
+
+    return face_app
 
 
 def estimate_pose(landmarks):
@@ -39,6 +53,9 @@ def detect_blur(image):
 
 def extract_face_embedding(image_bytes: bytes, is_admin_approval: bool = False) -> np.ndarray:
 
+    # Get global model instance
+    app = get_face_app()
+
     # File Size Check
     if len(image_bytes) > MAX_IMAGE_SIZE:
         raise HTTPException(400, "Image too large. Max 8MB.")
@@ -50,7 +67,6 @@ def extract_face_embedding(image_bytes: bytes, is_admin_approval: bool = False) 
     if image is None:
         raise HTTPException(400, "Invalid image file")
 
-    # Relax thresholds further during admin approval
     blur_threshold = BLUR_THRESHOLD if not is_admin_approval else 10
     pose_threshold = MAX_YAW if not is_admin_approval else 50
 
