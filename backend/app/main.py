@@ -2,28 +2,48 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer
-import os
 from fastapi.staticfiles import StaticFiles
+import os
+import warnings
+
 from app.api.v1.api import api_router
 from app.workers.scheduler import start_scheduler, stop_scheduler
+from app.services.face_embedding_service import get_face_app
+
+# Optional: silence unnecessary warnings
+warnings.filterwarnings("ignore")
+
 
 # --- LIFESPAN: Startup and Shutdown ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize background tasks on server startup
+
+    print("Starting FaceTrack services...")
+
+    # Start background scheduler
     start_scheduler()
-    
-    yield  # The FastAPI application runs while yielded here
-    
-    # Cleanup and shutdown background tasks when server stops
+
+    # Preload InsightFace model (loads only once)
+    get_face_app()
+    print("InsightFace model loaded successfully")
+
+    yield
+
+    print("Shutting down FaceTrack services...")
+
+    # Stop background scheduler
     stop_scheduler()
 
 
 # --- FASTAPI SETUP ---
-app = FastAPI(title="FaceTrack API", lifespan=lifespan)
+app = FastAPI(
+    title="FaceTrack API",
+    lifespan=lifespan
+)
 
 security = HTTPBearer()
 
+# --- CORS ---
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -32,16 +52,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- API ROUTES ---
 app.include_router(api_router, prefix="/api/v1")
 
-# Ensure the directory exists to avoid startup errors
-if not os.path.exists("uploads/faces"):
-    os.makedirs("uploads/faces", exist_ok=True)
-
-# MOUNT THE STATIC FILES
-# This makes http://localhost:8000/uploads/faces/your-image.jpg work
+# Mount static files (kept for backward compatibility)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
+
+# --- ROOT ENDPOINT ---
 @app.get("/")
 def read_root():
     return {"message": "FaceTrack Backend is operational."}

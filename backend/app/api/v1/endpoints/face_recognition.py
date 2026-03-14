@@ -10,13 +10,13 @@ router = APIRouter(prefix="/recognition", tags=["Face Recognition"])
 
 
 @router.post("/camera")
-async def recognize_camera_frame(
+def recognize_camera_frame(
     file: UploadFile = File(...),
     camera_id: str = Form(...),
     db: Session = Depends(get_db)
 ):
 
-    image_bytes = await file.read()
+    image_bytes =  file.read()
 
     nparr = np.frombuffer(image_bytes, np.uint8)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)

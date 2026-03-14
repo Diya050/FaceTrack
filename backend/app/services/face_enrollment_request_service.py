@@ -1,6 +1,7 @@
 from sqlalchemy import select
 from fastapi import HTTPException
 from typing import List, Dict, Any
+import os
 
 from app.models.core import User
 from app.models.biometrics import (
@@ -8,9 +9,10 @@ from app.models.biometrics import (
     FaceEnrollmentImage
 )
 
+SUPABASE_URL = os.getenv("SUPABASE_URL", "").rstrip("/")
+
 
 class FaceEnrollmentRequestService:
-
 
     @staticmethod
     def get_pending_requests(db, current_user) -> List[Dict[str, Any]]:
@@ -18,9 +20,7 @@ class FaceEnrollmentRequestService:
         query = (
             select(FaceEnrollmentSession)
             .join(User, FaceEnrollmentSession.user_id == User.user_id)
-            .where(
-                FaceEnrollmentSession.status == "pending_approval"
-            )
+            .where(FaceEnrollmentSession.status == "pending_approval")
         )
 
         sessions = db.execute(query).scalars().all()
@@ -38,6 +38,12 @@ class FaceEnrollmentRequestService:
 
             images = db.execute(image_query).scalars().all()
 
+            # Convert stored paths to full Supabase URLs
+            image_urls = [
+                f"{SUPABASE_URL}/storage/v1/object/public/face-images/{img}"
+                for img in images
+            ]
+
             pending_requests.append({
                 "session_id": session.session_id,
                 "user_id": user.user_id,
@@ -45,11 +51,10 @@ class FaceEnrollmentRequestService:
                 "email": user.email,
                 "status": session.status,
                 "created_at": session.created_at,
-                "images": images
+                "images": image_urls
             })
 
         return pending_requests
-
 
     @staticmethod
     def approve_enrollment(db, session_id):
@@ -71,7 +76,6 @@ class FaceEnrollmentRequestService:
         db.commit()
 
         return {"message": "Face enrollment approved"}
-
 
     @staticmethod
     def reject_enrollment(db, session_id):
