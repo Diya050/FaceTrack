@@ -20,7 +20,7 @@ router = APIRouter(
     "/requests",
     response_model=List[FaceEnrollmentRequestResponse]
 )
-async def get_requests(
+def get_requests(
     db: Session = Depends(get_db),
     current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
 ):
@@ -28,24 +28,24 @@ async def get_requests(
 
 
 @router.post("/{session_id}/approve")
-async def approve_request(
+def approve_request(
     session_id: UUID,
     db: Session = Depends(get_db),
     current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
 ):
-    return await AdminFaceApprovalService.approve_enrollment(
+    return AdminFaceApprovalService.approve_enrollment(
         db,
         session_id
     )
 
 
 @router.post("/{session_id}/reject")
-async def reject_request(
+def reject_request(
     session_id: UUID,
     db: Session = Depends(get_db),
     current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
 ):
-    return await AdminFaceApprovalService.reject_enrollment(
+    return AdminFaceApprovalService.reject_enrollment(
         db,
         session_id
     )

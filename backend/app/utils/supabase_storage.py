@@ -10,8 +10,21 @@ BUCKET = "face-images"
 
 
 def upload_image(file_bytes, path):
-    supabase.storage.from_(BUCKET).upload(
-        path,
-        file_bytes,
-        {"content-type": "image/jpeg"}
-    )
+    
+    try:
+        response = supabase.storage.from_(BUCKET).upload(
+            path,
+            file_bytes,
+            {"content-type": "image/jpeg",
+             "upsert": "true"
+            }
+        )
+        
+        if response is None: 
+            raise Exception("Supabase returned empty response")
+        
+        return response 
+    
+    except Exception as e:
+        print("SUPABASE UPLOAD ERROR", str(e))
+        raise

@@ -96,8 +96,13 @@ class AdminFaceApprovalService:
         ).scalars().first()
 
         if user:
+            
+            if user.status != UserStatusEnum.APPROVED:
+                raise HTTPException(400, "User must be approved before activation")
+            
             user.face_enrolled = True
             user.status = UserStatusEnum.ACTIVE
+            user.is_active = True
 
         db.commit()
 

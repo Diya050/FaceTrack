@@ -13,7 +13,7 @@ from app.models.biometrics import FaceEnrollmentSession, FaceEnrollmentImage
 class FaceEnrollmentService:
 
     @staticmethod
-    def store_images(db, current_user, files):
+    async def store_images(db, current_user, files):
 
         print("DEBUG: Starting face enrollment")
 
@@ -26,31 +26,46 @@ class FaceEnrollmentService:
                     detail="Upload between 5 and 7 images"
                 )
 
-            print("DEBUG: Checking existing enrollment session")
-
-            existing = db.execute(
+            print("DEBUG: Checking if admin requested enrollment")
+            
+            session = db.execute(
                 select(FaceEnrollmentSession).where(
                     FaceEnrollmentSession.user_id == current_user.user_id,
-                    FaceEnrollmentSession.status.in_(["started", "pending_approval"])
+                    FaceEnrollmentSession.organization_id == current_user.organization_id,
+                    FaceEnrollmentSession.status == "started"
                 )
             ).scalars().first()
 
-            if existing:
-                print("DEBUG: Enrollment already in progress")
-                raise HTTPException(400, "Enrollment already in progress")
+            if not session:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Face enrollment has not been requested by Admin"
+                )
 
-            print("DEBUG: Creating enrollment session")
 
-            session = FaceEnrollmentSession(
-                user_id=current_user.user_id,
-                organization_id=current_user.organization_id,
-                status="started"
-            )
+            # existing = db.execute(
+            #     select(FaceEnrollmentSession).where(
+            #         FaceEnrollmentSession.user_id == current_user.user_id,
+            #         FaceEnrollmentSession.status.in_(["started", "pending_approval"])
+            #     )
+            # ).scalars().first()
 
-            db.add(session)
-            db.flush()
+            # if existing:
+            #     print("DEBUG: Enrollment already in progress")
+            #     raise HTTPException(400, "Enrollment already in progress")
 
-            print("DEBUG: Session created with ID:", session.session_id)
+            # print("DEBUG: Creating enrollment session")
+
+            # session = FaceEnrollmentSession(
+            #     user_id=current_user.user_id,
+            #     organization_id=current_user.organization_id,
+            #     status="started"
+            # )
+
+            # db.add(session)
+            # db.flush()
+            
+            print("DEBUG: Using existing session:", session.session_id)
 
             MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
@@ -58,7 +73,7 @@ class FaceEnrollmentService:
 
                 print(f"DEBUG: Processing file {idx+1}")
 
-                contents = file.read()
+                contents = await file.read()
 
                 print("DEBUG: File size:", len(contents))
 
@@ -110,8 +125,10 @@ class FaceEnrollmentService:
                 "session_id": str(session.session_id),
                 "message": "Images uploaded successfully. Waiting for HR approval."
             }
-
+            
+        except HTTPException:
+            raise
         except Exception as e:
             print("CRITICAL ERROR:", e)
             traceback.print_exc()
-            raise
+            raise HTTPException(status_code=500, detail=str(e))
