@@ -13,20 +13,20 @@ from app.models.biometrics import FaceEnrollmentSession, FaceEnrollmentImage
 class FaceEnrollmentService:
 
     @staticmethod
-    def store_images(db, current_user, files):
+    async def store_images(db, current_user, files):
 
-        print("DEBUG: Starting face enrollment")
+        print("Starting face enrollment")
 
         try:
 
             if len(files) < 5 or len(files) > 7:
-                print("DEBUG: Invalid number of images:", len(files))
+                print("Invalid number of images:", len(files))
                 raise HTTPException(
                     status_code=400,
                     detail="Upload between 5 and 7 images"
                 )
 
-            print("DEBUG: Checking existing enrollment session")
+            print("Checking existing enrollment session")
 
             existing = db.execute(
                 select(FaceEnrollmentSession).where(
@@ -36,10 +36,10 @@ class FaceEnrollmentService:
             ).scalars().first()
 
             if existing:
-                print("DEBUG: Enrollment already in progress")
+                print("Enrollment already in progress")
                 raise HTTPException(400, "Enrollment already in progress")
 
-            print("DEBUG: Creating enrollment session")
+            print("Creating enrollment session")
 
             session = FaceEnrollmentSession(
                 user_id=current_user.user_id,
@@ -50,29 +50,29 @@ class FaceEnrollmentService:
             db.add(session)
             db.flush()
 
-            print("DEBUG: Session created with ID:", session.session_id)
+            print("Session created with ID:", session.session_id)
 
             MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
             for idx, file in enumerate(files):
 
-                print(f"DEBUG: Processing file {idx+1}")
+                print(f"Processing file {idx+1}")
 
-                contents = file.read()
+                contents = await file.read()
 
-                print("DEBUG: File size:", len(contents))
+                print("File size:", len(contents))
 
                 if len(contents) > MAX_IMAGE_SIZE:
-                    print("DEBUG: Image too large")
+                    print("Image too large")
                     raise HTTPException(400, "Image size exceeds 5MB")
 
                 try:
                     image = Image.open(io.BytesIO(contents))
                 except Exception as e:
-                    print("DEBUG: Failed to open image:", e)
+                    print("Failed to open image:", e)
                     raise HTTPException(400, "Invalid image format")
 
-                print("DEBUG: Image resolution:", image.width, image.height)
+                print("Image resolution:", image.width, image.height)
 
                 if image.width < 100 or image.height < 100:
                     raise HTTPException(400, "Image resolution too small")
@@ -80,11 +80,11 @@ class FaceEnrollmentService:
                 filename = f"{uuid4()}.jpg"
                 path = f"{current_user.organization_id}/{current_user.user_id}/{filename}"
 
-                print("DEBUG: Uploading image to Supabase path:", path)
+                print("Uploading image to Supabase path:", path)
 
                 try:
                     upload_image(contents, path)
-                    print("DEBUG: Upload successful")
+                    print("Upload successful")
                 except Exception as e:
                     print("UPLOAD ERROR:", e)
                     traceback.print_exc()
@@ -100,11 +100,11 @@ class FaceEnrollmentService:
 
             session.status = "pending_approval"
 
-            print("DEBUG: Committing database transaction")
+            print("Committing database transaction")
 
             db.commit()
 
-            print("DEBUG: Enrollment completed successfully")
+            print("Enrollment completed successfully")
 
             return {
                 "session_id": str(session.session_id),
