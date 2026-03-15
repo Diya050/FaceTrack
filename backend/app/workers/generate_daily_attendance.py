@@ -24,7 +24,6 @@ def get_db_session():
     finally:
         db.close()
 
-
 def run_daily_attendance_job():
     """
     Scheduled background job to generate daily attendance.

@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import extract, func
 
 
-
 def get_user_attendance(
     db,
     current_user,
@@ -22,6 +21,9 @@ def get_user_attendance(
     skip: int = 0,
     limit: int = 50,
 ):
+    if current_user.status != "active":
+        raise HTTPException(status_code=403, detail="Inactive users cannot mark attendance")
+
     query = select(Attendance).where(
         Attendance.user_id == current_user.user_id,
         Attendance.is_deleted == False,
@@ -37,12 +39,14 @@ def get_user_attendance(
     query = query.order_by(Attendance.attendance_date.desc()).offset(skip).limit(limit)
     return db.execute(query).scalars().all()
 
+
 def list_attendance_corrections(db, current_user):
     query = (
         select(AttendanceCorrection)
         .join(User, AttendanceCorrection.user_id == User.user_id)
         .where(
-            AttendanceCorrection.organization_id == current_user.organization_id
+            AttendanceCorrection.organization_id == current_user.organization_id,
+            User.status == "active"
         )
     )
     if current_user.role == "HR_ADMIN":
@@ -58,7 +62,11 @@ def list_attendance_corrections(db, current_user):
     result = db.execute(query.order_by(AttendanceCorrection.created_at.desc()))
     return result.scalars().all()
 
+
 def request_attendance_correction(db, current_user, data):
+    if current_user.status != "active":
+        raise HTTPException(status_code=403, detail="Inactive users cannot request corrections")
+
     result = db.execute(
         select(Attendance).where(
             Attendance.attendance_id == data.attendance_id,
@@ -98,6 +106,7 @@ def request_attendance_correction(db, current_user, data):
     db.refresh(correction)
     return correction
 
+
 def review_attendance_correction(db, current_user, correction_id, data):
     result = db.execute(
         select(AttendanceCorrection).where(
@@ -115,7 +124,7 @@ def review_attendance_correction(db, current_user, correction_id, data):
 
     # Fetch user who made the request
     result = db.execute(
-        select(User).where(User.user_id == correction.user_id)
+        select(User).where(User.user_id == correction.user_id, User.status == "active")
     )
     request_user = result.scalar_one()
 
@@ -142,7 +151,6 @@ def review_attendance_correction(db, current_user, correction_id, data):
     return correction
 
 
-
 def get_department_attendance(
     db,
     current_user,
@@ -156,7 +164,6 @@ def get_department_attendance(
 ):
     role_name = current_user.role.role_name
 
-    # ADMIN can only access their own department
     if role_name == "ADMIN":
         if str(current_user.department_id) != str(department_id):
             raise HTTPException(
@@ -164,7 +171,6 @@ def get_department_attendance(
                 detail="You can only view attendance for your own department",
             )
 
-    # Verify the department belongs to the current user's organization
     dept = db.execute(
         select(Department).where(
             Department.department_id == department_id,
@@ -182,6 +188,7 @@ def get_department_attendance(
             User.department_id == department_id,
             User.organization_id == current_user.organization_id,
             User.is_deleted == False,
+            User.status == "active",
             Attendance.is_deleted == False,
         )
     )
@@ -212,6 +219,7 @@ def get_department_attendance(
         for row in rows
     ]
 
+
 def get_organization_attendance(
     db,
     current_user,
@@ -228,8 +236,9 @@ def get_organization_attendance(
         .outerjoin(Department, User.department_id == Department.department_id)
         .where(
             User.organization_id == current_user.organization_id,
-            Attendance.is_deleted == False,
             User.is_deleted == False,
+            User.status == "active",
+            Attendance.is_deleted == False,
         )
     )
 
@@ -271,6 +280,10 @@ def record_attendance_event(
     recognition_method,
     event_type
 ):
+    result = db.execute(select(User).where(User.user_id == user_id, User.status == "active"))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=403, detail="Inactive users cannot record attendance events")
 
     event = AttendanceEvent(
         event_id=uuid.uuid4(),
@@ -288,7 +301,14 @@ def record_attendance_event(
     db.refresh(event)
 
     return event
+
+
+
 def get_monthly_attendance_stats(db: Session, user_id, year: int, month: int):
+    # Ensure user is active before calculating stats
+    user = db.query(User).filter(User.user_id == user_id, User.status == "active").first()
+    if not user:
+        raise HTTPException(status_code=403, detail="Inactive users cannot have attendance stats")
 
     records = (
         db.query(Attendance)
