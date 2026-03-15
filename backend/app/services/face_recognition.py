@@ -23,9 +23,11 @@ def recognize_frame(
     Detect faces in frame and attempt recognition
     """
 
-    camera=db.query(Camera).filter(Camera.camera_id==camera_id).first()
+    camera = db.query(Camera).filter(Camera.camera_id == camera_id).first()
     organization_id = camera.organization_id
+
     faces = face_app.get(frame)
+
     print("ORG ID:", organization_id)
     print("Faces detected:", len(faces))
 
@@ -59,6 +61,7 @@ def recognize_frame(
 
         print(similarity_score)
 
+        #  recognition decision + attendance event
         recognition_result = process_recognition(
             db=db,
             matched_user=matched_user,
@@ -83,6 +86,7 @@ def process_recognition(
 
     if similarity_score >= THRESHOLD:
 
+        #  Attendance event generated ONLY when face is recognized
         record_attendance_event(
             db=db,
             user_id=matched_user.user_id,
