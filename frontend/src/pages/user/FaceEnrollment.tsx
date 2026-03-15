@@ -162,7 +162,7 @@ export default function FaceEnrollment() {
       await api.post("/face-enrollment/capture", formData);
       alert("Success!");
       setImages([]);
-    } catch (err: unknown) {
+    } catch (err: any) {
       // Look at the console to see the ACTUAL error message from the backend
       console.error(err.response?.data);
       alert(err.response?.data?.detail || "Upload failed.");
@@ -172,8 +172,8 @@ export default function FaceEnrollment() {
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: "auto", padding: 20, textAlign: "center", fontFamily: "sans-serif" }}>
-      <h2 style={{ color: "#30364F" }}>Face Enrollment</h2>
+    <div style={{ maxWidth: 800, margin: "auto", padding: 20, textAlign: "center", fontFamily: "sans-serif", paddingTop: 60 }}>
+      <h1 style={{ color: "#30364F" }}>Face Enrollment</h1>
 
       <button onClick={startCamera} style={{ background: "#30364F", color: "white", padding: "10px 20px", marginBottom: 20, border: "none", borderRadius: 5 }}>
         Start Camera

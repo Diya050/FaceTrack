@@ -34,7 +34,7 @@ class AdminFaceApprovalService:
             )
         ).scalars().all()
 
-        print(f"DEBUG: Found {len(images)} images in DB")
+        print(f"Found {len(images)} images in DB")
 
         embeddings = []
         processed_records = []
@@ -46,7 +46,7 @@ class AdminFaceApprovalService:
                 response = supabase.storage.from_(BUCKET).download(img.image_path)
 
                 if not response:
-                    print(f"DEBUG: Failed to download {img.image_path}")
+                    print(f"Failed to download {img.image_path}")
                     continue
 
                 embedding = extract_face_embedding(response, is_admin_approval=True)
@@ -54,20 +54,23 @@ class AdminFaceApprovalService:
                 if embedding is not None:
                     embeddings.append(embedding)
                     processed_records.append(img)
-                    print(f"DEBUG: Successfully processed {img.image_path}")
+                    print(f"Successfully processed {img.image_path}")
 
             except Exception as e:
-                print(f"DEBUG: Image {img.image_path} failed embedding: {str(e)}")
+                print(f"Image {img.image_path} failed embedding: {str(e)}")
                 continue
 
-        if len(embeddings) < 3:
+        # Ensure enough embeddings exist BEFORE activating user
+        if len(embeddings) < 5:
             raise HTTPException(
                 status_code=400,
                 detail=f"Only {len(embeddings)} images passed embedding check"
             )
 
+        # Generate final embedding
         mean_embedding = np.mean(embeddings, axis=0)
 
+        # Store biometric
         biometric = FacialBiometric(
             user_id=session.user_id,
             organization_id=session.organization_id,
@@ -79,18 +82,20 @@ class AdminFaceApprovalService:
         db.add(biometric)
         db.flush()
 
-        # Delete images from Supabase after approval
+        # Delete images from Supabase after successful embedding generation
         for img_record in processed_records:
 
             try:
                 supabase.storage.from_(BUCKET).remove([img_record.image_path])
-            except Exception as e:
-                print(f"DEBUG: Failed to delete storage file {img_record.image_path}")
+            except Exception:
+                print(f"Failed to delete storage file {img_record.image_path}")
 
             db.delete(img_record)
 
+        # Mark session completed
         session.status = "completed"
 
+        # Activate user ONLY AFTER biometric creation
         user = db.execute(
             select(User).where(User.user_id == session.user_id)
         ).scalars().first()
@@ -126,7 +131,7 @@ class AdminFaceApprovalService:
             try:
                 supabase.storage.from_(BUCKET).remove([img.image_path])
             except Exception as e:
-                print(f"DEBUG: Failed to delete storage file {img.image_path}")
+                print(f"Failed to delete storage file {img.image_path}")
 
             db.delete(img)
 
