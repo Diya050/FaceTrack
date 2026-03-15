@@ -83,3 +83,39 @@ class UserService:
         db.commit()
 
         return {"message": "User rejected"}
+    
+    
+def get_user_registration_details(db, current_user, user_id):
+
+    if current_user.role.role_name != "HR_ADMIN":
+        raise HTTPException(
+            status_code=403,
+            detail="Only HR_ADMIN can verify user registration details"
+        )
+
+    result = db.execute(
+        select(User).where(
+            User.user_id == user_id,
+            User.is_deleted == False
+        )
+    )
+
+    user = result.scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=404,
+            detail="User not found"
+        )
+
+    return {
+        "user_id": user.user_id,
+        "full_name": user.full_name,
+        "email": user.email,
+        "phone_number": user.phone_number,
+        "organization_id": user.organization_id,
+        "department_id": user.department_id,
+        "status": user.status,
+        "face_enrolled": user.face_enrolled,
+        "created_at": user.created_at
+    }

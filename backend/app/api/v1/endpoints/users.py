@@ -4,8 +4,12 @@ from sqlalchemy.orm import Session
 
 from app.db.session import get_db
 from app.core.permissions import require_roles
+from app.core.security import get_current_user
+from app.models.core import User
 from app.services.user_service import UserService
 from app.services.face_enrollment_admin_service import FaceEnrollmentAdminService
+from app.services.user_service import get_user_registration_details
+
 
 
 router = APIRouter(prefix="/users", tags=["Users"])
@@ -43,4 +47,18 @@ def request_face_enrollment(
         db,
         current_user,
         user_id
+    )
+    
+
+@router.get("/{user_id}/registration-details")
+def get_registration_details(
+    user_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    return get_user_registration_details(
+        db=db,
+        current_user=current_user,
+        user_id=user_id
     )
