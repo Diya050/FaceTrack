@@ -10,6 +10,8 @@ from app.core.security import (
 import datetime
 from datetime import timezone, datetime
 
+from app.services.notification_service import NotificationService
+
 
 class AuthService:
 
@@ -128,6 +130,21 @@ class AuthService:
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
+
+        hr_admins = db.query(User).filter(
+            User.organization_id == organization.organization_id,
+            User.role.has(role_name="HR_ADMIN")
+        ).all()
+
+        for hr in hr_admins:
+
+            NotificationService.create_notification(
+                db,
+                hr.user_id,
+                hr.organization_id,
+                f"New user registered: {new_user.full_name}",
+                "INFO"
+            )
 
         return new_user
     

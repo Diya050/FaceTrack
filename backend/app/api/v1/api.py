@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.v1.endpoints import auth, organization, department, profiles, face_enrollment_request, roles, users, unknown_faces, attendance_correction,attendance
 from app.api.v1.endpoints import face_enrollment, face_recognition, camera, support_tickets
+from app.api.v1.endpoints import notifications
 
 from app.api.v1.endpoints import user_dashboard,face_enrollment_status
 
@@ -24,6 +25,7 @@ api_router.include_router(attendance.router)
 api_router.include_router(camera.router)
 
 api_router.include_router(support_tickets.router)
+api_router.include_router(notifications.router)
 
 api_router.include_router(user_dashboard.router)
 
