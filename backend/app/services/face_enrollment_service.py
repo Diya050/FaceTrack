@@ -8,6 +8,8 @@ import traceback
 
 from app.utils.supabase_storage import upload_image
 from app.models.biometrics import FaceEnrollmentSession, FaceEnrollmentImage
+from app.models.core import User
+from app.services.notification_service import NotificationService
 
 
 class FaceEnrollmentService:
@@ -114,6 +116,21 @@ class FaceEnrollmentService:
                 db.add(image_record)
 
             session.status = "pending_approval"
+
+            hr_admins = db.query(User).filter(
+                User.organization_id == current_user.organization_id,
+                User.role.has(role_name="HR_ADMIN")
+            ).all()
+
+            for hr in hr_admins:
+
+                NotificationService.create_notification(
+                    db,
+                    hr.user_id,
+                    hr.organization_id,
+                    f"{current_user.full_name} submitted face enrollment images",
+                    "INFO"
+                )
 
             print("Committing database transaction")
 
