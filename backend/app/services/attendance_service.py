@@ -262,32 +262,32 @@ def get_organization_attendance(
     ]
 
 
-async def record_attendance_event(
+def record_attendance_event(
     db,
     user_id,
     camera_id,
     organization_id,
     confidence_score,
     recognition_method,
-    event_type="scan",
+    event_type
 ):
+
     event = AttendanceEvent(
+        event_id=uuid.uuid4(),
         user_id=user_id,
         camera_id=camera_id,
         organization_id=organization_id,
         scan_timestamp=datetime.utcnow(),
         confidence_score=confidence_score,
         recognition_method=recognition_method,
-        event_type=event_type,
+        event_type=event_type
     )
 
     db.add(event)
-    await db.commit()
-    await db.refresh(event)
+    db.commit()
+    db.refresh(event)
 
     return event
-
-
 def get_monthly_attendance_stats(db: Session, user_id, year: int, month: int):
 
     records = (
