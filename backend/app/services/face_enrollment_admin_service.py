@@ -2,6 +2,7 @@ from sqlalchemy import select
 from fastapi import HTTPException
 from app.models.biometrics import FaceEnrollmentSession
 from app.models.core import User, UserStatusEnum
+from app.services.notification_service import NotificationService
 
 
 class FaceEnrollmentAdminService:
@@ -47,6 +48,14 @@ class FaceEnrollmentAdminService:
 
         db.add(session)
         db.commit()
+
+        NotificationService.create_notification(
+            db=db,
+            user_id=user.user_id,
+            organization_id=user.organization_id,
+            message="HR Admin requested you to complete face enrollment",
+            type="INFO"
+        )
 
         return {
             "message": "Face enrollment requested",
