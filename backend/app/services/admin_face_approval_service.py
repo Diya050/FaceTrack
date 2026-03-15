@@ -10,6 +10,7 @@ from app.models.biometrics import (
 )
 from app.models.core import User, UserStatusEnum
 from app.utils.supabase_storage import supabase
+from app.services.notification_service import NotificationService
 
 BUCKET = "face-images"
 
@@ -101,10 +102,23 @@ class AdminFaceApprovalService:
         ).scalars().first()
 
         if user:
+            
+            if user.status != UserStatusEnum.APPROVED:
+                raise HTTPException(400, "User must be approved before activation")
+            
             user.face_enrolled = True
             user.status = UserStatusEnum.ACTIVE
+            user.is_active = True
 
         db.commit()
+
+        NotificationService.create_notification(
+            db,
+            user.user_id,
+            user.organization_id,
+            "Face enrollment approved. Your biometric data has been generated.",
+            "SUCCESS"
+        )
 
         return {"message": "Face enrollment approved successfully"}
 
@@ -145,5 +159,13 @@ class AdminFaceApprovalService:
             user.status = UserStatusEnum.PENDING
 
         db.commit()
+
+        NotificationService.create_notification(
+            db,
+            user.user_id,
+            user.organization_id,
+            "Face enrollment rejected. Please upload new images.",
+            "ERROR"
+        )
 
         return {"message": "Enrollment rejected and images cleared"}

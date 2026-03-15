@@ -16,7 +16,7 @@ def recognize_camera_frame(
     db: Session = Depends(get_db)
 ):
 
-    image_bytes =  file.read()
+    image_bytes = file.file.read()
 
     nparr = np.frombuffer(image_bytes, np.uint8)
     frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)

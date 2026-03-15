@@ -3,7 +3,6 @@ from typing import List, Optional
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
@@ -17,14 +16,14 @@ from app.services.attendance_service import get_monthly_attendance_stats
 from app.schemas.monthly_attendance import MonthlyAttendanceStats
 
 from app.services.attendance_service import (
-    request_attendance_correction,
     get_user_attendance,
     get_organization_attendance,
     get_department_attendance,
 )
 from app.services.daily_attendance_service import DailyAttendanceService
 
-from app.schemas.attendance_correction import AttendanceCorrectionRequest
+
+
 from app.schemas.daily_attendance import (
     AttendanceGenerateResponse,
     UserAttendanceResponse,
@@ -82,28 +81,6 @@ def get_my_attendance(
     )
 
 
-# -------------------------------------------------------------------------
-# Attendance Correction Endpoint
-# -------------------------------------------------------------------------
-
-@router.post("/corrections")
-async def request_correction(
-    data: AttendanceCorrectionRequest,
-    db: AsyncSession = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    """
-    Allows a user to request an attendance correction.
-
-    The request is forwarded to the attendance service which handles
-    validation, persistence, and workflow logic.
-    """
-
-    return await request_attendance_correction(
-        db=db,
-        current_user=current_user,
-        data=data,
-    )
 
 
 # -------------------------------------------------------------------------
@@ -121,7 +98,7 @@ def generate_daily_attendance(
         examples=["2026-03-10"],
     ),
     current_user: User = Depends(
-        require_roles(["SUPER_ADMIN", "HR_ADMIN"])
+        require_roles(["HR_ADMIN"])
     ),
     db: Session = Depends(get_db),
 ):

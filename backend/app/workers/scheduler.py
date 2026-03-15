@@ -1,7 +1,7 @@
 import logging
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
-from pytz import timezone
+from zoneinfo import ZoneInfo
 
 from app.workers.generate_daily_attendance import run_daily_attendance_job
 
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 scheduler = BackgroundScheduler()
 
 # Define timezone explicitly
-IST = timezone("Asia/Kolkata")
+IST = ZoneInfo("Asia/Kolkata")
 
 JOB_ID = "daily_attendance_generation"
 

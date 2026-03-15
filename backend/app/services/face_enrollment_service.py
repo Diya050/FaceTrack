@@ -8,6 +8,8 @@ import traceback
 
 from app.utils.supabase_storage import upload_image
 from app.models.biometrics import FaceEnrollmentSession, FaceEnrollmentImage
+from app.models.core import User
+from app.services.notification_service import NotificationService
 
 
 class FaceEnrollmentService:
@@ -26,31 +28,46 @@ class FaceEnrollmentService:
                     detail="Upload between 5 and 7 images"
                 )
 
-            print("Checking existing enrollment session")
-
-            existing = db.execute(
+            print("DEBUG: Checking if admin requested enrollment")
+            
+            session = db.execute(
                 select(FaceEnrollmentSession).where(
                     FaceEnrollmentSession.user_id == current_user.user_id,
-                    FaceEnrollmentSession.status.in_(["started", "pending_approval"])
+                    FaceEnrollmentSession.organization_id == current_user.organization_id,
+                    FaceEnrollmentSession.status == "started"
                 )
             ).scalars().first()
 
-            if existing:
-                print("Enrollment already in progress")
-                raise HTTPException(400, "Enrollment already in progress")
+            if not session:
+                raise HTTPException(
+                    status_code=403,
+                    detail="Face enrollment has not been requested by Admin"
+                )
 
-            print("Creating enrollment session")
 
-            session = FaceEnrollmentSession(
-                user_id=current_user.user_id,
-                organization_id=current_user.organization_id,
-                status="started"
-            )
+            # existing = db.execute(
+            #     select(FaceEnrollmentSession).where(
+            #         FaceEnrollmentSession.user_id == current_user.user_id,
+            #         FaceEnrollmentSession.status.in_(["started", "pending_approval"])
+            #     )
+            # ).scalars().first()
 
-            db.add(session)
-            db.flush()
+            # if existing:
+            #     print("DEBUG: Enrollment already in progress")
+            #     raise HTTPException(400, "Enrollment already in progress")
 
-            print("Session created with ID:", session.session_id)
+            # print("DEBUG: Creating enrollment session")
+
+            # session = FaceEnrollmentSession(
+            #     user_id=current_user.user_id,
+            #     organization_id=current_user.organization_id,
+            #     status="started"
+            # )
+
+            # db.add(session)
+            # db.flush()
+            
+            print("DEBUG: Using existing session:", session.session_id)
 
             MAX_IMAGE_SIZE = 5 * 1024 * 1024
 
@@ -100,6 +117,21 @@ class FaceEnrollmentService:
 
             session.status = "pending_approval"
 
+            hr_admins = db.query(User).filter(
+                User.organization_id == current_user.organization_id,
+                User.role.has(role_name="HR_ADMIN")
+            ).all()
+
+            for hr in hr_admins:
+
+                NotificationService.create_notification(
+                    db,
+                    hr.user_id,
+                    hr.organization_id,
+                    f"{current_user.full_name} submitted face enrollment images",
+                    "INFO"
+                )
+
             print("Committing database transaction")
 
             db.commit()
@@ -110,8 +142,10 @@ class FaceEnrollmentService:
                 "session_id": str(session.session_id),
                 "message": "Images uploaded successfully. Waiting for HR approval."
             }
-
+            
+        except HTTPException:
+            raise
         except Exception as e:
             print("CRITICAL ERROR:", e)
             traceback.print_exc()
-            raise
+            raise HTTPException(status_code=500, detail=str(e))
