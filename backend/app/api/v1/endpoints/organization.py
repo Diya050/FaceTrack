@@ -35,7 +35,7 @@ def list_orgs(
 def get_my_org(
     db: Session = Depends(get_db),
     # Assuming require_roles or a similar dependency returns the current user
-    current_user = Depends(require_roles(["ADMIN", "SUPER_ADMIN"]))
+    current_user = Depends(require_roles(["HR_ADMIN"]))
 ):
     """Fetch the organization details for the logged-in admin."""
     org = db.execute(

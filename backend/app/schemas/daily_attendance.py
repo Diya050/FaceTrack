@@ -4,11 +4,11 @@ from typing import Optional
 from uuid import UUID
 
 class AttendanceGenerateResponse(BaseModel):
-    message : str
+    message: str
     processed_users_count: int
-    present_count : int
-    absent_count : int
-    half_day_count : int
+    present_count: int
+    absent_count: int
+
 
 class AttendanceRecordResponse(BaseModel):
     attendance_id : UUID

@@ -43,12 +43,11 @@ def run_daily_attendance_job(target_date: date = None):
             )
 
         logger.info(
-            "Attendance job finished | date=%s | users=%s | present=%s | absent=%s | half_day=%s",
+            "Attendance job finished | date=%s | users=%s | present=%s | absent=%s",
             target_date,
             result.get("processed_users_count"),
             result.get("present_count"),
             result.get("absent_count"),
-            result.get("half_day_count"),
         )
 
         return result

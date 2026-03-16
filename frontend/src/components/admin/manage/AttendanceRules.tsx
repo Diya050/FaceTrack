@@ -58,11 +58,11 @@ const AttendanceRules: React.FC = () => {
       setLoading(true);
       setError("");
 
-      // Attempt to fetch both, but handle them gracefully if one fails
-      const rulesPromise = api.get("/attendance/rules");
-      const orgPromise = api.get("/organizations/me");
-
-      const [rulesRes, orgRes] = await Promise.allSettled([rulesPromise, orgPromise]);
+      // Fetch both Time-based Rules and Organization Settings (Threshold)
+      const [rulesRes, orgRes] = await Promise.allSettled([
+        api.get("/attendance/rules"),
+        api.get("/organizations/me")
+      ]);
 
       // Handle Rules Response
       if (rulesRes.status === "fulfilled") {
@@ -77,10 +77,11 @@ const AttendanceRules: React.FC = () => {
         setError("Failed to load attendance rules");
       }
 
-      // Handle Org Response (Duration Logic)
+      // Handle Org Response (Fetching value stored in database table)
       if (orgRes.status === "fulfilled") {
-        if (orgRes.value.data.min_hours_for_present) {
-          setMinHours(orgRes.value.data.min_hours_for_present);
+        const storedMinHours = orgRes.value.data.min_hours_for_present;
+        if (storedMinHours !== undefined && storedMinHours !== null) {
+          setMinHours(storedMinHours);
         }
       } else {
         console.warn("Org settings fetch failed. Ensure /organizations/me exists.");
@@ -159,10 +160,10 @@ const AttendanceRules: React.FC = () => {
       setError("");
       setSuccess("");
 
-      // 1. Save Duration Threshold to Organization
-      await api.put("/organizations/me", { min_hours_for_present: minHours });
+      // 1. Save Duration Threshold to Organization table
+      await api.put("/organizations/me", { min_hours_for_present: Number(minHours) });
 
-      // 2. Save Time-based Rules
+      // 2. Save/Update Time-based Rules
       for (const rule of rules) {
         const payload = {
           rule_name: rule.rule_name,
@@ -180,7 +181,7 @@ const AttendanceRules: React.FC = () => {
 
       setSuccess("All settings deployed successfully!");
       setTimeout(() => setSuccess(""), 5000);
-      fetchData();
+      fetchData(); // Sync state with DB after save
     } catch (err: any) {
       const backendError = err.response?.data?.detail;
       setError(typeof backendError === 'string' ? backendError : "Failed to deploy settings. Check backend routes.");
@@ -232,7 +233,7 @@ const AttendanceRules: React.FC = () => {
               </Box>
             )}
 
-            {/* Duration Settings Section */}
+            {/* Duration Settings Section - Linked to Organization DB table */}
             <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1, border: '1px solid #e0e0e0' }}>
               <Stack direction="row" spacing={2} alignItems="center">
                 <Timer color="primary" />
