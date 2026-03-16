@@ -51,6 +51,19 @@ export default function FaceEnrollment() {
     }
   };
 
+  const stopCamera = () => {
+  if (videoRef.current && videoRef.current.srcObject) {
+    const stream = videoRef.current.srcObject as MediaStream;
+    stream.getTracks().forEach(track => track.stop());
+    videoRef.current.srcObject = null;
+  }
+
+  if (detectionIntervalRef.current) {
+    clearInterval(detectionIntervalRef.current);
+    detectionIntervalRef.current = null;
+  }
+};
+
   const detectBlur = (imageData: ImageData) => {
     const data = imageData.data;
     const gray = [];
@@ -157,6 +170,8 @@ export default function FaceEnrollment() {
 
     try {
       setLoading(true);
+      stopCamera();
+
       // Note: If using axios, don't manually set Content-Type header, 
       // let the browser set it with the boundary string.
       await api.post("/face-enrollment/capture", formData);

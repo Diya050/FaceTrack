@@ -2,34 +2,30 @@ import cv2
 import numpy as np
 from sqlalchemy import select
 from insightface.app import FaceAnalysis
-from app.models.streams import Camera
+from datetime import datetime, timedelta, timezone
 
+from app.models.streams import Camera
 from app.models.biometrics import FacialBiometric
 from app.services.attendance_service import record_attendance_event
+from app.enums.attendance_enums import AttendanceEventType
 
 THRESHOLD = 0.65
 
-# Initialize model
 face_app = FaceAnalysis(name="buffalo_l")
 face_app.prepare(ctx_id=-1, det_size=(640, 640))
 
 
-def recognize_frame(
-    db,
-    frame,
-    camera_id
-):
-    """
-    Detect faces in frame and attempt recognition
-    """
+def recognize_frame(db, frame, camera_id):
 
-    camera = db.query(Camera).filter(Camera.camera_id == camera_id).first()
+    camera = db.execute(
+        select(Camera).where(Camera.camera_id == camera_id)
+    ).scalar_one_or_none()
+
+    if not camera:
+        return []
+
     organization_id = camera.organization_id
-
     faces = face_app.get(frame)
-
-    print("ORG ID:", organization_id)
-    print("Faces detected:", len(faces))
 
     results = []
 
@@ -59,9 +55,6 @@ def recognize_frame(
         matched_user = match.FacialBiometric.user
         similarity_score = 1 - match.distance
 
-        print(similarity_score)
-
-        #  recognition decision + attendance event
         recognition_result = process_recognition(
             db=db,
             matched_user=matched_user,
@@ -74,19 +67,13 @@ def recognize_frame(
     return results
 
 
-def process_recognition(
-    db,
-    matched_user,
-    camera_id,
-    similarity_score
-):
-    """
-    Process the result of a face recognition match.
-    """
+def process_recognition(db, matched_user, camera_id, similarity_score):
 
-    if similarity_score >= THRESHOLD:
+    if similarity_score < THRESHOLD:
+        return {"status": "unknown"}
 
-        #  Attendance event generated ONLY when face is recognized
+    try:
+
         record_attendance_event(
             db=db,
             user_id=matched_user.user_id,
@@ -94,14 +81,14 @@ def process_recognition(
             organization_id=matched_user.organization_id,
             confidence_score=similarity_score,
             recognition_method="face",
-            event_type="passby"
+            event_type=AttendanceEventType.passby
         )
 
-        return {
-            "status": "recognized",
-            "user_id": str(matched_user.user_id)
-        }
+    except Exception as e:
+        print("Attendance logging failed:", e)
 
     return {
-        "status": "unknown"
+        "status": "recognized",
+        "user_id": str(matched_user.user_id),
+        "confidence": round(similarity_score, 3)
     }
