@@ -15,8 +15,10 @@ logger = logging.getLogger(__name__)
 class DailyAttendanceService:
 
     @staticmethod
-    def get_status_from_rules(db: Session, organization_id: UUID, scan_time: time):
-        """Matches first scan against the AttendanceRule table."""
+    def get_status_from_rules(db: Session, organization_id: UUID, scan_time: time) -> str:
+        """
+        Determines the status (Present, Late, Half Day) based on the first scan time.
+        """
         stmt = select(AttendanceRule).where(
             AttendanceRule.organization_id == organization_id,
             AttendanceRule.is_deleted == False,
@@ -24,37 +26,45 @@ class DailyAttendanceService:
             AttendanceRule.end_time >= scan_time
         )
         rule = db.execute(stmt).scalars().first()
-        # If no rule matches, we assume they arrived too late or outside 
-        # allowed windows, effectively making them absent.
+        # If no rule window matches, default to absent
         return rule.status_effect if rule else "absent"
 
     @staticmethod
-    def generate_daily_attendance(db: Session, target_date: date, organization_id: Optional[UUID] = None):
+    def generate_daily_attendance(db: Session, target_date: date, organization_id: UUID):
+        """
+        Finalizes attendance for a specific day. 
+        Synchronizes Live Camera scans with the Night Shift scheduler logic.
+        """
         try:
-            # 1. Fetch Dynamic Threshold for Organization (Fallback to 4)
-            org_stmt = select(Organization).where(Organization.organization_id == organization_id)
-            org = db.execute(org_stmt).scalars().first()
-            min_hours = org.min_hours_for_present if org and org.min_hours_for_present else 4
+            # 1. FETCH DYNAMIC THRESHOLD FROM ORGANIZATION
+            # Pulls 'min_hours_for_present' directly from the database
+            org = db.execute(
+                select(Organization).where(Organization.organization_id == organization_id)
+            ).scalars().first()
+            
+            if not org:
+                raise ValueError("Organization not found")
+
+            min_hours = org.min_hours_for_present if org.min_hours_for_present else 4
             threshold_delta = timedelta(hours=min_hours)
 
-            # 2. Fetch users with "active" status string
-            user_query = select(User).where(
-                User.is_active.is_(True),
-                User.is_deleted.is_(False),
-                User.status == "active"  # Corrected to string "active"
-            )
-            if organization_id:
-                user_query = user_query.where(User.organization_id == organization_id)
+            # 2. FETCH ALL ACTIVE USERS
+            users = db.execute(
+                select(User).where(
+                    User.organization_id == organization_id,
+                    User.is_active.is_(True),
+                    User.status == "active"
+                )
+            ).scalars().all()
 
-            users = db.execute(user_query).scalars().all()
-
-            # Time Window Setup
+            # Time boundaries for the target day
             start_of_day = datetime.combine(target_date, datetime.min.time()).replace(tzinfo=timezone.utc)
             end_of_day = start_of_day + timedelta(days=1)
-            counts = {"present": 0, "absent": 0, "half_day": 0, "late": 0}
+            
+            summary_counts = {"present": 0, "absent": 0, "half_day": 0, "late": 0}
 
-            # 3. Process Users
             for user in users:
+                # 3. FETCH RAW SCANS (Source of Truth from Camera)
                 event_stats = db.execute(
                     select(
                         func.min(AttendanceEvent.scan_timestamp).label("first_in"),
@@ -66,60 +76,77 @@ class DailyAttendanceService:
                     )
                 ).first()
 
-                first_in = event_stats.first_in if event_stats and event_stats.first_in else None
-                last_out = event_stats.last_out if event_stats and event_stats.last_out else None
+                first_in_dt = event_stats.first_in if event_stats else None
+                last_out_dt = event_stats.last_out if event_stats else None
 
-                final_status = "absent"
+                # Calculate proposed status based on arrival and duration
+                calculated_status = "absent"
                 first_in_time = None
                 last_out_time = None
 
-                if first_in:
-                    first_in_time = first_in.time()
-                    last_out_time = last_out.time() if last_out else first_in_time
+                if first_in_dt:
+                    first_in_time = first_in_dt.time()
+                    last_out_time = last_out_dt.time() if last_out_dt else first_in_time
                     
-                    # Arrival Logic: Are they Present or Late?
+                    # Arrival check (Late vs Present)
                     arrival_status = DailyAttendanceService.get_status_from_rules(
-                        db, user.organization_id, first_in_time
+                        db, organization_id, first_in_time
                     )
 
-                    # Duration Logic:
-                    # If they only scanned once, (last_out - first_in) is 0.
-                    # This will trigger the 'half_day' status as a penalty for not scanning out.
-                    duration = (last_out or first_in) - first_in
-                    
+                    # Duration check (Half Day penalty)
+                    duration = (last_out_dt or first_in_dt) - first_in_dt
                     if arrival_status in ["present", "late"] and duration < threshold_delta:
-                        final_status = "half_day"
+                        calculated_status = "half_day"
                     else:
-                        final_status = arrival_status
-                else:
-                    final_status = "absent"
+                        calculated_status = arrival_status
 
-                # 4. Upsert Logic
-                existing = db.execute(select(Attendance).where(
-                    Attendance.user_id == user.user_id,
-                    Attendance.attendance_date == target_date
-                )).scalars().first()
+                # 4. SMART UPSERT (The "Dhruvit Protection" Layer)
+                # Check if a record was already created by your Live Tracking service
+                existing = db.execute(
+                    select(Attendance).where(
+                        Attendance.user_id == user.user_id,
+                        Attendance.attendance_date == target_date
+                    )
+                ).scalars().first()
 
                 if existing:
+                    # Sync times from raw scans to the record
                     existing.first_check_in = first_in_time
                     existing.last_check_out = last_out_time
-                    existing.status = final_status
+                    
+                    # Logic: Do not overwrite a 'late' or 'half_day' tag with 'present'
+                    # if the live tracker already flagged a violation.
+                    if existing.status in ["absent", None]:
+                        existing.status = calculated_status
+                    elif calculated_status == "half_day":
+                        # Duration penalty always overrides a live 'present' or 'late'
+                        existing.status = "half_day"
+                    # If it was 'late' and new calc is 'present', keep 'late'
+                    
+                    existing.updated_at = func.now()
                 else:
+                    # Create record for those the camera missed (the true absentees)
                     db.add(Attendance(
                         user_id=user.user_id,
-                        organization_id=user.organization_id,
+                        organization_id=organization_id,
                         attendance_date=target_date,
                         first_check_in=first_in_time,
                         last_check_out=last_out_time,
-                        status=final_status,
+                        status=calculated_status
                     ))
 
-                counts[final_status] += 1
+                final_status = existing.status if existing else calculated_status
+                summary_counts[final_status] += 1
 
             db.commit()
-            return {"message": "Success", "counts": counts, "applied_threshold": min_hours}
+            return {
+                "status": "success", 
+                "date": target_date, 
+                "counts": summary_counts, 
+                "threshold_used": min_hours
+            }
 
         except Exception as e:
             db.rollback()
-            logger.exception(f"Error in Attendance Generation: {e}")
-            raise HTTPException(status_code=500, detail="Internal Server Error")
+            logger.error(f"Attendance Generation Error: {str(e)}")
+            raise HTTPException(status_code=500, detail="Could not process daily attendance.")
