@@ -79,10 +79,6 @@ def get_my_attendance(
         skip=skip,
         limit=limit,
     )
-
-
-
-
 # -------------------------------------------------------------------------
 # Daily Attendance Generation
 # -------------------------------------------------------------------------
@@ -90,27 +86,21 @@ def get_my_attendance(
 @router.post(
     "/generate-daily-attendance",
     response_model=AttendanceGenerateResponse,
+    summary="Generate daily attendance records",
 )
 def generate_daily_attendance(
     target_date: date = Query(
         ...,
-        description="Date for which attendance should be generated (YYYY-MM-DD)",
+        description="Date to generate attendance for (YYYY-MM-DD)",
         examples=["2026-03-10"],
     ),
-    current_user: User = Depends(
-        require_roles(["HR_ADMIN"])
-    ),
+    current_user: User = Depends(require_roles(["HR_ADMIN"])),
     db: Session = Depends(get_db),
 ):
     """
-    Generate structured daily attendance records from raw attendance events.
-
-    Role Behavior:
-    - SUPER_ADMIN → Can generate attendance for all organizations.
-    - HR_ADMIN → Generates attendance only for their organization.
-
-    The service aggregates scan events (first_in / last_out) and
-    determines attendance status based on business rules.
+    Generates structured daily attendance from raw scan events.
+    
+    - **HR_ADMIN** → Generates only for their own organization.
     """
 
     organization_id = None
@@ -118,14 +108,11 @@ def generate_daily_attendance(
     if current_user.role.role_name == "HR_ADMIN":
         organization_id = current_user.organization_id
 
-    result = DailyAttendanceService.generate_daily_attendance(
+    return DailyAttendanceService.generate_daily_attendance(
         db=db,
         target_date=target_date,
         organization_id=organization_id,
     )
-
-    return result
-
 
 # -------------------------------------------------------------------------
 # Get Organization Attendance
