@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from sqlalchemy import select
 from insightface.app import FaceAnalysis
-from datetime import datetime, timedelta
+from datetime import datetime, timezone
 
 from app.models.streams import Camera, VideoStream, UnknownFace
 from app.models.biometrics import FacialBiometric
@@ -109,6 +109,7 @@ def recognize_frame(db, frame, camera_id):
             )
 
             db.add(unknown)
+            db.flush()  # get unknown_id before commit
             unknown_faces_added = True
             
             results.append({
@@ -161,6 +162,7 @@ def recognize_frame(db, frame, camera_id):
                     )
 
                     db.add(unknown)
+                    db.flush()  # get unknown_id before commit
                     unknown_faces_added = True
 
                     results.append({
@@ -206,7 +208,7 @@ def process_recognition(db, matched_user, camera_id, similarity_score):
     
 def should_store_unknown(camera_id, embedding):
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     cache = UNKNOWN_FACE_CACHE.get(camera_id)
 
