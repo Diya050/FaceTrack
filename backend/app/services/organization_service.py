@@ -44,22 +44,20 @@ def create_organization(db, data):
         contact_number=data.contact_number,
         address=data.address,
         status=OrganizationStatusEnum.ACTIVE,
-        # is_deleted defaults to False
-        # created_at handled by DB
-        # updated_at handled by DB
+        min_hours_for_present=data.min_hours_for_present 
     )
 
     db.add(new_org)
-    db.flush()  # important (get organization_id before commit)
+    db.flush()  # Get organization_id for departments/roles
 
-    hr_department=Department(
+    hr_department = Department(
         name="HR",
         organization_id=new_org.organization_id,
         description="Human Resources Department"
     )
     db.add(hr_department)
 
-        # Auto-create default roles
+    # Auto-create default roles
     default_roles = [
         ("USER", "Standard user role"),
         ("ADMIN", "Department admin role"),

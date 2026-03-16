@@ -23,7 +23,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 
-import { Rule, Delete, Add } from "@mui/icons-material";
+import { Rule, Delete, Add, Timer } from "@mui/icons-material";
 import api from "../../../services/api";
 
 /* -------------------- Types -------------------- */
@@ -45,37 +45,57 @@ const toAPI = (t: string) => (t.length === 5 ? `${t}:00` : t);
 /* -------------------- Component -------------------- */
 
 const AttendanceRules: React.FC = () => {
+  const [minHours, setMinHours] = useState<number>(4);
   const [rules, setRules] = useState<AttendanceRule[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(""); // State for success feedback
+  const [success, setSuccess] = useState("");
 
-  /* -------------------- Fetch Rules -------------------- */
+  /* -------------------- Fetch Data -------------------- */
 
-  const fetchRules = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
       setError("");
 
-      const res = await api.get("/attendance/rules");
+      // Attempt to fetch both, but handle them gracefully if one fails
+      const rulesPromise = api.get("/attendance/rules");
+      const orgPromise = api.get("/organizations/me");
 
-      const formatted = res.data.map((r: any) => ({
-        ...r,
-        start_time: toUI(r.start_time),
-        end_time: toUI(r.end_time),
-      }));
+      const [rulesRes, orgRes] = await Promise.allSettled([rulesPromise, orgPromise]);
 
-      setRules(formatted);
+      // Handle Rules Response
+      if (rulesRes.status === "fulfilled") {
+        const formatted = rulesRes.value.data.map((r: any) => ({
+          ...r,
+          start_time: toUI(r.start_time),
+          end_time: toUI(r.end_time),
+        }));
+        setRules(formatted);
+      } else {
+        console.error("Rules fetch failed", rulesRes.reason);
+        setError("Failed to load attendance rules");
+      }
+
+      // Handle Org Response (Duration Logic)
+      if (orgRes.status === "fulfilled") {
+        if (orgRes.value.data.min_hours_for_present) {
+          setMinHours(orgRes.value.data.min_hours_for_present);
+        }
+      } else {
+        console.warn("Org settings fetch failed. Ensure /organizations/me exists.");
+      }
+
     } catch (err) {
       console.error(err);
-      setError("Failed to load attendance rules");
+      setError("An unexpected error occurred while fetching data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchRules();
+    fetchData();
   }, []);
 
   /* -------------------- Update Rule -------------------- */
@@ -131,14 +151,18 @@ const AttendanceRules: React.FC = () => {
     }
   };
 
-  /* -------------------- Deploy Rules -------------------- */
+  /* -------------------- Deploy All Settings -------------------- */
 
-  const saveRules = async () => {
+  const saveAllSettings = async () => {
     try {
       setLoading(true);
       setError("");
       setSuccess("");
 
+      // 1. Save Duration Threshold to Organization
+      await api.put("/organizations/me", { min_hours_for_present: minHours });
+
+      // 2. Save Time-based Rules
       for (const rule of rules) {
         const payload = {
           rule_name: rule.rule_name,
@@ -148,34 +172,22 @@ const AttendanceRules: React.FC = () => {
         };
 
         if (!rule.rule_id) {
-          console.log("Creating rule:", payload);
           await api.post("/attendance/rules", payload);
         } else {
           await api.put(`/attendance/rules/${rule.rule_id}`, payload);
         }
       }
 
-      // Display success message instead of browser alert
-      setSuccess("Rules deployed successfully!");
-      
-      // Auto-hide success message after 5 seconds
+      setSuccess("All settings deployed successfully!");
       setTimeout(() => setSuccess(""), 5000);
-      
-      fetchRules();
+      fetchData();
     } catch (err: any) {
       const backendError = err.response?.data?.detail;
-      const errorMessage = typeof backendError === 'string'
-        ? backendError
-        : "Validation Error: Check time overlaps or formats.";
-
-      setError(errorMessage);
-      console.error("Save failed:", err.response?.data);
+      setError(typeof backendError === 'string' ? backendError : "Failed to deploy settings. Check backend routes.");
     } finally {
       setLoading(false);
     }
   };
-
-  /* -------------------- UI -------------------- */
 
   return (
     <Box mt={8}>
@@ -191,14 +203,12 @@ const AttendanceRules: React.FC = () => {
 
             <Divider />
 
-            {/* Error Feedback */}
             {error && (
               <Alert severity="error" onClose={() => setError("")}>
                 {error}
               </Alert>
             )}
 
-            {/* Success Feedback */}
             {success && (
               <Alert severity="success" onClose={() => setSuccess("")}>
                 {success}
@@ -206,10 +216,7 @@ const AttendanceRules: React.FC = () => {
             )}
 
             <Stack direction="row" justifyContent="space-between">
-              <Typography fontWeight={600}>
-                Time Based Rules
-              </Typography>
-
+              <Typography fontWeight={600}>Time Based Rules (Arrival)</Typography>
               <Button
                 startIcon={<Add />}
                 variant="outlined"
@@ -225,11 +232,27 @@ const AttendanceRules: React.FC = () => {
               </Box>
             )}
 
-            {!loading && rules.length === 0 && (
-              <Alert severity="info">
-                No attendance rules configured.
-              </Alert>
-            )}
+            {/* Duration Settings Section */}
+            <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+              <Stack direction="row" spacing={2} alignItems="center">
+                <Timer color="primary" />
+                <Typography variant="body2" fontWeight={600}>
+                  Minimum hours required for Full Day:
+                </Typography>
+                <TextField
+                  type="number"
+                  size="small"
+                  value={minHours}
+                  onChange={(e) => setMinHours(Number(e.target.value))}
+                  sx={{ width: 80 }}
+                  inputProps={{ min: 1, max: 12 }}
+                />
+                
+                <Typography variant="caption" color="text.secondary">
+                  (Status will downgrade to Half Day if worked less than {minHours} hrs)
+                </Typography>
+              </Stack>
+            </Box>
 
             <TableContainer component={Paper} elevation={0}>
               <Table size="small">
@@ -246,52 +269,36 @@ const AttendanceRules: React.FC = () => {
                 <TableBody>
                   {rules.map((r) => {
                     const key = r.rule_id || r.temp_id!;
-
                     return (
                       <TableRow key={key}>
                         <TableCell>
                           <TextField
                             size="small"
                             value={r.rule_name}
-                            onChange={(e) =>
-                              updateRule(key, "rule_name", e.target.value)
-                            }
+                            onChange={(e) => updateRule(key, "rule_name", e.target.value)}
                           />
                         </TableCell>
-
                         <TableCell>
                           <TextField
                             type="time"
                             size="small"
                             value={r.start_time}
-                            onChange={(e) =>
-                              updateRule(key, "start_time", e.target.value)
-                            }
+                            onChange={(e) => updateRule(key, "start_time", e.target.value)}
                           />
                         </TableCell>
-
                         <TableCell>
                           <TextField
                             type="time"
                             size="small"
                             value={r.end_time}
-                            onChange={(e) =>
-                              updateRule(key, "end_time", e.target.value)
-                            }
+                            onChange={(e) => updateRule(key, "end_time", e.target.value)}
                           />
                         </TableCell>
-
                         <TableCell>
                           <Select
                             size="small"
                             value={r.status_effect}
-                            onChange={(e) =>
-                              updateRule(
-                                key,
-                                "status_effect",
-                                e.target.value as any
-                              )
-                            }
+                            onChange={(e) => updateRule(key, "status_effect", e.target.value as any)}
                           >
                             <MenuItem value="present">
                               <Chip label="Present" color="success" size="small" />
@@ -300,14 +307,13 @@ const AttendanceRules: React.FC = () => {
                               <Chip label="Late" color="warning" size="small" />
                             </MenuItem>
                             <MenuItem value="half_day">
-                              <Chip label="Half Day" color="info" size="small" />
+                              <Chip label="Half Day (Arrival)" color="info" size="small" />
                             </MenuItem>
                             <MenuItem value="absent">
                               <Chip label="Absent" color="error" size="small" />
                             </MenuItem>
                           </Select>
                         </TableCell>
-
                         <TableCell>
                           <IconButton onClick={() => deleteRule(r)}>
                             <Delete fontSize="small" />
@@ -320,22 +326,42 @@ const AttendanceRules: React.FC = () => {
               </Table>
             </TableContainer>
 
-            <Alert severity="info">
-              Attendance status is determined from the <b>first face recognition
-                event of the day</b> and matched against the configured rule time.
+            <Alert
+              severity="info"
+              variant="outlined"
+              sx={{ borderWidth: '1px', '& .MuiAlert-message': { width: '100%' } }}
+            >
+              <Stack spacing={2}>
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={700} color="info.main" gutterBottom>
+                    1. Arrival Logic (First Half Day)
+                  </Typography>
+                  <Typography variant="body2">
+                    Marked <b>Half Day</b> immediately if first check-in falls within a Half Day(Arrival) rule slot.
+                  </Typography>
+                </Box>
+                <Divider sx={{ opacity: 0.6 }} />
+                <Box>
+                  <Typography variant="subtitle2" fontWeight={700} color="info.main" gutterBottom>
+                    2. Duration Logic (Second Half Day)
+                  </Typography>
+                  <Typography variant="body2">
+                    Downgraded to <b>Half Day</b> if total work duration is <b>less than {minHours} hours</b>.
+                  </Typography>
+                </Box>
+              </Stack>
             </Alert>
 
             <Stack direction="row" justifyContent="flex-end" spacing={2}>
-              <Button variant="outlined" onClick={fetchRules} disabled={loading}>
+              <Button variant="outlined" onClick={fetchData} disabled={loading}>
                 Refresh
               </Button>
-
               <Button
                 variant="contained"
                 disabled={loading}
-                onClick={saveRules}
+                onClick={saveAllSettings}
               >
-                {loading ? <CircularProgress size={24} color="inherit" /> : "Deploy Rules"}
+                {loading ? <CircularProgress size={24} color="inherit" /> : "Deploy All Settings"}
               </Button>
             </Stack>
           </Stack>
