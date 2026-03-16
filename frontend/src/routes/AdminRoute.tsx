@@ -15,6 +15,7 @@ import SystemSettingsPage from "../pages/admin/settings/SystemSettingsPage";
 import SecuritySettingsPage from "../pages/admin/settings/SecuritySettingsPage";
 import ManagePage from "../pages/admin/ManagePage";
 import FaceEnrollmentRequests from "../pages/admin/FaceEnrollmentRequests";
+import UnknownFacesPage from "../pages/admin/UnknownFacesPage";
 
 // support ticket
 import SupportTickets from "../pages/admin/SupportTickets";
@@ -34,6 +35,9 @@ export const adminRoutes: RouteObject = {
 
     // Live Monitoring
     { path: "monitoring", element: <LiveMonitoringPage /> },
+
+    // Unknown Faces
+    { path: "unknown-faces", element: <UnknownFacesPage /> },
 
     // Attendance
     { path: "attendance", element: <AttendancePage /> },

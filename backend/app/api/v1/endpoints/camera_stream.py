@@ -1,35 +1,18 @@
-from fastapi import APIRouter, Depends, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
-from app.schemas.camera import CameraIdentify, CameraIdentifyResponse
-from app.services.camera_service import CameraService
-from app.db.session import get_db
-from app.core.dependencies import get_current_user
-
 import cv2
 import numpy as np
 import time
+
+from fastapi import APIRouter, UploadFile, File, Form, Depends
+from fastapi.responses import StreamingResponse
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
 from app.services.camera_stream_buffer import update_frame, get_frame
 from app.services.video_stream_service import ensure_stream
-from sqlalchemy.orm import Session
 from app.models.streams import VideoStream
 
+router = APIRouter(prefix="/cameras", tags=["Camera Streaming"])
 
-router = APIRouter(prefix="/cameras", tags=["Cameras"])
-
-@router.post("/identify", response_model=CameraIdentifyResponse)
-def identify_camera(
-    data: CameraIdentify,
-    db=Depends(get_db),
-    user=Depends(get_current_user)
-):
-
-    camera = CameraService.identify_or_register_camera(
-        db,
-        data,
-        user.organization_id
-    )
-
-    return camera
 
 # Upload frame from camera client
 

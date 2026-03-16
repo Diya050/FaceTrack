@@ -66,6 +66,33 @@ def send_frame(camera_id, frame):
         print("Recognition error:", e)
 
 
+#STREAM FRAMES TO BACKEND FOR LIVE VIEWING
+
+def send_stream_frame(camera_id, frame):
+
+    _, buffer = cv2.imencode(".jpg", frame)
+
+    files = {
+        "file": ("frame.jpg", buffer.tobytes(), "image/jpeg")
+    }
+
+    data = {
+        "camera_id": camera_id
+    }
+
+    try:
+
+        requests.post(
+            f"{BACKEND_URL}/cameras/frame",
+            files=files,
+            data=data,
+            headers=HEADERS,
+            timeout=1
+        )
+
+    except:
+        pass
+
 
 #MAIN FUNCTION TO START CAMERA AND STREAM FRAMES
 def start_camera(camera_id):
@@ -82,6 +109,7 @@ def start_camera(camera_id):
         cv2.imshow('Camera Feed', frame)
 
         send_frame(camera_id, frame)
+        send_stream_frame(camera_id, frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
 
