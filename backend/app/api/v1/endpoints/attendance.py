@@ -99,20 +99,19 @@ def generate_daily_attendance(
 ):
     """
     Generates structured daily attendance from raw scan events.
-    
+
     - **HR_ADMIN** → Generates only for their own organization.
     """
 
-    organization_id = None
-
-    if current_user.role.role_name == "HR_ADMIN":
-        organization_id = current_user.organization_id
+    # Restrict to HR_ADMIN’s organization
+    organization_id = current_user.organization_id if current_user.role.role_name == "HR_ADMIN" else None
 
     return DailyAttendanceService.generate_daily_attendance(
         db=db,
         target_date=target_date,
         organization_id=organization_id,
     )
+
 
 # -------------------------------------------------------------------------
 # Get Organization Attendance

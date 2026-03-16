@@ -1,33 +1,34 @@
 import logging
 from datetime import date, datetime, timedelta, timezone
+from typing import Optional
+from uuid import UUID
 
 from sqlalchemy import select, func
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.orm import Session
 from fastapi import HTTPException
 
-from app.models.core import User, UserStatusEnum
+from app.models.core import User
 from app.models.attendance import Attendance, AttendanceEvent
 
 logger = logging.getLogger(__name__)
-
-# Business rule constants
-PRESENT_THRESHOLD_HOURS = 4   # >= 4 hours → Present
-HALF_DAY_THRESHOLD_HOURS = 0  # > 0 hours  → Half Day (else Absent)
 
 
 class DailyAttendanceService:
 
     @staticmethod
-    def generate_daily_attendance(db, target_date: date, organization_id=None):
+    def generate_daily_attendance(
+        db: Session,
+        target_date: date,
+        organization_id: Optional[UUID] = None,
+    ):
         try:
 
-            # ----------------------------------------------------------------
-            # 1. Fetch active, approved users
-            # ----------------------------------------------------------------
+            # 1️⃣ Fetch users
             user_query = select(User).where(
                 User.is_active.is_(True),
                 User.is_deleted.is_(False),
-                User.status == UserStatusEnum.APPROVED,
+                User.status == "active",
             )
 
             if organization_id:
@@ -38,128 +39,122 @@ class DailyAttendanceService:
             users = db.execute(user_query).scalars().all()
 
             if not users:
-                logger.info("No eligible users found for date: %s", target_date)
                 return {
                     "message": "No eligible users found",
                     "processed_users_count": 0,
                     "present_count": 0,
                     "absent_count": 0,
-                    "half_day_count": 0,
                 }
 
-            # ----------------------------------------------------------------
-            # 2. Define the time window for the target date (UTC)
-            # ----------------------------------------------------------------
+            user_ids = [u.user_id for u in users]
+
+            # 2️⃣ Time window
             start_of_day = datetime.combine(
                 target_date, datetime.min.time()
             ).replace(tzinfo=timezone.utc)
 
             end_of_day = start_of_day + timedelta(days=1)
 
-            counts = {"present": 0, "absent": 0, "half_day": 0}
+            # 3️⃣ Fetch events grouped by user
+            event_rows = db.execute(
+                select(
+                    AttendanceEvent.user_id,
+                    func.min(AttendanceEvent.scan_timestamp).label("first_in"),
+                    func.max(AttendanceEvent.scan_timestamp).label("last_out"),
+                )
+                .where(
+                    AttendanceEvent.user_id.in_(user_ids),
+                    AttendanceEvent.scan_timestamp >= start_of_day,
+                    AttendanceEvent.scan_timestamp < end_of_day,
+                )
+                .group_by(AttendanceEvent.user_id)
+            ).all()
 
-            # ----------------------------------------------------------------
-            # 3. Process each user
-            # ----------------------------------------------------------------
+            event_map = {
+                row.user_id: row
+                for row in event_rows
+            }
+
+            # 4️⃣ Existing attendance
+            existing_rows = db.execute(
+                select(Attendance).where(
+                    Attendance.user_id.in_(user_ids),
+                    Attendance.attendance_date == target_date,
+                    Attendance.is_deleted == False,
+                )
+            ).scalars().all()
+
+            existing_map = {
+                a.user_id: a
+                for a in existing_rows
+            }
+
+            present_count = 0
+            absent_count = 0
+
+            # 5️⃣ Process users
             for user in users:
 
-                # Fetch first scan-in and last scan-out for the day
-                event_stats = db.execute(
-                    select(
-                        func.min(AttendanceEvent.scan_timestamp).label("first_in"),
-                        func.max(AttendanceEvent.scan_timestamp).label("last_out"),
-                    ).where(
-                        AttendanceEvent.user_id == user.user_id,
-                        AttendanceEvent.scan_timestamp >= start_of_day,
-                        AttendanceEvent.scan_timestamp < end_of_day,
+                event = event_map.get(user.user_id)
+
+                if event:
+                    status = "present"
+                    present_count += 1
+
+                    first_check_in = event.first_in.time()
+                    last_check_out = (
+                        event.last_out.time()
+                        if event.last_out
+                        else first_check_in
                     )
-                ).first()
 
-                first_in = event_stats.first_in if event_stats else None
-                last_out = event_stats.last_out if event_stats else None
+                else:
+                    status = "absent"
+                    absent_count += 1
+                    first_check_in = None
+                    last_check_out = None
 
-                # ------------------------------------------------------------
-                # 4. Determine attendance status
-                # ------------------------------------------------------------
-                status = "absent"
-                first_in_time = None
-                last_out_time = None
-
-                if first_in:
-                    first_in_time = first_in.time()
-                    last_out_time = last_out.time() if last_out else first_in_time
-
-                    duration = (last_out or first_in) - first_in
-
-                    if duration >= timedelta(hours=PRESENT_THRESHOLD_HOURS):
-                        status = "present"
-                    else:
-                        status = "half_day"
-
-                counts[status] += 1
-
-                # ------------------------------------------------------------
-                # 5. Upsert: update existing record or create a new one
-                # ------------------------------------------------------------
-                existing = db.execute(
-                    select(Attendance).where(
-                        Attendance.user_id == user.user_id,
-                        Attendance.attendance_date == target_date,
-                    )
-                ).scalars().first()
+                existing = existing_map.get(user.user_id)
 
                 if existing:
-                    existing.first_check_in = first_in_time
-                    existing.last_check_out = last_out_time
+                    existing.first_check_in = first_check_in
+                    existing.last_check_out = last_check_out
                     existing.status = status
                     existing.generated_at = func.now()
+
                 else:
-                    db.add(Attendance(
-                        user_id=user.user_id,
-                        attendance_date=target_date,
-                        first_check_in=first_in_time,
-                        last_check_out=last_out_time,
-                        status=status,
-                        organization_id=user.organization_id,
-                    ))
+                    db.add(
+                        Attendance(
+                            user_id=user.user_id,
+                            attendance_date=target_date,
+                            first_check_in=first_check_in,
+                            last_check_out=last_check_out,
+                            status=status,
+                            organization_id=user.organization_id,
+                        )
+                    )
 
-            # ----------------------------------------------------------------
-            # 6. Commit everything in one transaction
-            # ----------------------------------------------------------------
             db.commit()
-
-            logger.info(
-                "Attendance generated | date=%s | total=%s | present=%s | absent=%s | half_day=%s",
-                target_date,
-                len(users),
-                counts["present"],
-                counts["absent"],
-                counts["half_day"],
-            )
 
             return {
                 "message": f"Attendance generated successfully for {target_date}",
                 "processed_users_count": len(users),
-                "present_count": counts["present"],
-                "absent_count": counts["absent"],
-                "half_day_count": counts["half_day"],
+                "present_count": present_count,
+                "absent_count": absent_count,
             }
 
         except SQLAlchemyError:
             db.rollback()
-            logger.exception("Database error during attendance generation for %s", target_date)
+            logger.exception("Database error while generating attendance")
             raise HTTPException(
                 status_code=500,
-                detail="Database error occurred while generating attendance."
+                detail="Database error occurred while generating attendance",
             )
-
-        except HTTPException:
-            raise  # Re-raise HTTP exceptions untouched
 
         except Exception:
             db.rollback()
-            logger.exception("Unexpected error during attendance generation for %s", target_date)
+            logger.exception("Unexpected error during attendance generation")
             raise HTTPException(
                 status_code=500,
-                detail="Unexpected error occurred while generating attendance."
+                detail="Unexpected error occurred",
             )
