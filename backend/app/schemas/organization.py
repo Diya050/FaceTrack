@@ -1,13 +1,13 @@
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
 
-
 class OrganizationCreate(BaseModel):
     name: str
     email: EmailStr
     contact_number: str
     address: str
-
+    # Added default of 4 to match your business logic
+    min_hours_for_present: int = 4
 
 class OrganizationResponse(BaseModel):
     organization_id: UUID
@@ -15,6 +15,16 @@ class OrganizationResponse(BaseModel):
     email: EmailStr
     contact_number: str
     address: str
+    # Added this so the frontend can read the setting
+    min_hours_for_present: int 
 
     class Config:
         from_attributes = True
+
+# Recommended: Add an Update schema for the "Deploy All Settings" button
+class OrganizationUpdate(BaseModel):
+    name: str | None = None
+    email: EmailStr | None = None
+    contact_number: str | None = None
+    address: str | None = None
+    min_hours_for_present: int | None = None

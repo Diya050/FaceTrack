@@ -59,9 +59,16 @@ def send_frame(camera_id, frame):
         "camera_id": camera_id
     }
     try:
-        response = requests.post(f"{BACKEND_URL}/recognition/camera", files=files, data=data, headers=HEADERS)
-        if response.status_code == 200:
-            print("Recognition result:", response.json())
+        response = requests.post(
+            f"{BACKEND_URL}/recognition/camera",
+            files=files,
+            data=data,
+            headers=HEADERS
+        )
+
+        print("Status:", response.status_code)
+        print("Response:", response.text)
+        
     except Exception as e:
         print("Recognition error:", e)
 

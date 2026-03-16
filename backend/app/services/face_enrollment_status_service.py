@@ -21,6 +21,7 @@ def get_face_enrollment_status(db: Session, user_id: str):
         "user_id": user.user_id,
         "full_name": user.full_name,
         "session_id": str(session.session_id),
+        "face_enrolled": user.face_enrolled,
         "status": session.status,
         "submitted_images": [{"image_path": img.image_path} for img in images],
         "created_at": session.created_at,

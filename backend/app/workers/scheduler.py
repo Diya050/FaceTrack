@@ -48,5 +48,5 @@ def stop_scheduler():
     try:
         scheduler.shutdown(wait=True)
         logger.info("APScheduler stopped gracefully.")
-    except Exception:
-        logger.exception("Error while stopping APScheduler.")
+    except Exception:0       
+    logger.exception("Error while stopping APScheduler.")

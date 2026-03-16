@@ -13,6 +13,7 @@ import app.models.biometrics
 import app.models.attendance
 import app.models.streams
 import app.models.system
+import app.enums.attendance_enums
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
