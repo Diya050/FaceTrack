@@ -12,6 +12,7 @@ class AttendanceStatus(str, Enum):
     absent = "absent"
     half_day = "half_day"
     on_leave = "on_leave"
+    late = "late"
 
 
 class RecognitionMethod(str, Enum):

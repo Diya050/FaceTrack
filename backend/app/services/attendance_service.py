@@ -4,7 +4,8 @@ from datetime import datetime, date, timezone, time
 from typing import Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
-
+from sqlalchemy import select
+from app.models.attendance import AttendanceRule
 from app.models.core import User
 from app.models.attendance import Attendance, AttendanceCorrection, AttendanceEvent
 from app.enums.attendance_enums import AttendanceEventType
@@ -18,16 +19,23 @@ def ensure_active_user(user):
         raise HTTPException(status_code=403, detail="Inactive users cannot perform this action")
 
 
-def determine_attendance_status(check_in_time):
+def determine_attendance_status(db, organization_id, check_in_time):
 
-    if check_in_time < time(18, 0):
-        return AttendanceStatus.present
+    rules = db.execute(
+        select(AttendanceRule)
+        .where(
+            AttendanceRule.organization_id == organization_id,
+            AttendanceRule.is_deleted == False
+        )
+        .order_by(AttendanceRule.start_time)
+    ).scalars().all()
 
-    elif check_in_time < time(20, 0):
-        return AttendanceStatus.late
+    for rule in rules:
+
+        if rule.start_time <= check_in_time <= rule.end_time:
+            return rule.status_effect
 
     return AttendanceStatus.absent
-
 
 def record_attendance_event(
     db: Session,
@@ -94,7 +102,11 @@ def record_attendance_event(
     # first detection of the day
     if not attendance:
 
-        status = determine_attendance_status(current_time)
+        status = determine_attendance_status(
+            db,
+            organization_id,
+            current_time
+        )
 
         attendance = Attendance(
             user_id=user_id,
