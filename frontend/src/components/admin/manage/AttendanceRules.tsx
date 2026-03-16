@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Box,
   Card,
@@ -17,185 +17,326 @@ import {
   Alert,
   TextField,
   Button,
+  Select,
+  MenuItem,
+  IconButton,
+  CircularProgress,
 } from "@mui/material";
-import {
-  Rule,
-} from "@mui/icons-material";
 
+import { Rule, Delete, Add } from "@mui/icons-material";
+import api from "../../../services/api";
 
-/*  Types  */
+/* -------------------- Types -------------------- */
 
-type TimeRule = {
-  id: number;
-  rule: string;
-  start: string;
-  end: string;
-  effect: string;
+type AttendanceRule = {
+  rule_id?: string;
+  temp_id?: string;
+  rule_name: string;
+  start_time: string;
+  end_time: string;
+  status_effect: "present" | "half_day" | "absent" | "late";
 };
 
-type AuditLog = {
-  id: number;
-  admin: string;
-  action: string;
-  target: string;
-  time: string;
-};
+/* -------------------- Helpers -------------------- */
 
-/*  Mock Data  */
+const toUI = (t: string) => t.slice(0, 5);      // 08:30:00 -> 08:30
+const toAPI = (t: string) => (t.length === 5 ? `${t}:00` : t);
 
-const TIME_RULES: TimeRule[] = [
-  {
-    id: 1,
-    rule: "Attendance Window",
-    start: "08:30",
-    end: "10:30",
-    effect: "Present",
-  },
-  {
-    id: 2,
-    rule: "Late Threshold",
-    start: "10:31",
-    end: "12:00",
-    effect: "Late",
-  },
-  {
-    id: 3,
-    rule: "Absent Threshold",
-    start: "12:01",
-    end: "23:59",
-    effect: "Absent",
-  },
-];
-
-const AUDIT_LOGS: AuditLog[] = [
-  {
-    id: 1,
-    admin: "HR-Admin-01",
-    action: "Attendance Override",
-    target: "EMP-1043",
-    time: "2026-03-01 11:42",
-  },
-  {
-    id: 2,
-    admin: "Manager-02",
-    action: "Face Enrollment Approved",
-    target: "EMP-1098",
-    time: "2026-03-01 09:21",
-  },
-];
-
-/*  Component  */
+/* -------------------- Component -------------------- */
 
 const AttendanceRules: React.FC = () => {
-  const [rules, setRules] = useState<TimeRule[]>(TIME_RULES);
+  const [rules, setRules] = useState<AttendanceRule[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(""); // State for success feedback
 
-  const updateRule = (id: number, field: keyof TimeRule, value: string) => {
+  /* -------------------- Fetch Rules -------------------- */
+
+  const fetchRules = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      const res = await api.get("/attendance/rules");
+
+      const formatted = res.data.map((r: any) => ({
+        ...r,
+        start_time: toUI(r.start_time),
+        end_time: toUI(r.end_time),
+      }));
+
+      setRules(formatted);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to load attendance rules");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRules();
+  }, []);
+
+  /* -------------------- Update Rule -------------------- */
+
+  const updateRule = (
+    key: string,
+    field: keyof AttendanceRule,
+    value: string
+  ) => {
     setRules((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, [field]: value } : r))
+      prev.map((r) =>
+        (r.rule_id || r.temp_id) === key ? { ...r, [field]: value } : r
+      )
     );
   };
+
+  /* -------------------- Add Rule -------------------- */
+
+  const addRule = () => {
+    setRules((prev) => [
+      ...prev,
+      {
+        temp_id: Date.now().toString(),
+        rule_name: "New Rule",
+        start_time: "09:00",
+        end_time: "10:00",
+        status_effect: "present",
+      },
+    ]);
+  };
+
+  /* -------------------- Delete Rule -------------------- */
+
+  const deleteRule = async (rule: AttendanceRule) => {
+    try {
+      if (!rule.rule_id) {
+        setRules((prev) =>
+          prev.filter((r) => r.temp_id !== rule.temp_id)
+        );
+        return;
+      }
+
+      await api.delete(`/attendance/rules/${rule.rule_id}`);
+
+      setRules((prev) =>
+        prev.filter((r) => r.rule_id !== rule.rule_id)
+      );
+      setSuccess("Rule deleted successfully");
+      setTimeout(() => setSuccess(""), 5000);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to delete rule");
+    }
+  };
+
+  /* -------------------- Deploy Rules -------------------- */
+
+  const saveRules = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      setSuccess("");
+
+      for (const rule of rules) {
+        const payload = {
+          rule_name: rule.rule_name,
+          start_time: toAPI(rule.start_time),
+          end_time: toAPI(rule.end_time),
+          status_effect: rule.status_effect,
+        };
+
+        if (!rule.rule_id) {
+          console.log("Creating rule:", payload);
+          await api.post("/attendance/rules", payload);
+        } else {
+          await api.put(`/attendance/rules/${rule.rule_id}`, payload);
+        }
+      }
+
+      // Display success message instead of browser alert
+      setSuccess("Rules deployed successfully!");
+      
+      // Auto-hide success message after 5 seconds
+      setTimeout(() => setSuccess(""), 5000);
+      
+      fetchRules();
+    } catch (err: any) {
+      const backendError = err.response?.data?.detail;
+      const errorMessage = typeof backendError === 'string'
+        ? backendError
+        : "Validation Error: Check time overlaps or formats.";
+
+      setError(errorMessage);
+      console.error("Save failed:", err.response?.data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* -------------------- UI -------------------- */
 
   return (
     <Box mt={8}>
       <Card elevation={0}>
         <CardContent>
           <Stack spacing={3}>
-            {/* Header */}
             <Stack direction="row" spacing={1} alignItems="center">
               <Rule />
               <Typography variant="h5" fontWeight={600}>
-                Attendance Rules
+                Attendance Rules Engine
               </Typography>
             </Stack>
 
             <Divider />
 
-            
+            {/* Error Feedback */}
+            {error && (
+              <Alert severity="error" onClose={() => setError("")}>
+                {error}
+              </Alert>
+            )}
 
-            {/* Time Rules */}
-            <Typography variant="subtitle1" fontWeight={600}>
-              Attendance Time Rules Engine
-            </Typography>
+            {/* Success Feedback */}
+            {success && (
+              <Alert severity="success" onClose={() => setSuccess("")}>
+                {success}
+              </Alert>
+            )}
+
+            <Stack direction="row" justifyContent="space-between">
+              <Typography fontWeight={600}>
+                Time Based Rules
+              </Typography>
+
+              <Button
+                startIcon={<Add />}
+                variant="outlined"
+                onClick={addRule}
+              >
+                Add Rule
+              </Button>
+            </Stack>
+
+            {loading && !rules.length && (
+              <Box display="flex" justifyContent="center">
+                <CircularProgress size={30} />
+              </Box>
+            )}
+
+            {!loading && rules.length === 0 && (
+              <Alert severity="info">
+                No attendance rules configured.
+              </Alert>
+            )}
 
             <TableContainer component={Paper} elevation={0}>
               <Table size="small">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Rule</TableCell>
-                    <TableCell>Start</TableCell>
-                    <TableCell>End</TableCell>
-                    <TableCell>Effect</TableCell>
+                    <TableCell>Rule Name</TableCell>
+                    <TableCell>Start Time</TableCell>
+                    <TableCell>End Time</TableCell>
+                    <TableCell>Status Effect</TableCell>
+                    <TableCell />
                   </TableRow>
                 </TableHead>
+
                 <TableBody>
-                  {rules.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell>{r.rule}</TableCell>
-                      <TableCell>
-                        <TextField
-                          size="small"
-                          type="time"
-                          value={r.start}
-                          onChange={(e) =>
-                            updateRule(r.id, "start", e.target.value)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <TextField
-                          size="small"
-                          type="time"
-                          value={r.end}
-                          onChange={(e) =>
-                            updateRule(r.id, "end", e.target.value)
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Chip size="small" label={r.effect} />
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  {rules.map((r) => {
+                    const key = r.rule_id || r.temp_id!;
+
+                    return (
+                      <TableRow key={key}>
+                        <TableCell>
+                          <TextField
+                            size="small"
+                            value={r.rule_name}
+                            onChange={(e) =>
+                              updateRule(key, "rule_name", e.target.value)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell>
+                          <TextField
+                            type="time"
+                            size="small"
+                            value={r.start_time}
+                            onChange={(e) =>
+                              updateRule(key, "start_time", e.target.value)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell>
+                          <TextField
+                            type="time"
+                            size="small"
+                            value={r.end_time}
+                            onChange={(e) =>
+                              updateRule(key, "end_time", e.target.value)
+                            }
+                          />
+                        </TableCell>
+
+                        <TableCell>
+                          <Select
+                            size="small"
+                            value={r.status_effect}
+                            onChange={(e) =>
+                              updateRule(
+                                key,
+                                "status_effect",
+                                e.target.value as any
+                              )
+                            }
+                          >
+                            <MenuItem value="present">
+                              <Chip label="Present" color="success" size="small" />
+                            </MenuItem>
+                            <MenuItem value="late">
+                              <Chip label="Late" color="warning" size="small" />
+                            </MenuItem>
+                            <MenuItem value="half_day">
+                              <Chip label="Half Day" color="info" size="small" />
+                            </MenuItem>
+                            <MenuItem value="absent">
+                              <Chip label="Absent" color="error" size="small" />
+                            </MenuItem>
+                          </Select>
+                        </TableCell>
+
+                        <TableCell>
+                          <IconButton onClick={() => deleteRule(r)}>
+                            <Delete fontSize="small" />
+                          </IconButton>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
 
-            {/* Rules Explanation */}
             <Alert severity="info">
-              <b>Rules Engine:</b> If recognition occurs between 08:30–10:30 → Present. After 10:30 → Late. After 12:00 → Absent.
+              Attendance status is determined from the <b>first face recognition
+                event of the day</b> and matched against the configured rule time.
             </Alert>
 
-            {/* Audit Logs */}
-            <Typography variant="subtitle1" fontWeight={600}>
-              Admin Audit Logs
-            </Typography>
-
-            <TableContainer component={Paper} elevation={0}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Admin</TableCell>
-                    <TableCell>Action</TableCell>
-                    <TableCell>Target</TableCell>
-                    <TableCell>Timestamp</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {AUDIT_LOGS.map((l) => (
-                    <TableRow key={l.id}>
-                      <TableCell>{l.admin}</TableCell>
-                      <TableCell>{l.action}</TableCell>
-                      <TableCell>{l.target}</TableCell>
-                      <TableCell>{l.time}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
             <Stack direction="row" justifyContent="flex-end" spacing={2}>
-              <Button variant="outlined">Simulate Rules</Button>
-              <Button variant="contained">Deploy Rules</Button>
+              <Button variant="outlined" onClick={fetchRules} disabled={loading}>
+                Refresh
+              </Button>
+
+              <Button
+                variant="contained"
+                disabled={loading}
+                onClick={saveRules}
+              >
+                {loading ? <CircularProgress size={24} color="inherit" /> : "Deploy Rules"}
+              </Button>
             </Stack>
           </Stack>
         </CardContent>

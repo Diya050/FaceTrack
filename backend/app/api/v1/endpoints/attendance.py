@@ -9,7 +9,18 @@ from app.db.session import get_db
 from app.models.core import User
 from app.core.security import get_current_user
 from app.core.permissions import require_roles
+from app.schemas.attendance_rule import (
+    AttendanceRuleCreate,
+    AttendanceRuleUpdate,
+    AttendanceRuleResponse,
+)
 
+from app.services.attendance_rule_service import (
+    get_rules,
+    create_rule,
+    update_rule,
+    delete_rule,
+)
 
 from app.core.dependencies import get_db
 from app.services.attendance_service import get_monthly_attendance_stats
@@ -56,7 +67,7 @@ def get_my_attendance(
     ),
     status: Optional[str] = Query(
         None,
-        description="Filter by attendance status: present, absent, half_day, on_leave",
+        description="Filter by attendance status: present, absent, half_day, on_leave, late",
         examples=["present"],
     ),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -137,7 +148,7 @@ def get_org_attendance(
     ),
     status: Optional[str] = Query(
         None,
-        description="Filter by attendance status: present, absent, half_day, on_leave",
+        description="Filter by attendance status: present, absent, half_day, on_leave, late",
         examples=["present"],
     ),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -190,7 +201,7 @@ def get_department_attendance_endpoint(
     ),
     status: Optional[str] = Query(
         None,
-        description="Filter by attendance status: present, absent, half_day, on_leave",
+        description="Filter by attendance status: present, absent, half_day, on_leave, late",
         examples=["present"],
     ),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -229,3 +240,71 @@ def monthly_attendance(
     db: Session = Depends(get_db)
 ):
     return get_monthly_attendance_stats(db, user_id, year, month)
+
+
+# -------------------------------------------------------------------------
+# Manage Attendance Rules
+# -------------------------------------------------------------------------
+
+@router.get(
+    "/rules",
+    response_model=List[AttendanceRuleResponse],
+)
+def get_attendance_rules(
+    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    db: Session = Depends(get_db),
+):
+
+    return get_rules(
+        db=db,
+        organization_id=current_user.organization_id,
+    )
+
+@router.post(
+    "/rules",
+    response_model=AttendanceRuleResponse,
+)
+def create_attendance_rule(
+    payload: AttendanceRuleCreate,
+    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    db: Session = Depends(get_db),
+):
+
+    return create_rule(
+        db=db,
+        organization_id=current_user.organization_id,
+        data=payload,
+    )
+
+@router.put(
+    "/rules/{rule_id}",
+    response_model=AttendanceRuleResponse,
+)
+def update_attendance_rule(
+    rule_id: UUID,
+    payload: AttendanceRuleUpdate,
+    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    db: Session = Depends(get_db),
+):
+
+    return update_rule(
+        db=db,
+        rule_id=rule_id,
+        organization_id=current_user.organization_id,
+        data=payload,
+    )
+
+@router.delete("/rules/{rule_id}")
+def delete_attendance_rule(
+    rule_id: UUID,
+    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    db: Session = Depends(get_db),
+):
+
+    delete_rule(
+        db=db,
+        rule_id=rule_id,
+        organization_id=current_user.organization_id,
+    )
+
+    return {"message": "Rule deleted successfully"}

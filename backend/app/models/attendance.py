@@ -109,3 +109,52 @@ class AttendanceCorrection(TenantMixin, Base):
     user = relationship("User", foreign_keys=[user_id])
 
     reviewer = relationship("User", foreign_keys=[reviewed_by])
+
+
+class AttendanceRule(TenantMixin, Base):
+    __tablename__ = "attendance_rules"
+
+    rule_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    rule_name = Column(String, nullable=False)
+
+    start_time = Column(Time, nullable=False)
+
+    end_time = Column(Time, nullable=False)
+
+    status_effect = Column(
+        SqlEnum(AttendanceStatus),
+        nullable=False
+    )
+
+    created_at = Column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        nullable=False
+    )
+
+    is_deleted = Column(
+        Boolean,
+        nullable=False,
+        default=False,
+        server_default="false"
+    )
+
+    __table_args__ = (
+
+        # prevents duplicate time windows in same organization
+        UniqueConstraint(
+            "organization_id",
+            "start_time",
+            "end_time",
+            name="uq_attendance_rule_window"
+        ),
+
+        # faster rule lookup
+        Index(
+            "ix_attendance_rules_org_time",
+            "organization_id",
+            "start_time",
+            "end_time"
+        ),
+    )
