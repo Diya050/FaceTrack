@@ -1,29 +1,11 @@
 import React, { useEffect, useState } from "react";
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Stack,
-  Divider,
-  Chip,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Alert,
-  TextField,
-  Button,
-  Select,
-  MenuItem,
-  IconButton,
-  CircularProgress,
+  Box, Card, CardContent, Typography, Stack, Divider, Chip, Table,
+  TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+  Alert, TextField, Button, Select, MenuItem, IconButton, CircularProgress,
 } from "@mui/material";
 
-import { Rule, Delete, Add, Timer } from "@mui/icons-material";
+import { Rule, Delete, Add, Timer, SwapHoriz } from "@mui/icons-material";
 import api from "../../../services/api";
 
 /* -------------------- Types -------------------- */
@@ -39,7 +21,7 @@ type AttendanceRule = {
 
 /* -------------------- Helpers -------------------- */
 
-const toUI = (t: string) => t.slice(0, 5);      // 08:30:00 -> 08:30
+const toUI = (t: string) => t && t.length >= 5 ? t.slice(0, 5) : t;
 const toAPI = (t: string) => (t.length === 5 ? `${t}:00` : t);
 
 /* -------------------- Component -------------------- */
@@ -58,13 +40,11 @@ const AttendanceRules: React.FC = () => {
       setLoading(true);
       setError("");
 
-      // Fetch both Time-based Rules and Organization Settings (Threshold)
       const [rulesRes, orgRes] = await Promise.allSettled([
         api.get("/attendance/rules"),
         api.get("/organizations/me")
       ]);
 
-      // Handle Rules Response
       if (rulesRes.status === "fulfilled") {
         const formatted = rulesRes.value.data.map((r: any) => ({
           ...r,
@@ -73,22 +53,17 @@ const AttendanceRules: React.FC = () => {
         }));
         setRules(formatted);
       } else {
-        console.error("Rules fetch failed", rulesRes.reason);
         setError("Failed to load attendance rules");
       }
 
-      // Handle Org Response (Fetching value stored in database table)
       if (orgRes.status === "fulfilled") {
         const storedMinHours = orgRes.value.data.min_hours_for_present;
         if (storedMinHours !== undefined && storedMinHours !== null) {
           setMinHours(storedMinHours);
         }
-      } else {
-        console.warn("Org settings fetch failed. Ensure /organizations/me exists.");
       }
 
     } catch (err) {
-      console.error(err);
       setError("An unexpected error occurred while fetching data");
     } finally {
       setLoading(false);
@@ -101,11 +76,7 @@ const AttendanceRules: React.FC = () => {
 
   /* -------------------- Update Rule -------------------- */
 
-  const updateRule = (
-    key: string,
-    field: keyof AttendanceRule,
-    value: string
-  ) => {
+  const updateRule = (key: string, field: keyof AttendanceRule, value: string) => {
     setRules((prev) =>
       prev.map((r) =>
         (r.rule_id || r.temp_id) === key ? { ...r, [field]: value } : r
@@ -133,21 +104,14 @@ const AttendanceRules: React.FC = () => {
   const deleteRule = async (rule: AttendanceRule) => {
     try {
       if (!rule.rule_id) {
-        setRules((prev) =>
-          prev.filter((r) => r.temp_id !== rule.temp_id)
-        );
+        setRules((prev) => prev.filter((r) => r.temp_id !== rule.temp_id));
         return;
       }
-
       await api.delete(`/attendance/rules/${rule.rule_id}`);
-
-      setRules((prev) =>
-        prev.filter((r) => r.rule_id !== rule.rule_id)
-      );
+      setRules((prev) => prev.filter((r) => r.rule_id !== rule.rule_id));
       setSuccess("Rule deleted successfully");
       setTimeout(() => setSuccess(""), 5000);
     } catch (err) {
-      console.error(err);
       setError("Failed to delete rule");
     }
   };
@@ -161,9 +125,13 @@ const AttendanceRules: React.FC = () => {
       setSuccess("");
 
       // 1. Save Duration Threshold to Organization table
-      await api.put("/organizations/me", { min_hours_for_present: Number(minHours) });
+      // Ensure minHours is a valid number before sending
+      await api.put("/organizations/me", { 
+        min_hours_for_present: Number(minHours) 
+      });
 
       // 2. Save/Update Time-based Rules
+      // We use a for...of loop to ensure operations complete in order
       for (const rule of rules) {
         const payload = {
           rule_name: rule.rule_name,
@@ -173,33 +141,60 @@ const AttendanceRules: React.FC = () => {
         };
 
         if (!rule.rule_id) {
+          // It's a new rule from the UI (has temp_id)
           await api.post("/attendance/rules", payload);
         } else {
+          // It's an existing rule (has rule_id)
           await api.put(`/attendance/rules/${rule.rule_id}`, payload);
         }
       }
 
+      // 3. Success Handling
       setSuccess("All settings deployed successfully!");
+      
+      // 4. CRITICAL SYNC: 
+      await fetchData();
+
+      // Clear success message after 5 seconds
       setTimeout(() => setSuccess(""), 5000);
-      fetchData(); // Sync state with DB after save
+
     } catch (err: any) {
+      console.error("Save Error:", err);
+      
+      // Extract the most helpful error message possible
       const backendError = err.response?.data?.detail;
-      setError(typeof backendError === 'string' ? backendError : "Failed to deploy settings. Check backend routes.");
+      const errorMessage = Array.isArray(backendError) 
+        ? backendError[0]?.msg 
+        : typeof backendError === 'string' 
+          ? backendError 
+          : "Failed to deploy settings. Ensure there are no overlapping time windows.";
+      
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <Box mt={8}>
       <Card elevation={0}>
         <CardContent>
           <Stack spacing={3}>
-            <Stack direction="row" spacing={1} alignItems="center">
-              <Rule />
-              <Typography variant="h5" fontWeight={600}>
-                Attendance Rules Engine
-              </Typography>
+            <Stack direction="row" justifyContent="space-between" alignItems="center">
+              <Stack direction="row" spacing={1} alignItems="center">
+                <Rule />
+                <Typography variant="h5" fontWeight={600}>
+                  Attendance Rules Engine
+                </Typography>
+              </Stack>
+              <Chip 
+                icon={<SwapHoriz />} 
+                label="UI: IST | DB: UTC" 
+                size="small" 
+                variant="outlined" 
+                color="primary" 
+              />
             </Stack>
 
             <Divider />
@@ -233,7 +228,6 @@ const AttendanceRules: React.FC = () => {
               </Box>
             )}
 
-            {/* Duration Settings Section - Linked to Organization DB table */}
             <Box sx={{ p: 2, bgcolor: 'background.default', borderRadius: 1, border: '1px solid #e0e0e0' }}>
               <Stack direction="row" spacing={2} alignItems="center">
                 <Timer color="primary" />
@@ -248,7 +242,6 @@ const AttendanceRules: React.FC = () => {
                   sx={{ width: 80 }}
                   inputProps={{ min: 1, max: 12 }}
                 />
-                
                 <Typography variant="caption" color="text.secondary">
                   (Status will downgrade to Half Day if worked less than {minHours} hrs)
                 </Typography>
@@ -260,8 +253,8 @@ const AttendanceRules: React.FC = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Rule Name</TableCell>
-                    <TableCell>Start Time</TableCell>
-                    <TableCell>End Time</TableCell>
+                    <TableCell>Start Time (IST)</TableCell>
+                    <TableCell>End Time (IST)</TableCell>
                     <TableCell>Status Effect</TableCell>
                     <TableCell />
                   </TableRow>

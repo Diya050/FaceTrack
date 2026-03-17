@@ -10,17 +10,19 @@ from app.models.biometrics import FacialBiometric
 from app.services.attendance_service import record_attendance_event
 from app.utils.supabase_storage import upload_image
 from app.enums.attendance_enums import AttendanceEventType
+from app.services.face_embedding_service import get_face_app
 
 THRESHOLD = 0.65
 UNKNOWN_SIMILARITY_THRESHOLD = 0.85
 UNKNOWN_COOLDOWN_SECONDS = 60
 UNKNOWN_FACE_CACHE = {}
 
-# Initialize model
-face_app = FaceAnalysis(name="buffalo_l")
-face_app.prepare(ctx_id=-1, det_size=(640, 640))
-
 def recognize_frame(db, frame, camera_id):
+
+    face_app = get_face_app()
+
+    faces = face_app.get(frame)
+    
     if isinstance(camera_id, str):
         from uuid import UUID
         camera_id = UUID(camera_id)
