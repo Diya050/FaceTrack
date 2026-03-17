@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.v1.endpoints import auth, organization, department, profiles, face_enrollment_request, roles, users, unknown_faces, attendance_correction,attendance
-from app.api.v1.endpoints import face_enrollment, face_recognition, camera, support_tickets, camera_stream
+from app.api.v1.endpoints import face_enrollment, face_recognition, camera, support_tickets
 from app.api.v1.endpoints import notifications
 
 from app.api.v1.endpoints import user_dashboard,face_enrollment_status
