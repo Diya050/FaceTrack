@@ -23,7 +23,7 @@ api_router.include_router(attendance_correction.router)
 api_router.include_router(unknown_faces.router)
 api_router.include_router(attendance.router)
 api_router.include_router(camera.router)
-api_router.include_router(camera_stream.router)
+# api_router.include_router(camera_stream.router)
 
 api_router.include_router(support_tickets.router)
 api_router.include_router(notifications.router)
