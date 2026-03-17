@@ -9,6 +9,7 @@ from app.models.core import User
 from app.models.attendance import Attendance, AttendanceCorrection, AttendanceEvent
 from app.enums.attendance_enums import AttendanceEventType
 from app.enums.attendance_enums import AttendanceStatus
+from app.enums.attendance_enums import AttendanceCorrectionStatus
 
 COOLDOWN_SECONDS = 60
 
@@ -147,25 +148,33 @@ def get_user_attendance(
 
 def list_attendance_corrections(db: Session, current_user):
 
+    role = current_user.role.role_name
+
     query = (
         select(AttendanceCorrection)
-        .join(User, AttendanceCorrection.user_id == User.user_id)
+        .join(Attendance, AttendanceCorrection.attendance_id == Attendance.attendance_id)
+        .join(User, Attendance.user_id == User.user_id)
         .where(
             AttendanceCorrection.organization_id == current_user.organization_id,
             User.status == "active"
         )
     )
 
-    if current_user.role == "ADMIN":
+    # HR_ADMIN → sees all corrections in org
+    if role == "HR_ADMIN":
+        pass
+
+    # ADMIN → only their department
+    elif role == "ADMIN":
         query = query.where(User.department_id == current_user.department_id)
 
-    elif current_user.role not in ["HR_ADMIN"]:
+    # EMPLOYEE → only their own requests
+    else:
         query = query.where(AttendanceCorrection.user_id == current_user.user_id)
 
     return db.execute(
         query.order_by(AttendanceCorrection.created_at.desc())
     ).scalars().all()
-
 
 def request_attendance_correction(db: Session, current_user, data):
 
@@ -181,12 +190,18 @@ def request_attendance_correction(db: Session, current_user, data):
 
     if not attendance:
         raise HTTPException(status_code=404, detail="Attendance record not found")
+    
+    if not data.requested_time_in and not data.requested_time_out:
+        raise HTTPException(
+        status_code=400,
+        detail="At least one of requested_time_in or requested_time_out must be provided"
+    )
 
     existing = db.execute(
         select(AttendanceCorrection).where(
             and_(
                 AttendanceCorrection.attendance_id == data.attendance_id,
-                AttendanceCorrection.status == "pending"
+                AttendanceCorrection.status == AttendanceCorrectionStatus.pending
             )
         )
     ).scalar_one_or_none()
@@ -212,9 +227,15 @@ def request_attendance_correction(db: Session, current_user, data):
 
     return correction
 
+def review_attendance_correction(
+    db: Session,
+    current_user,
+    correction_id: UUID,
+    data
+):
+    role = current_user.role.role_name
 
-def review_attendance_correction(db: Session, current_user, correction_id, data):
-
+    # Fetch correction
     correction = db.execute(
         select(AttendanceCorrection).where(
             AttendanceCorrection.correction_id == correction_id,
@@ -225,38 +246,81 @@ def review_attendance_correction(db: Session, current_user, correction_id, data)
     if not correction:
         raise HTTPException(status_code=404, detail="Correction request not found")
 
-    if correction.status != "pending":
+    # ✅ FIXED ENUM CHECK
+    if correction.status != AttendanceCorrectionStatus.pending:
         raise HTTPException(status_code=400, detail="Correction already reviewed")
 
+    # Fetch requesting user
     request_user = db.execute(
         select(User).where(
             User.user_id == correction.user_id,
             User.status == "active"
         )
-    ).scalar_one()
+    ).scalar_one_or_none()
 
-    if current_user.role == "ADMIN":
+    if not request_user:
+        raise HTTPException(status_code=404, detail="Requesting user not found or inactive")
+
+    # Authorization
+    if role == "HR_ADMIN":
+        pass
+
+    elif role == "ADMIN":
         if current_user.department_id != request_user.department_id:
             raise HTTPException(
                 status_code=403,
                 detail="You can only review requests from your department"
             )
 
-    elif current_user.role != "HR_ADMIN":
+    else:
         raise HTTPException(
             status_code=403,
             detail="Not authorized to review correction requests"
         )
 
-    correction.status = data.status
+    # ✅ FIXED ENUM ASSIGNMENT
+    correction.status = AttendanceCorrectionStatus(data.status)
     correction.reviewed_by = current_user.user_id
     correction.reviewed_at = datetime.now(timezone.utc)
+
+    # Apply attendance update ONLY if approved
+    if data.status == AttendanceCorrectionStatus.approved.value:
+
+        attendance = db.execute(
+            select(Attendance).where(
+                Attendance.attendance_id == correction.attendance_id,
+                Attendance.is_deleted == False
+            )
+        ).scalar_one_or_none()
+
+        if not attendance:
+            raise HTTPException(status_code=404, detail="Attendance record not found")
+
+        # Validate time logic
+        if (
+            correction.requested_time_in and
+            correction.requested_time_out and
+            correction.requested_time_out < correction.requested_time_in
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="requested_time_out cannot be earlier than requested_time_in"
+            )
+
+        # Apply corrections
+        if correction.requested_time_in:
+            attendance.first_check_in = correction.requested_time_in
+
+        if correction.requested_time_out:
+            attendance.last_check_out = correction.requested_time_out
+
+        if attendance.first_check_in:
+            attendance.status = determine_attendance_status(attendance.first_check_in)
 
     db.commit()
     db.refresh(correction)
 
     return correction
-
 
 def get_department_attendance(
     db: Session,
