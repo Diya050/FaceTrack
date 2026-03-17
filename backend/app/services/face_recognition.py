@@ -1,28 +1,31 @@
-from uuid import uuid4
-
+import uuid
 import cv2
 import numpy as np
-from sqlalchemy import select
-from insightface.app import FaceAnalysis
 from datetime import datetime, timezone
+from sqlalchemy import select
 
+from insightface.app import FaceAnalysis
 from app.models.streams import Camera, VideoStream, UnknownFace
 from app.models.biometrics import FacialBiometric
 from app.services.attendance_service import record_attendance_event
 from app.utils.supabase_storage import upload_image
 from app.enums.attendance_enums import AttendanceEventType
+from app.services.face_embedding_service import get_face_app
 
 THRESHOLD = 0.65
-
-UNKNOWN_FACE_CACHE = {}
 UNKNOWN_SIMILARITY_THRESHOLD = 0.85
 UNKNOWN_COOLDOWN_SECONDS = 60
-
-face_app = FaceAnalysis(name="buffalo_l")
-face_app.prepare(ctx_id=-1, det_size=(640, 640))
-
+UNKNOWN_FACE_CACHE = {}
 
 def recognize_frame(db, frame, camera_id):
+
+    face_app = get_face_app()
+
+    faces = face_app.get(frame)
+    
+    if isinstance(camera_id, str):
+        from uuid import UUID
+        camera_id = UUID(camera_id)
 
     camera = db.execute(
         select(Camera).where(Camera.camera_id == camera_id)
@@ -33,30 +36,32 @@ def recognize_frame(db, frame, camera_id):
 
     organization_id = camera.organization_id
 
-    # get or create active video stream
+    # Ensure active VideoStream exists for Foreign Key constraints
     stream = db.query(VideoStream).filter(
         VideoStream.camera_id == camera_id,
-        VideoStream.processed_status == "processing"
+        VideoStream.processed_status == "processing",
+        VideoStream.organization_id == organization_id
     ).first()
 
     if not stream:
         stream = VideoStream(
             camera_id=camera_id,
-            organization_id=organization_id
+            organization_id=organization_id,
+            stream_url=camera.ip_address if camera.ip_address else f"internal://{camera_id}",
+            processed_status="processing" 
         )
         db.add(stream)
         db.commit()
         db.refresh(stream)
 
     faces = face_app.get(frame)
-
     results = []
-    unknown_faces_added = False
+    should_commit = False
 
     for face in faces:
-
         embedding = face.embedding
-
+        
+        # Recognition Query
         result = db.execute(
             select(
                 FacialBiometric,
@@ -66,157 +71,95 @@ def recognize_frame(db, frame, camera_id):
                 FacialBiometric.organization_id == organization_id,
                 FacialBiometric.is_active == True
             )
-            .order_by(FacialBiometric.face_encoding.cosine_distance(embedding))
+            .order_by("distance")
             .limit(1)
         )
 
         match = result.first()
+        similarity_score = (1 - match.distance) if match else 0
 
-        if not match:
+        # Use the helper function for the recognition decision
+        recognition_result = process_recognition(
+            db=db,
+            matched_user=match.FacialBiometric.user if match else None,
+            camera_id=camera_id,
+            similarity_score=similarity_score
+        )
 
-            # crop face
-            bbox = face.bbox.astype(int)
-            x1, y1, x2, y2 = bbox
+        if recognition_result["status"] == "recognized":
+            results.append(recognition_result)
+            continue
 
-            h, w, _ = frame.shape
+        # Handle Unknown/Uncertain faces
+        if not should_store_unknown(camera_id, embedding):
+            results.append({"status": "unknown"})
+            continue
 
-            x1 = max(0, x1)
-            y1 = max(0, y1)
-            x2 = min(w, x2)
-            y2 = min(h, y2)
-
-            face_img = frame[y1:y2, x1:x2]
-
-            if face_img.size == 0:
-                continue
-
+        # Image processing for UnknownFace storage
+        bbox = face.bbox.astype(int)
+        x1, y1, x2, y2 = max(0, bbox[0]), max(0, bbox[1]), bbox[2], bbox[3]
+        h, w, _ = frame.shape
+        x2, y2 = min(w, x2), min(h, y2)
+        
+        face_img = frame[y1:y2, x1:x2]
+        if face_img.size > 0:
             _, buffer = cv2.imencode(".jpg", face_img)
             image_bytes = buffer.tobytes()
-
-            filename = f"unknown/{organization_id}/{uuid4()}.jpg"
-
-            if not should_store_unknown(camera_id, embedding):
-                results.append({"status": "unknown"})
-                continue
+            filename = f"unknown/{organization_id}/{uuid.uuid4()}.jpg"
 
             upload_image(image_bytes, filename)
-
+            
             unknown = UnknownFace(
                 stream_id=stream.stream_id,
                 organization_id=organization_id,
                 image_path=filename,
-                confidence_score=None
+                confidence_score=similarity_score if match else None
             )
-
             db.add(unknown)
-            db.flush()  # get unknown_id before commit
-            unknown_faces_added = True
+            should_commit = True
             
             results.append({
                 "status": "unknown",
                 "unknown_id": str(unknown.unknown_id)
             })
 
-            continue
-
-        matched_user = match.FacialBiometric.user
-        similarity_score = 1 - match.distance
-
-        recognition_result = process_recognition(
-            db=db,
-            matched_user=matched_user,
-            camera_id=camera_id,
-            similarity_score=similarity_score
-        )
-
-        if recognition_result["status"] == "unknown_store":
-
-            bbox = face.bbox.astype(int)
-            x1, y1, x2, y2 = bbox
-
-            h, w, _ = frame.shape
-
-            x1 = max(0, x1)
-            y1 = max(0, y1)
-            x2 = min(w, x2)
-            y2 = min(h, y2)
-
-            face_img = frame[y1:y2, x1:x2]
-
-            if face_img.size != 0:
-
-                _, buffer = cv2.imencode(".jpg", face_img)
-                image_bytes = buffer.tobytes()
-
-                filename = f"unknown/{organization_id}/{uuid4()}.jpg"
-
-                if should_store_unknown(camera_id, embedding):
-
-                    upload_image(image_bytes, filename)
-
-                    unknown = UnknownFace(
-                        stream_id=stream.stream_id,
-                        organization_id=organization_id,
-                        image_path=filename,
-                        confidence_score=similarity_score
-                    )
-
-                    db.add(unknown)
-                    db.flush()  # get unknown_id before commit
-                    unknown_faces_added = True
-
-                    results.append({
-                        "status": "unknown",
-                        "unknown_id": str(unknown.unknown_id)
-                    })
-
-        else:
-            results.append(recognition_result)
-
-    if unknown_faces_added:
+    if should_commit:
         db.commit()
     
     return results
 
-
 def process_recognition(db, matched_user, camera_id, similarity_score):
+    """
+    Original logic preserved: Attendance event generated ONLY when face is recognized
+    """
+    if matched_user and similarity_score >= THRESHOLD:
+        try:
+            record_attendance_event(
+                db=db,
+                user_id=matched_user.user_id,
+                camera_id=camera_id,
+                organization_id=matched_user.organization_id,
+                confidence_score=similarity_score,
+                recognition_method="face",
+                event_type=AttendanceEventType.passby
+            )
+        except Exception as e:
+            print(f"Attendance logging failed: {e}")
 
-    if similarity_score < THRESHOLD:
-        return {"status": "unknown_store"}
-
-    try:
-
-        record_attendance_event(
-            db=db,
-            user_id=matched_user.user_id,
-            camera_id=camera_id,
-            organization_id=matched_user.organization_id,
-            confidence_score=similarity_score,
-            recognition_method="face",
-            event_type=AttendanceEventType.passby
-        )
-
-    except Exception as e:
-        print("Attendance logging failed:", e)
-
-    return {
-        "status": "recognized",
-        "user_id": str(matched_user.user_id),
-        "confidence": round(similarity_score, 3)
-    }
+        return {
+            "status": "recognized",
+            "user_id": str(matched_user.user_id),
+            "confidence": round(similarity_score, 3)
+        }
     
-    
+    return {"status": "unknown_store"}
+
 def should_store_unknown(camera_id, embedding):
-
     now = datetime.now(timezone.utc)
-
     cache = UNKNOWN_FACE_CACHE.get(camera_id)
 
     if cache is None:
-        UNKNOWN_FACE_CACHE[camera_id] = {
-            "embedding": embedding,
-            "timestamp": now
-        }
+        UNKNOWN_FACE_CACHE[camera_id] = {"embedding": embedding, "timestamp": now}
         return True
 
     last_embedding = cache["embedding"]
@@ -230,16 +173,5 @@ def should_store_unknown(camera_id, embedding):
         if (now - last_time).total_seconds() < UNKNOWN_COOLDOWN_SECONDS:
             return False
 
-    UNKNOWN_FACE_CACHE[camera_id] = {
-        "embedding": embedding,
-        "timestamp": now
-    }
-
-    if len(UNKNOWN_FACE_CACHE) > 200:
-        oldest_camera = min(
-            UNKNOWN_FACE_CACHE,
-            key=lambda k: UNKNOWN_FACE_CACHE[k]["timestamp"]
-        )
-        del UNKNOWN_FACE_CACHE[oldest_camera]
-
+    UNKNOWN_FACE_CACHE[camera_id] = {"embedding": embedding, "timestamp": now}
     return True

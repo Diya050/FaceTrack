@@ -59,21 +59,6 @@ type Role = {
 
 const DEFAULT_ROLES: Role[] = [
   {
-    id: "admin",
-    name: "Super Admin",
-    system: true,
-    permissions: {
-      viewAttendance: true,
-      editAttendance: true,
-      overrideAttendance: true,
-      approveEnrollment: true,
-      manageUsers: true,
-      viewAnalytics: true,
-      manageSystem: true,
-      viewAuditLogs: true,
-    },
-  },
-  {
     id: "hr",
     name: "HR Admin",
     system: true,

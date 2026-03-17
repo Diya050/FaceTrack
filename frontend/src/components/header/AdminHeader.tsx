@@ -49,6 +49,10 @@ const adminNavItems = [
     label: "Support Ticket",
     path: "/admin/support-ticket"
   },
+  {
+    label: "Unknown Faces",
+    path: "/admin/unknown-faces"
+  },
   // THESE WILL BE HIDDEN ON DESKTOP
   {
     label: "System Settings",

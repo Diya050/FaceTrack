@@ -1,6 +1,6 @@
 import uuid
 import enum
-from sqlalchemy import Column, String, DateTime, ForeignKey, Boolean, Enum, UniqueConstraint, Index
+from sqlalchemy import Integer, Column, String, DateTime, ForeignKey, Boolean, Enum, UniqueConstraint, Index
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, declared_attr
 from sqlalchemy.sql import func
@@ -37,6 +37,7 @@ class Organization(Base):
     email = Column(String(255), nullable=False, unique=True)
     contact_number = Column(String(20))
     address = Column(String(500))
+    min_hours_for_present = Column(Integer, default=4, nullable=False)
     status = Column(
         Enum(OrganizationStatusEnum, name="organization_status_enum", values_callable=lambda enum_cls: [e.value for e in enum_cls]),
         nullable=False,
