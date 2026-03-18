@@ -23,13 +23,23 @@ const StatusGuard = ({ children }: any) => {
     if (!auth.loading) {
       check();
     }
-  }, [auth]);
+  }, [auth.status, auth.role, auth.face_enrolled, auth.loading]);
 
   if (auth.loading || !route) {
     return <div>Loading...</div>;
   }
 
-  if (!location.pathname.startsWith(route)) {
+  const getBasePath = (path: string) => {
+    if (path.startsWith("/user")) return "/user";
+    if (path.startsWith("/admin")) return "/admin";
+    if (path.startsWith("/pending-approval")) return "/pending-approval";
+    return "/";
+  };
+
+  const targetBase = getBasePath(route);
+  const currentBase = getBasePath(location.pathname);
+
+  if (targetBase !== currentBase) {
     return <Navigate to={route} replace />;
   }
 
