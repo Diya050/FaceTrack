@@ -69,7 +69,7 @@ export default function AppRoutes() {
         </ProtectedRoute>
       ),
       children: [
-        { index: true, element: <Navigate to="dashboard" replace /> },
+        // { index: true, element: <Navigate to="dashboard" replace /> },
         { path: "pending-face-approval", element: <PendingFaceApproval />},
         { path: "dashboard", element: <UserDashboardPage /> },
         { path: "me", element: <Profiles /> },
