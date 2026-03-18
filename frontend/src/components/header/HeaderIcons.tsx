@@ -44,13 +44,14 @@ const HeaderIcons = ({ firstName }: Props) => {
   };
 
   const handleSettings = () => {
-    if (role === "admin") {
-      navigate("/admin/settings/help/admin-guide");
-    } else if (role === "user") {
-      navigate("/user/help");
-    } else {
-      navigate("/login");
-    }
+  if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN") {
+    navigate("/admin/settings/help/admin-guide");
+  } else if (role === "USER") {
+    navigate("/user/settings/user-guide");
+  } else {
+    console.warn("Unknown role:", role);
+    navigate("/login");
+  }
   };
 
   return (
@@ -92,7 +93,7 @@ const HeaderIcons = ({ firstName }: Props) => {
         transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
         {/* Only for normal users */}
-        {role === "user" && (
+        {role === "USER" && (
           <>
             <MenuItem onClick={handleMyProfile}>
               <PersonOutlineIcon fontSize="small" sx={{ mr: 1 }} />
