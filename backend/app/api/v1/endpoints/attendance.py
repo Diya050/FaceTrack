@@ -100,22 +100,11 @@ def get_my_attendance(
     summary="Generate daily attendance records",
 )
 def generate_daily_attendance(
-    target_date: date = Query(
-        ...,
-        description="Date to generate attendance for (YYYY-MM-DD)",
-        examples=["2026-03-10"],
-    ),
+    target_date: date = Query(...),
     current_user: User = Depends(require_roles(["HR_ADMIN"])),
     db: Session = Depends(get_db),
 ):
-    """
-    Generates structured daily attendance from raw scan events.
-
-    - **HR_ADMIN** → Generates only for their own organization.
-    """
-
-    # Restrict to HR_ADMIN’s organization
-    organization_id = current_user.organization_id if current_user.role.role_name == "HR_ADMIN" else None
+    organization_id = current_user.organization_id
 
     return DailyAttendanceService.generate_daily_attendance(
         db=db,

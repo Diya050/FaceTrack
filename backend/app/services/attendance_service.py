@@ -12,6 +12,7 @@ from app.enums.attendance_enums import AttendanceEventType
 from app.enums.attendance_enums import AttendanceStatus
 from app.enums.attendance_enums import AttendanceCorrectionStatus
 
+
 COOLDOWN_SECONDS = 60
 
 
@@ -385,7 +386,7 @@ def get_organization_attendance(
     db: Session,
     current_user,
     start_date: Optional[date] = None,
-    end_date: Optional[date] = None,
+    end_date: Optional[date] = None,          
     department_id: Optional[UUID] = None,
     skip: int = 0,
     limit: int = 50
