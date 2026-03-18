@@ -23,7 +23,7 @@ class ProfileService:
             "role": user.role.role_name if user.role else None,
             "department": user.department.name if user.department else None,
             "organization": user.organization.name if user.organization else None,
-            "status": user.status,
+            "status":  user.status.value if user.status else None,
             "is_active": user.is_active,
             "face_enrolled": user.face_enrolled,
             "approved_by": approved_by,

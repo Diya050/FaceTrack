@@ -1,46 +1,99 @@
-import { createContext, useContext, useState } from "react";
-import type { ReactNode } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+//import type { ReactNode } from "react";
+import instance from "../services/api"; // axios instance
 
-export type UserRole = "user" | "admin" | null;
+export type UserRole = "SUPER_ADMIN" | "HR_ADMIN" | "ADMIN" | "USER";
+export type UserStatus = "pending" | "approved" | "active";
 
-interface AuthContextType {
+interface AuthState {
+  token: string | null;
+  role: UserRole | null;
+  status: UserStatus | null;
+  face_enrolled: boolean;
   isAuthenticated: boolean;
-  role: UserRole;
-  user: {
-    firstName: string;
-    lastName?: string;
-  } | null;
-  login: (role: UserRole, user: any) => void;
-  logout: () => void;
+  loading: boolean;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+interface AuthContextType extends AuthState {
+  login: (token: string) => Promise<void>;
+  logout: () => void;
+}
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [role, setRole] = useState<UserRole>(null);
-  const [user, setUser] = useState<AuthContextType["user"]>(null);
+export const AuthProvider = ({ children }: any) => {
+  const [state, setState] = useState<AuthState>({
+    token: localStorage.getItem("token"),
+    role: null,
+    status: null,
+    face_enrolled: false,
+    isAuthenticated: !!localStorage.getItem("token"),
+    loading: true,
+  });
 
-  const login = (role: UserRole, userData: any) => {
-    setRole(role);
-    setUser(userData);
+  const fetchUser = async () => {
+  try {
+    const res = await instance.get("/profile/users/me");
+
+    setState((prev) => ({
+      ...prev,
+      role: res.data.role,
+      status: res.data.status,
+      face_enrolled: res.data.face_enrolled,
+      isAuthenticated: true,
+      loading: false,
+    }));
+  } catch (err: any) {
+    console.error("fetchUser failed:", err);
+
+    //ONLY logout on invalid token
+    if (err?.response?.status === 401 || err?.response?.status === 403) {
+      logout();
+      return;
+    }
+
+    // Backend down → DON'T logout
+    setState((prev) => ({
+      ...prev,
+      loading: false,
+    }));
+  }
+  };
+
+  const login = async (token: string) => {
+    localStorage.setItem("token", token);
+
+    setState((prev) => ({
+      ...prev,
+      token,
+      isAuthenticated: true,
+      loading: true,
+    }));
+
+    await fetchUser();
   };
 
   const logout = () => {
     localStorage.removeItem("token");
-    setRole(null);
-    setUser(null);
+    setState({
+      token: null,
+      role: null,
+      status: null,
+      face_enrolled: false,
+      isAuthenticated: false,
+      loading: false,
+    });
   };
 
+  useEffect(() => {
+    if (state.token) {
+      fetchUser();
+    } else {
+      setState((prev) => ({ ...prev, loading: false }));
+    }
+  }, [state.token]);
+
   return (
-    <AuthContext.Provider
-      value={{
-        isAuthenticated: !!role,
-        role,
-        user,
-        login,
-        logout,
-      }}
-    >
+    <AuthContext.Provider value={{ ...state, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
@@ -49,7 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {
-    throw new Error("useAuth must be used within AuthProvider");
+    throw new Error("AuthContext Not Found");
   }
   return context;
 };
