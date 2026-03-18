@@ -32,28 +32,73 @@ class TenantMixin:
     
 class Organization(Base):
     __tablename__ = "organizations"
+
     organization_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False, unique=True)
     email = Column(String(255), nullable=False, unique=True)
     contact_number = Column(String(20))
     address = Column(String(500))
+
     min_hours_for_present = Column(Integer, default=4, nullable=False)
     status = Column(
-        Enum(OrganizationStatusEnum, name="organization_status_enum", values_callable=lambda enum_cls: [e.value for e in enum_cls]),
+        Enum(
+            OrganizationStatusEnum,
+            name="organization_status_enum",
+            values_callable=lambda x: [e.value for e in x],
+        ),
         nullable=False,
         default=OrganizationStatusEnum.ACTIVE,
     )
-    is_deleted = Column(Boolean, default=False, nullable=False, index=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    is_deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
-        nullable=False,
     )
+
     departments = relationship("Department", back_populates="organization")
-    roles = relationship("Role", back_populates="organization")
     users = relationship("User", back_populates="organization")
+    roles = relationship(
+        "OrganizationRole",
+        back_populates="organization",
+        cascade="all, delete-orphan",
+    )
+
+
+class Role(Base):
+    __tablename__ = "roles"
+
+    role_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    role_name = Column(String(100), nullable=False, unique=True)
+    description = Column(String)
+    organizations = relationship(
+        "OrganizationRole",
+        back_populates="role",
+        cascade="all, delete-orphan",
+    )
+    
+
+class OrganizationRole(Base):
+    __tablename__ = "organization_roles"
+
+    organization_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("organizations.organization_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    role_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("roles.role_id", ondelete="CASCADE"),
+        primary_key=True,
+    )
+
+    organization = relationship("Organization", back_populates="roles")
+
+    role = relationship("Role", back_populates="organizations")
+
+
 
 class Department(Base, TenantMixin):
     __tablename__ = "departments"
@@ -67,19 +112,6 @@ class Department(Base, TenantMixin):
     __table_args__ = (
         UniqueConstraint("organization_id", "name", name="uq_department_org_name"),
         Index("ix_department_org_name", "organization_id", "name"),
-    )
-
-class Role(Base, TenantMixin):
-    __tablename__ = "roles"
-    role_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    role_name = Column(String(100), nullable=False)
-    description = Column(String)
-
-    organization = relationship("Organization", back_populates="roles")
-    users = relationship("User", back_populates="role")
-
-    __table_args__ = (
-        UniqueConstraint("organization_id", "role_name", name="uq_role_org_name"),
     )
 
     
@@ -133,7 +165,7 @@ class User(Base, TenantMixin):
 
     # Relationships
     organization = relationship("Organization", back_populates="users")
-    role = relationship("Role", back_populates="users")
+    role = relationship("Role")
     department = relationship("Department", back_populates="users")
 
     approver = relationship("User", remote_side=[user_id], foreign_keys=[approved_by])
