@@ -177,11 +177,13 @@ class AuthService:
         user.last_login = datetime.now(timezone.utc)
         db.commit()
 
-        return create_access_token(
+        token = create_access_token(
             subject=user.user_id,
             organization_id=None,
             role_name=user.role.role_name
         )
+        
+        return user, token
     
     # Separate login method for organization users (requires org name)
     @staticmethod
@@ -222,11 +224,13 @@ class AuthService:
         user.last_login = datetime.now(timezone.utc)
         db.commit()
 
-        return create_access_token(
+        token = create_access_token(
             subject=user.user_id,
             organization_id=user.organization_id,
             role_name=user.role.role_name
         )
+        
+        return user, token
     
     @staticmethod
     async def initial_admin_approval(db, user_id):

@@ -17,12 +17,12 @@ def register(
     return {"message": "Registration successful. Awaiting approval."}
 
 
-@router.post("/platform-login")
+@router.post("/platform-login", response_model=TokenResponse)
 def platform_login_route(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db=Depends(get_db)
 ):
-    token = AuthService.platform_login(
+    user, token = AuthService.platform_login(
         db,
         form_data.username,
         form_data.password
@@ -30,16 +30,18 @@ def platform_login_route(
 
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "role": user.role.role_name,
+        "organization_id": None
     }
 
 
-@router.post("/org-login")
+@router.post("/org-login", response_model=TokenResponse)
 def org_login_route(
     data: OrgLoginRequest,
     db=Depends(get_db)
 ):
-    token = AuthService.org_login(
+    user, token = AuthService.org_login(
         db,
         data.email,
         data.password,
@@ -47,7 +49,9 @@ def org_login_route(
     )
     return {
         "access_token": token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "role": user.role.role_name,
+        "organization_id": str(user.organization_id)
     }
 
 
