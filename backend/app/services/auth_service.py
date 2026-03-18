@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
-from app.models.core import User, Role, Department, Organization
+from app.models.core import User, Role, Department, Organization, OrganizationRole
 from app.models.core import OrganizationStatusEnum, UserStatusEnum
 from app.core.security import (
     verify_password,
@@ -94,9 +94,11 @@ class AuthService:
 
         # Fetch default USER role for this organization
         role_result = db.execute(
-            select(Role).where(
+            select(Role)
+            .join(OrganizationRole)
+            .where(
                 Role.role_name == role_name,
-                Role.organization_id == organization.organization_id
+                OrganizationRole.organization_id == organization.organization_id
             )
         )
         user_role = role_result.scalars().first()

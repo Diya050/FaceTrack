@@ -1,6 +1,6 @@
 from sqlalchemy import select
 from fastapi import HTTPException
-from app.models.core import Organization, Role, Department
+from app.models.core import Organization, Role, Department, OrganizationRole
 from sqlalchemy.exc import IntegrityError
 from app.models.core import OrganizationStatusEnum  # wherever your enum lives
 
@@ -58,19 +58,19 @@ def create_organization(db, data):
     db.add(hr_department)
 
     # Auto-create default roles
-    default_roles = [
-        ("USER", "Standard user role"),
-        ("ADMIN", "Department admin role"),
-        ("HR_ADMIN", "HR administrator role")
-    ]
-
-    for role_name, description in default_roles:
-        role = Role(
-            role_name=role_name,
-            description=description,
-            organization_id=new_org.organization_id
+    roles = db.execute(
+        select(Role).where(
+            Role.role_name.in_(["USER", "ADMIN", "HR_ADMIN"])
         )
-        db.add(role)
+    ).scalars().all()
+
+    for role in roles:
+        org_role = OrganizationRole(
+            organization_id=new_org.organization_id,
+            role_id=role.role_id
+        )
+        db.add(org_role)
+
 
     # Commit everything together
     try:

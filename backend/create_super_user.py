@@ -14,16 +14,14 @@ def create_super_admin():
         # Check if SUPER_ADMIN role exists
         role = db.execute(
             select(Role).where(
-                Role.role_name == "SUPER_ADMIN",
-                Role.organization_id.is_(None)
+                Role.role_name == "SUPER_ADMIN"
             )
         ).scalars().first()
 
         if not role:
             role = Role(
                 role_name="SUPER_ADMIN",
-                description="Platform Super Admin",
-                organization_id=None
+                description="Platform Super Admin"
             )
             db.add(role)
             db.commit()
@@ -38,9 +36,6 @@ def create_super_admin():
         ).scalars().first()
 
         if not existing_user:
-            print(UserStatusEnum.APPROVED)
-            print(UserStatusEnum.APPROVED.value)
-            print(UserStatusEnum.APPROVED.name)
             superuser = User(
                 full_name="Platform Admin",
                 email="burnerformygem@gmail.com",
@@ -52,6 +47,7 @@ def create_super_admin():
                 is_active=True,
                 face_enrolled=False
             )
+
             db.add(superuser)
             db.commit()
 
