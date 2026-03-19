@@ -6,6 +6,8 @@ from app.api.v1.endpoints import notifications
 
 from app.api.v1.endpoints import user_dashboard,face_enrollment_status
 
+from app.api.v1.endpoints import user_analytics
+
 api_router = APIRouter()
 
 api_router.include_router(auth.router)
@@ -31,3 +33,5 @@ api_router.include_router(notifications.router)
 api_router.include_router(user_dashboard.router)
 
 api_router.include_router(face_enrollment_status.router)
+
+api_router.include_router(user_analytics.router)

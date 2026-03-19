@@ -1,15 +1,58 @@
+import { useEffect, useState } from "react";
 import { Box, Grid, Typography, LinearProgress, Stack, alpha } from "@mui/material";
 import QueryStatsIcon from "@mui/icons-material/QueryStats";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import { COLORS } from "../../theme/dashboardTheme";
+import { getProductivityMetrics } from "../../services/userAnalyticsService";
+import type { ProductivityMetricsResponse } from "../../types/userAnalyticsBackend.types";
 
 export default function ProductivityMetrics() {
- 
+  const [metrics, setMetrics] = useState<ProductivityMetricsResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const behaviors = [
-    { label: "Attendance Consistency", value: 92, color: COLORS.present },
-    { label: "Stability Index", value: 85, color: COLORS.navy },
-  ];
+  useEffect(() => {
+  let mounted = true;
+
+  // 2. Remove setLoading(true) from here to satisfy the linter
+  getProductivityMetrics()
+    .then((res) => {
+      if (!mounted) return;
+      setMetrics(res);
+      setError(null);
+    })
+    .catch((err) => {
+      console.error(err);
+      if (!mounted) return;
+      setError("Failed to load metrics");
+    })
+    .finally(() => {
+      if (!mounted) return;
+      setLoading(false);
+    });
+
+  return () => {
+    mounted = false;
+  };
+}, []);
+
+  const behaviors = metrics ? [
+    { label: "Attendance Consistency", value: Math.round(metrics.attendance_consistency), color: COLORS.present },
+    { label: "Stability Index", value: Math.round(metrics.stability_index), color: COLORS.navy },
+  ] : [];
+
+  const patterns = metrics ? [
+    { icon: <AccessTimeIcon fontSize="small" />, label: "Peak Arrival", value: metrics.peak_arrival ?? "—" },
+    { icon: <QueryStatsIcon fontSize="small" />, label: "Late Frequency", value: `${metrics.late_frequency_per_week} / week` }
+  ] : [];
+
+  if (loading) {
+    return <Box>Loading metrics...</Box>;
+  }
+
+  if (error) {
+    return <Box sx={{ color: 'error.main' }}>{error}</Box>;
+  }
 
   return (
     <Box>
@@ -22,9 +65,7 @@ export default function ProductivityMetrics() {
         </Typography>
       </Box>
 
-      {/* Added alignItems="center" to ensure the right side matches the vertical center of the bars */}
       <Grid container spacing={5} alignItems="center">
-        {/* Progress Bars */}
         <Grid size={{ xs: 12, md: 7 }}>
           <Stack spacing={5}>
             {behaviors.map((item) => (
@@ -52,21 +93,17 @@ export default function ProductivityMetrics() {
           </Stack>
         </Grid>
 
-        {/* Pattern Cards - Refined Design */}
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack spacing={2.5}>
-            {[
-              { icon: <AccessTimeIcon fontSize="small" />, label: "Peak Arrival", value: "08:52 AM" },
-              { icon: <QueryStatsIcon fontSize="small" />, label: "Late Frequency", value: "1.2 / week" }
-            ].map((pattern, i) => (
+            {patterns.map((pattern, i) => (
               <Box key={i} sx={{ 
                 p: 2.5, 
                 borderRadius: 3, 
                 display: 'flex', 
                 alignItems: 'center', 
-                justifyContent: 'space-between', // Pushes icon and text to ends for cleaner look
+                justifyContent: 'space-between',
                 border: `1px solid ${alpha(COLORS.navy, 0.05)}`,
-                bgcolor: "background.default", // Cleaner than the cream tint
+                bgcolor: "background.default",
                 transition: "0.2s",
                 "&:hover": { bgcolor: "white", borderColor: alpha(COLORS.navy, 0.1) }
               }}>

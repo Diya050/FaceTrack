@@ -4,7 +4,7 @@ import { Bar } from 'react-chartjs-2';
 import { COLORS } from '../../theme/dashboardTheme';
 import { getChartScales, getChartTooltip } from "../admin/dashboard/overview/shared/ChartConstants";
 import ChartWrapper from "../admin/dashboard/overview/shared/ChartWrapper";
-import { getMonthlyAttendanceStats } from '../../services/uaAttendanceStatsService';
+import { getMonthlyAttendanceStats } from '../../services/userAnalyticsService';
 
 export default function MonthlyAttendanceChart() {
   
