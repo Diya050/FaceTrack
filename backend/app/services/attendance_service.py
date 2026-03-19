@@ -11,6 +11,7 @@ from app.models.attendance import Attendance, AttendanceCorrection, AttendanceEv
 from app.enums.attendance_enums import AttendanceEventType
 from app.enums.attendance_enums import AttendanceStatus
 from app.enums.attendance_enums import AttendanceCorrectionStatus
+from backend.app.services.notification_service import NotificationService
 
 
 COOLDOWN_SECONDS = 60
@@ -332,6 +333,14 @@ def review_attendance_correction(
 
     db.commit()
     db.refresh(correction)
+    
+    NotificationService.create_notification(
+        db,
+        correction.user_id,
+        current_user.organization_id,
+        f"Your attendance correction has been {correction.status.value}",
+        "INFO"
+    )
 
     return correction
 
