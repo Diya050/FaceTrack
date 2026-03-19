@@ -23,6 +23,7 @@ import {
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import { useEffect } from "react";
 
 type RequestStatus = "Pending" | "Approved" | "Rejected";
 
@@ -41,57 +42,68 @@ interface RegistrationRequest {
   status: RequestStatus;
 }
 
-const mockRequests: RegistrationRequest[] = [
-  {
-    id: "1",
-    fullName: "Amit Kumar",
-    email: "amit.kumar@techcorp.com",
-    organization: "TechCorp Pvt Ltd",
-    department: "Engineering",
-    role: "Staff",
-    employeeId: "EMP1021",
-    submittedAt: "2026-03-01 09:42",
-    device: "Chrome / Windows",
-    ipAddress: "192.168.1.21",
-    images: [
-      "https://randomuser.me/api/portraits/men/75.jpg",
-      "https://randomuser.me/api/portraits/men/76.jpg",
-      "https://randomuser.me/api/portraits/men/77.jpg",
-    ],
-    status: "Pending",
-  },
-  {
-    id: "2",
-    fullName: "Neha Sharma",
-    email: "neha.sharma@techcorp.com",
-    organization: "TechCorp Pvt Ltd",
-    department: "HR",
-    role: "Manager",
-    employeeId: "EMP0842",
-    submittedAt: "2026-03-01 08:30",
-    device: "Safari / iPhone",
-    ipAddress: "10.0.0.14",
-    images: [
-      "https://randomuser.me/api/portraits/women/65.jpg",
-      "https://randomuser.me/api/portraits/women/66.jpg",
-      "https://randomuser.me/api/portraits/women/67.jpg",
-    ],
-    status: "Pending",
-  },
-];
 
 const RegistrationRequests: React.FC = () => {
-  const [requests, setRequests] = useState<RegistrationRequest[]>(mockRequests);
+
+  const [requests, setRequests] = useState<RegistrationRequest[]>([]);
   const [selected, setSelected] = useState<RegistrationRequest | null>(null);
   const [remark, setRemark] = useState("");
 
-  const updateStatus = (id: string, status: RequestStatus) => {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
-    setSelected(null);
-    setRemark("");
+  const fetchPendingUsers = () => {
+    fetch("http://localhost:8000/api/v1/users/pending", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.map((user: any) => ({
+          id: user.id,
+          fullName: user.full_name,
+          email: user.email,
+          organization: user.organization_name || "",
+          department: user.department_name || "",
+          role: user.role || "",
+          employeeId: user.employee_id || "",
+          submittedAt: user.created_at || "",
+          device: "N/A",
+          ipAddress: "N/A",
+          images: [],
+          status: "Pending",
+        }));
+
+        setRequests(formatted);
+      })
+      .catch((err) => {
+        console.error("Error fetching users", err);
+      });
   };
+
+  const updateStatus = (id: string, status: RequestStatus) => {
+    if (status === "Approved") {
+      fetch(`http://localhost:8000/api/v1/users/${id}/approve`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      })
+        .then(() => {
+          fetchPendingUsers(); // refresh
+          setSelected(null);
+          setRemark("");
+        })
+        .catch((err) => {
+          console.error("Error updating status", err);
+        });
+    } else {
+      setSelected(null);
+      setRemark("");
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingUsers();
+  }, []);
 
   return (
     <Box p={3} mt={8}>

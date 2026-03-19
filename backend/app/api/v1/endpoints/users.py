@@ -62,3 +62,5 @@ def get_registration_details(
         current_user=current_user,
         user_id=user_id
     )
+    
+    
