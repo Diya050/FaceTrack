@@ -14,7 +14,7 @@ router = APIRouter(prefix="/departments", tags=["Departments"])
 def create_department(
     data: DepartmentCreate,
     db=Depends(get_db),
-    user=Depends(require_roles(["SUPER_ADMIN", "ADMIN", "HR_ADMIN"]))
+    user=Depends(require_roles([ "ADMIN", "HR_ADMIN"]))
 ):
     return DepartmentService.create_department(db, data, user)
 
@@ -23,7 +23,7 @@ def create_department(
 def list_departments(
     organization_id: UUID | None = Query(default=None),
     db=Depends(get_db),
-    user=Depends(require_roles(["SUPER_ADMIN", "ADMIN", "HR_ADMIN"]))
+    user=Depends(require_roles([ "ADMIN", "HR_ADMIN"]))
 ):
     return DepartmentService.list_departments(db, user, organization_id)
 
