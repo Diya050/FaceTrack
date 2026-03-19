@@ -7,10 +7,13 @@ from sqlalchemy import select
 from insightface.app import FaceAnalysis
 from app.models.streams import Camera, VideoStream, UnknownFace
 from app.models.biometrics import FacialBiometric
+from app.models.core import User
 from app.services.attendance_service import record_attendance_event
 from app.utils.supabase_storage import upload_image
 from app.enums.attendance_enums import AttendanceEventType
 from app.services.face_embedding_service import get_face_app
+from app.services.notification_service import NotificationService
+
 
 THRESHOLD = 0.65
 UNKNOWN_SIMILARITY_THRESHOLD = 0.85
@@ -125,6 +128,21 @@ def recognize_frame(db, frame, camera_id):
 
     if should_commit:
         db.commit()
+        hr_admins = db.query(User).filter(
+            User.organization_id == organization_id,
+            User.role.has(role_name="HR_ADMIN")
+        ).all()
+
+        for hr in hr_admins:
+            NotificationService.create_notification(
+                db,
+                hr.user_id,
+                organization_id,
+                "Unknown face detected on camera",
+                "ALERT"
+            )
+        
+    
     
     return results
 
