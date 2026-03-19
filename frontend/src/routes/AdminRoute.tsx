@@ -14,6 +14,7 @@ import AttendancePage from "../pages/admin/AttendancePage";
 import SystemSettingsPage from "../pages/admin/settings/SystemSettingsPage";
 import SecuritySettingsPage from "../pages/admin/settings/SecuritySettingsPage";
 import ManagePage from "../pages/admin/ManagePage";
+import ViewOrganizationUsers from "../pages/admin/ViewOrganizationUsers";
 import FaceEnrollmentRequests from "../pages/admin/FaceEnrollmentRequests";
 import UnknownFacesPage from "../pages/admin/UnknownFacesPage";
 import SupportTickets from "../pages/admin/SupportTickets";
@@ -46,6 +47,14 @@ export const adminRoutes: RouteObject = {
 
     // Manage Department
     { path: "manage", element: <ManagePage /> },
+    {
+      path: "manage/users",
+      element: (
+        <RoleGuard allowedRoles={["HR_ADMIN"]}>
+          <ViewOrganizationUsers />
+        </RoleGuard>
+      ),
+    },
     { path: "face-enrollment-requests", element: <FaceEnrollmentRequests /> },
    
     // support ticket

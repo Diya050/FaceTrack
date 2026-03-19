@@ -16,6 +16,7 @@ import type { NavLinkProps } from "react-router-dom";
 import { NavLink } from "react-router-dom";
 import { useSidebarConfig } from "../../hooks/useSidebarConfig";
 import { useTheme } from "@mui/material/styles";
+import { useAuth } from "../../context/AuthContext";
 import {
   sidebarContainer,
   sidebarPanelTitle,
@@ -35,8 +36,35 @@ type Props = {
 
 const AdminSidebar = ({ width, collapsed = false, onToggle }: Props) => {
   const sidebar = useSidebarConfig();
+  const { role } = useAuth();
   const [open, setOpen] = useState<Record<string, boolean>>({});
   const theme = useTheme();
+
+  const visibleSidebar = sidebar
+    .filter((item) => {
+      if (!("allowedRoles" in item) || !item.allowedRoles?.length) {
+        return true;
+      }
+      return role ? item.allowedRoles.includes(role) : false;
+    })
+    .map((item) => {
+      if (!("children" in item)) {
+        return item;
+      }
+
+      const visibleChildren = item.children.filter((child) => {
+        if (!child.allowedRoles?.length) {
+          return true;
+        }
+        return role ? child.allowedRoles.includes(role) : false;
+      });
+
+      return {
+        ...item,
+        children: visibleChildren,
+      };
+    })
+    .filter((item) => !("children" in item) || item.children.length > 0);
 
   useEffect(() => {
     if (collapsed) setOpen({});
@@ -79,7 +107,7 @@ const AdminSidebar = ({ width, collapsed = false, onToggle }: Props) => {
       </Box>
 
       <List disablePadding>
-        {sidebar.map((item) => {
+        {visibleSidebar.map((item) => {
           if ("children" in item) {
             const isOpen = !!open[item.label];
             const Icon = item.icon;
