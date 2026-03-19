@@ -6,7 +6,7 @@ from uuid import UUID
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from app.models.attendance import AttendanceRule
-from app.models.core import User
+from app.models.core import User, Department
 from app.models.attendance import Attendance, AttendanceCorrection, AttendanceEvent
 from app.enums.attendance_enums import AttendanceEventType
 from app.enums.attendance_enums import AttendanceStatus
@@ -347,55 +347,96 @@ def review_attendance_correction(
 def get_department_attendance(
     db: Session,
     current_user,
+    department_id: UUID,
+    target_date: Optional[date] = None,
     start_date: Optional[date] = None,
     end_date: Optional[date] = None,
+    status: Optional[str] = None,
     skip: int = 0,
     limit: int = 50
 ):
 
     ensure_active_user(current_user)
 
-    if current_user.role not in ["HR_ADMIN", "ADMIN"]:
+    role_name = current_user.role.role_name if current_user.role else None
+
+    if role_name not in ["HR_ADMIN", "ADMIN"]:
         raise HTTPException(
             status_code=403,
             detail="Not authorized to view department attendance"
         )
 
-    if not current_user.department_id:
+    if role_name == "ADMIN" and not current_user.department_id:
         raise HTTPException(
             status_code=400,
             detail="Department not assigned to user"
         )
 
+    if role_name == "ADMIN" and department_id != current_user.department_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Not authorized to view attendance for this department"
+        )
+
     query = (
-        select(Attendance)
+        select(
+            Attendance.user_id,
+            User.full_name,
+            Attendance.attendance_id,
+            Attendance.attendance_date,
+            Attendance.first_check_in,
+            Attendance.last_check_out,
+            Attendance.status,
+        )
         .join(User, Attendance.user_id == User.user_id)
         .where(
             Attendance.organization_id == current_user.organization_id,
-            User.department_id == current_user.department_id,
+            User.department_id == department_id,
             User.status == "active",
             Attendance.is_deleted == False
         )
     )
 
-    if start_date:
-        query = query.where(Attendance.attendance_date >= start_date)
+    if target_date:
+        query = query.where(Attendance.attendance_date == target_date)
+    else:
+        if start_date:
+            query = query.where(Attendance.attendance_date >= start_date)
 
-    if end_date:
-        query = query.where(Attendance.attendance_date <= end_date)
+        if end_date:
+            query = query.where(Attendance.attendance_date <= end_date)
+
+    if status:
+        query = query.where(Attendance.status == status)
 
     query = query.order_by(
-        Attendance.attendance_date.desc()
+        Attendance.attendance_date.desc(),
+        User.full_name.asc(),
     ).offset(skip).limit(limit)
 
-    return db.execute(query).scalars().all()
+    rows = db.execute(query).all()
+
+    return [
+        {
+            "user_id": row.user_id,
+            "full_name": row.full_name,
+            "attendance_id": row.attendance_id,
+            "attendance_date": row.attendance_date,
+            "first_check_in": row.first_check_in,
+            "last_check_out": row.last_check_out,
+            "status": row.status.value if hasattr(row.status, "value") else row.status,
+        }
+        for row in rows
+    ]
 
 
 def get_organization_attendance(
     db: Session,
     current_user,
+    attendance_date: Optional[date] = None,
     start_date: Optional[date] = None,
-    end_date: Optional[date] = None,          
+    end_date: Optional[date] = None,
+    status: Optional[str] = None,
     department_id: Optional[UUID] = None,
     skip: int = 0,
     limit: int = 50
@@ -403,15 +444,28 @@ def get_organization_attendance(
 
     ensure_active_user(current_user)
 
-    if current_user.role not in ["HR_ADMIN", "ADMIN"]:
+    role_name = current_user.role.role_name if current_user.role else None
+
+    if role_name not in ["HR_ADMIN", "ADMIN"]:
         raise HTTPException(
             status_code=403,
             detail="Not authorized to view organization attendance"
         )
 
     query = (
-        select(Attendance)
+        select(
+            Attendance.user_id,
+            User.full_name,
+            Department.name.label("department_name"),
+            Attendance.attendance_id,
+            Attendance.attendance_date,
+            Attendance.first_check_in,
+            Attendance.last_check_out,
+            Attendance.status,
+            Attendance.organization_id,
+        )
         .join(User, Attendance.user_id == User.user_id)
+        .outerjoin(Department, User.department_id == Department.department_id)
         .where(
             Attendance.organization_id == current_user.organization_id,
             Attendance.is_deleted == False,
@@ -419,23 +473,45 @@ def get_organization_attendance(
         )
     )
 
-    if start_date:
-        query = query.where(Attendance.attendance_date >= start_date)
+    if attendance_date:
+        query = query.where(Attendance.attendance_date == attendance_date)
+    else:
+        if start_date:
+            query = query.where(Attendance.attendance_date >= start_date)
 
-    if end_date:
-        query = query.where(Attendance.attendance_date <= end_date)
+        if end_date:
+            query = query.where(Attendance.attendance_date <= end_date)
+
+    if status:
+        query = query.where(Attendance.status == status)
 
     if department_id:
         query = query.where(User.department_id == department_id)
 
-    if current_user.role == "ADMIN":
+    if role_name == "ADMIN":
         query = query.where(User.department_id == current_user.department_id)
 
     query = query.order_by(
-        Attendance.attendance_date.desc()
+        Attendance.attendance_date.desc(),
+        User.full_name.asc(),
     ).offset(skip).limit(limit)
 
-    return db.execute(query).scalars().all()
+    rows = db.execute(query).all()
+
+    return [
+        {
+            "user_id": row.user_id,
+            "full_name": row.full_name,
+            "department_name": row.department_name,
+            "attendance_id": row.attendance_id,
+            "attendance_date": row.attendance_date,
+            "first_check_in": row.first_check_in,
+            "last_check_out": row.last_check_out,
+            "status": row.status.value if hasattr(row.status, "value") else row.status,
+            "organization_id": row.organization_id,
+        }
+        for row in rows
+    ]
 
 
 def get_monthly_attendance_stats(db: Session, user_id, year: int, month: int):
