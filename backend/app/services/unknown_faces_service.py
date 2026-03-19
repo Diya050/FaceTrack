@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app.models.streams import UnknownFace
 from app.models.core import User
-from backend.app.services.notification_service import NotificationService
+from app.services.notification_service import NotificationService
 
 
 class UnknownFacesService:

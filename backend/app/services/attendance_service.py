@@ -11,7 +11,7 @@ from app.models.attendance import Attendance, AttendanceCorrection, AttendanceEv
 from app.enums.attendance_enums import AttendanceEventType
 from app.enums.attendance_enums import AttendanceStatus
 from app.enums.attendance_enums import AttendanceCorrectionStatus
-from backend.app.services.notification_service import NotificationService
+from app.services.notification_service import NotificationService
 
 
 COOLDOWN_SECONDS = 60
