@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Box,
   Card,
@@ -17,8 +17,16 @@ import {
   alpha,
 } from "@mui/material";
 import { COLORS } from "../../../theme/dashboardTheme";
-import { mockAttendanceRecords } from "../../../data/attendance.mock";
-import type { AttendanceRecord } from "../../../data/attendance.mock";
+
+interface AttendanceRecord {
+  id: string;
+  employeeName: string;
+  date: string;
+  checkIn: string | null;
+  checkOut: string | null;
+  confidence: number | null;
+  camera: string | null;
+}
 
 const LATE_AFTER = "09:30";
 const EARLY_BEFORE = "17:00";
@@ -70,8 +78,44 @@ export default function AttendanceRecords() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [confidence, setConfidence] = useState("all");
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
 
-  const filteredRecords = mockAttendanceRecords.filter((r) => {
+  // ✅ FETCH FROM BACKEND
+  useEffect(() => {
+    fetchAttendance();
+  }, []);
+
+  const fetchAttendance = () => {
+    fetch("http://localhost:8000/api/v1/attendance/organization", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("token")}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!Array.isArray(data)) {
+    console.error("Backend error:", data);
+    return;
+  }
+        const formatted = data.map((item: any) => ({
+          id: item.user_id + item.date,
+          employeeName: item.full_name || "User",
+          date: item.date,
+          checkIn: item.check_in,
+          checkOut: item.check_out,
+          confidence: item.confidence ?? null,
+          camera: item.camera_name || "N/A",
+        }));
+
+        setRecords(formatted);
+      })
+      .catch((err) => {
+        console.error("Error fetching attendance", err);
+      });
+  };
+
+  // ✅ FILTER LOGIC
+  const filteredRecords = records.filter((r) => {
     const flags = deriveFlags(r);
 
     const matchesSearch = r.employeeName
@@ -81,8 +125,6 @@ export default function AttendanceRecords() {
     const derivedStatus =
       flags.absent
         ? "absent"
-        : flags.late && flags.earlyLeave
-        ? "late"
         : flags.late
         ? "late"
         : flags.earlyLeave
@@ -116,6 +158,7 @@ export default function AttendanceRecords() {
 
       <Card elevation={0} sx={{ borderRadius: 4 }}>
         <CardContent sx={{ p: 3 }}>
+          {/* FILTERS */}
           <Stack direction="row" spacing={2} mb={3}>
             <TextField
               placeholder="Search employee"
@@ -151,6 +194,7 @@ export default function AttendanceRecords() {
             </Select>
           </Stack>
 
+          {/* TABLE */}
           <Table>
             <TableHead>
               <TableRow>
@@ -164,14 +208,7 @@ export default function AttendanceRecords() {
                   "Confidence",
                   "Camera",
                 ].map((h) => (
-                  <TableCell
-                    key={h}
-                    sx={{
-                      fontWeight: 800,
-                      color: COLORS.navy,
-                      borderBottom: `1px solid ${alpha(COLORS.navy, 0.08)}`,
-                    }}
-                  >
+                  <TableCell key={h} sx={{ fontWeight: 800 }}>
                     {h}
                   </TableCell>
                 ))}
@@ -186,97 +223,25 @@ export default function AttendanceRecords() {
                   r.checkOut
                 );
 
-                const confidenceColor =
-                  r.confidence === null
-                    ? COLORS.slate
-                    : r.confidence >= 85
-                    ? COLORS.present
-                    : r.confidence >= 65
-                    ? COLORS.late
-                    : COLORS.absent;
-
                 return (
-                  <TableRow
-                    key={r.id}
-                    sx={{
-                      transition: "0.2s",
-                      "&:hover": {
-                        bgcolor: alpha(COLORS.cream, 0.25),
-                      },
-                    }}
-                  >
-                    <TableCell sx={{ fontWeight: 600 }}>
-                      {r.employeeName}
-                    </TableCell>
+                  <TableRow key={r.id}>
+                    <TableCell>{r.employeeName}</TableCell>
                     <TableCell>{r.date}</TableCell>
                     <TableCell>{r.checkIn ?? "—"}</TableCell>
                     <TableCell>{r.checkOut ?? "—"}</TableCell>
                     <TableCell>{workingHours ?? "—"}</TableCell>
 
                     <TableCell>
-                      {flags.absent && (
-                        <Chip
-                          label="ABSENT"
-                          size="small"
-                          sx={{
-                            bgcolor: alpha(COLORS.absent, 0.12),
-                            color: COLORS.absent,
-                            fontWeight: 800,
-                            fontSize: "0.65rem",
-                            mr: 0.5,
-                          }}
-                        />
+                      {flags.absent && <Chip label="ABSENT" />}
+                      {flags.late && <Chip label="LATE" />}
+                      {flags.earlyLeave && <Chip label="EARLY LEAVE" />}
+                      {!flags.absent && !flags.late && !flags.earlyLeave && (
+                        <Chip label="PRESENT" />
                       )}
-
-                      {flags.late && (
-                        <Chip
-                          label="LATE"
-                          size="small"
-                          sx={{
-                            bgcolor: alpha(COLORS.late, 0.12),
-                            color: COLORS.late,
-                            fontWeight: 800,
-                            fontSize: "0.65rem",
-                            mr: 0.5,
-                          }}
-                        />
-                      )}
-
-                      {flags.earlyLeave && (
-                        <Chip
-                          label="EARLY LEAVE"
-                          size="small"
-                          sx={{
-                            bgcolor: alpha(COLORS.early, 0.12),
-                            color: COLORS.early,
-                            fontWeight: 800,
-                            fontSize: "0.65rem",
-                          }}
-                        />
-                      )}
-
-                      {!flags.absent &&
-                        !flags.late &&
-                        !flags.earlyLeave && (
-                          <Chip
-                            label="PRESENT"
-                            size="small"
-                            sx={{
-                              bgcolor: alpha(COLORS.present, 0.12),
-                              color: COLORS.present,
-                              fontWeight: 800,
-                              fontSize: "0.65rem",
-                            }}
-                          />
-                        )}
                     </TableCell>
 
-                    <TableCell
-                      sx={{ fontWeight: 700, color: confidenceColor }}
-                    >
-                      {r.confidence !== null
-                        ? `${r.confidence}%`
-                        : "—"}
+                    <TableCell>
+                      {r.confidence ? `${r.confidence}%` : "—"}
                     </TableCell>
 
                     <TableCell>{r.camera ?? "—"}</TableCell>
@@ -287,10 +252,7 @@ export default function AttendanceRecords() {
           </Table>
 
           {filteredRecords.length === 0 && (
-            <Typography
-              variant="body2"
-              sx={{ textAlign: "center", mt: 4, color: COLORS.slate }}
-            >
+            <Typography sx={{ textAlign: "center", mt: 4 }}>
               No records found
             </Typography>
           )}
