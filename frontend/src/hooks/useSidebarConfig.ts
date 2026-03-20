@@ -4,6 +4,7 @@ import { monitoringSidebar } from "../config/sidebar.monitoring";
 import { attendanceSidebar } from "../config/sidebar.attendance";
 import { departmentSidebar } from "../config/sidebar.department";
 import { settingsSidebar } from "../config/sidebar.settings";
+import { userSidebar } from "../config/sidebar.user";
 import type { SidebarItem } from "../types/sidebar";
 
 export const useSidebarConfig = (): SidebarItem[] => {
@@ -18,7 +19,9 @@ export const useSidebarConfig = (): SidebarItem[] => {
   if (pathname.includes("/settings/security")) return settingsSidebar;
   if (pathname.includes("/settings/help")) return settingsSidebar;
   
-
+  if (pathname.includes("/admin/me") || pathname.includes("admin/capture")) {
+    return userSidebar;
+  }
 
   return [];
 }

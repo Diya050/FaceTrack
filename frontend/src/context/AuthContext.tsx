@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from "react";
-//import type { ReactNode } from "react";
 import instance from "../services/api"; // axios instance
 
 export type UserRole = "SUPER_ADMIN" | "HR_ADMIN" | "ADMIN" | "USER";
@@ -9,6 +8,7 @@ interface AuthState {
   token: string | null;
   role: UserRole | null;
   status: UserStatus | null;
+  fullName: string | null;
   face_enrolled: boolean;
   isAuthenticated: boolean;
   loading: boolean;
@@ -18,6 +18,7 @@ interface AuthContextType extends AuthState {
   login: (token: string) => Promise<void>;
   logout: () => void;
 }
+
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: any) => {
@@ -25,50 +26,48 @@ export const AuthProvider = ({ children }: any) => {
     token: localStorage.getItem("token"),
     role: null,
     status: null,
+    fullName: null,
     face_enrolled: false,
     isAuthenticated: !!localStorage.getItem("token"),
     loading: true,
   });
 
   const fetchUser = async () => {
-  try {
-    const res = await instance.get("/profile/users/me");
+    try {
+      const res = await instance.get("/profile/users/me");
 
-    setState((prev) => ({
-      ...prev,
-      role: res.data.role,
-      status: res.data.status,
-      face_enrolled: res.data.face_enrolled,
-      isAuthenticated: true,
-      loading: false,
-    }));
-  } catch (err: any) {
-    console.error("fetchUser failed:", err);
+      setState((prev) => ({
+        ...prev,
+        role: res.data.role,
+        status: res.data.status,
+        fullName: res.data.full_name,
+        face_enrolled: res.data.face_enrolled,
+        isAuthenticated: true,
+        loading: false,
+      }));
+    } catch (err: any) {
+      console.error("fetchUser failed:", err);
 
-    //ONLY logout on invalid token
-    if (err?.response?.status === 401 || err?.response?.status === 403) {
-      logout();
-      return;
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
+        logout();
+        return;
+      }
+
+      setState((prev) => ({
+        ...prev,
+        loading: false,
+      }));
     }
-
-    // Backend down → DON'T logout
-    setState((prev) => ({
-      ...prev,
-      loading: false,
-    }));
-  }
   };
 
   const login = async (token: string) => {
     localStorage.setItem("token", token);
-
     setState((prev) => ({
       ...prev,
       token,
       isAuthenticated: true,
       loading: true,
     }));
-
     await fetchUser();
   };
 
@@ -78,6 +77,7 @@ export const AuthProvider = ({ children }: any) => {
       token: null,
       role: null,
       status: null,
+      fullName: null,
       face_enrolled: false,
       isAuthenticated: false,
       loading: false,

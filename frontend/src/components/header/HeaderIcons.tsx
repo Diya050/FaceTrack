@@ -6,11 +6,14 @@ import {
   Menu,
   MenuItem,
   Divider,
+  ListItemIcon,
+  ListItemText,
 } from "@mui/material";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
+import FaceIcon from "@mui/icons-material/Face"; // Icon for biometric enrollment
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useState } from "react";
@@ -40,23 +43,36 @@ const HeaderIcons = ({ firstName }: Props) => {
 
   const handleMyProfile = () => {
     handleClose();
-    navigate("/user/me");
+    // Check the role to determine the correct prefix
+    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN") {
+      navigate("/admin/me");
+    } else {
+      navigate("/user/me");
+    }
+  };
+
+  const handleEnrollBiometric = () => {
+    handleClose();
+
+    // Check the role to determine the correct prefix
+    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN") {
+      navigate("/admin/capture");
+    } else {
+      navigate("/user/capture");
+    }
   };
 
   const handleSettings = () => {
-  if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN") {
-    navigate("/admin/settings/help/admin-guide");
-  } else if (role === "USER") {
-    navigate("/user/settings/user-guide");
-  } else {
-    console.warn("Unknown role:", role);
-    navigate("/login");
-  }
+    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN") {
+      navigate("/admin/settings/help/admin-guide");
+    } else {
+      navigate("/user/settings/user-guide");
+    }
   };
 
   return (
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-      
+
       <Tooltip title="Notifications">
         <IconButton>
           <NotificationsNoneIcon />
@@ -69,15 +85,23 @@ const HeaderIcons = ({ firstName }: Props) => {
         </IconButton>
       </Tooltip>
 
-      {/* Avatar */}
-      <Tooltip title="Profile">
-        <IconButton onClick={handleProfileClick}>
+      {/* Avatar Button */}
+      <Tooltip title="Account Settings">
+        <IconButton
+          onClick={handleProfileClick}
+          size="medium"
+          sx={{ ml: 1 }}
+          aria-controls={open ? 'account-menu' : undefined}
+          aria-haspopup="true"
+          aria-expanded={open ? 'true' : undefined}
+        >
           <Avatar
             sx={{
               width: 36,
               height: 36,
               bgcolor: "primary.main",
               fontWeight: 600,
+              fontSize: "1.2rem"
             }}
           >
             {firstName?.charAt(0).toUpperCase()}
@@ -87,27 +111,58 @@ const HeaderIcons = ({ firstName }: Props) => {
 
       <Menu
         anchorEl={anchorEl}
+        id="account-menu"
         open={open}
         onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
+        onClick={handleClose}
+        PaperProps={{
+          elevation: 0,
+          sx: {
+            overflow: 'visible',
+            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
+            mt: 1.5,
+            '& .MuiAvatar-root': { width: 32, height: 32, ml: -0.5, mr: 1 },
+            '&:before': {
+              content: '""',
+              display: 'block',
+              position: 'absolute',
+              top: 0,
+              right: 14,
+              width: 10,
+              height: 10,
+              bgcolor: 'background.paper',
+              transform: 'translateY(-50%) rotate(45deg)',
+              zIndex: 0,
+            },
+          },
+        }}
+        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
       >
-        {/* Only for normal users */}
-        {role === "USER" && (
-          <>
-            <MenuItem onClick={handleMyProfile}>
-              <PersonOutlineIcon fontSize="small" sx={{ mr: 1 }} />
-              My Profile
-            </MenuItem>
+        {/* Profile Option - Visible to ALL */}
+        <MenuItem onClick={handleMyProfile}>
+          <ListItemIcon>
+            <PersonOutlineIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>My Profile</ListItemText>
+        </MenuItem>
 
-            <Divider />
-          </>
-        )}
+        {/* Biometric Option - Visible to ALL */}
+        <MenuItem onClick={handleEnrollBiometric}>
+          <ListItemIcon>
+            <FaceIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Enroll Biometric</ListItemText>
+        </MenuItem>
 
-        {/* For both admin & user */}
+        <Divider sx={{ my: 1 }} />
+
+        {/* Logout Option - Visible to ALL */}
         <MenuItem onClick={handleLogout}>
-          <LogoutIcon fontSize="small" sx={{ mr: 1 }} />
-          Logout
+          <ListItemIcon>
+            <LogoutIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Logout</ListItemText>
         </MenuItem>
       </Menu>
     </Box>

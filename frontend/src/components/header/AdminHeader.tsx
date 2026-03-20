@@ -89,13 +89,16 @@ const adminNavItems = [
 ];
 
 const AdminHeader = () => {
-  const { user } = useAuth();
+  const { fullName } = useAuth();
+
+  // Extract the first letter
+  const userInitial = fullName ? fullName.charAt(0).toUpperCase() : "A";
 
   return (
     <BaseHeader
       logoLink="/admin/dashboard"
       navItems={adminNavItems}
-      rightSlot={<HeaderIcons firstName={user?.firstName ?? "A"} />}
+      rightSlot={<HeaderIcons firstName={userInitial} />}
     />
   );
 };

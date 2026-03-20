@@ -18,6 +18,8 @@ import ViewOrganizationUsers from "../pages/admin/ViewOrganizationUsers";
 import FaceEnrollmentRequests from "../pages/admin/FaceEnrollmentRequests";
 import UnknownFacesPage from "../pages/admin/UnknownFacesPage";
 import SupportTickets from "../pages/admin/SupportTickets";
+import FaceEnrollment from "../pages/user/FaceEnrollment";
+import Profiles from "../pages/user/Profiles";
 
 export const adminRoutes: RouteObject = {
   path: "/admin",
@@ -55,7 +57,10 @@ export const adminRoutes: RouteObject = {
         </RoleGuard>
       ),
     },
+    { path: "me", element: <Profiles /> },
     { path: "face-enrollment-requests", element: <FaceEnrollmentRequests /> },
+    { path: "capture", element: <FaceEnrollment /> },
+    
    
     // support ticket
     { path: "support-ticket", element: <SupportTickets />},
