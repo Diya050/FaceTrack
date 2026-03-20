@@ -12,57 +12,115 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import ScheduleIcon from "@mui/icons-material/Schedule";
 import PercentIcon from "@mui/icons-material/Percent";
 
-const MyAttendancePage = () => {
+import {
+  getMyAttendance,
+  requestCorrection,
+} from "../../services/attendanceService";
 
-  const [attendance, setAttendance] = useState<any[]>([]);
+/* ───────── TYPES ───────── */
+
+type AttendanceRow = {
+  attendance_id: string;
+  date: string;
+  status: string;
+  checkIn: string;
+  checkOut: string;
+  total: string;
+  hours: string;
+  confidence: string;
+  camera: string;
+  method: string;
+};
+
+/* ───────── COMPONENT ───────── */
+
+const MyAttendancePage = () => {
+  const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [snackOpen, setSnackOpen] = useState(false);
 
-  useEffect(() => {
+  /* ───────── FETCH ATTENDANCE ───────── */
 
-    const mockData = [
-      {
-        date: "2026-03-01",
-        status: "Present",
-        checkIn: "09:12",
-        checkOut: "18:05",
-        hours: "8h 53m",
-        confidence: "97%",
-        camera: "Gate-2",
-        method: "Live"
-      },
-      {
-        date: "2026-03-02",
-        status: "Late",
-        checkIn: "09:45",
-        checkOut: "18:00",
-        hours: "8h 15m",
-        confidence: "92%",
-        camera: "Gate-1",
-        method: "Live"
-      },
-      {
-        date: "2026-03-03",
-        status: "Absent",
-        checkIn: "--",
-        checkOut: "--",
-        hours: "--",
+  const fetchAttendance = async (params?: any) => {
+    try {
+      setLoading(true);
+
+      const data = await getMyAttendance(params);
+
+      const mapped: AttendanceRow[] = data.map((item: any) => ({
+        attendance_id: item.attendance_id,
+        date: item.date,
+        status: item.status,
+        checkIn: item.check_in || "--",
+        checkOut: item.check_out || "--",
+        total: item.total || "--",
+        hours: item.total || "--",
         confidence: "--",
-        camera: "--",
-        method: "--"
-      }
-    ];
+        camera: item.camera_name || "--",
+        method: item.recognition_method || "--",
+      }));
 
-    setTimeout(() => {
-      setAttendance(mockData);
+      setAttendance(mapped);
+    } catch (err) {
+      console.error("Fetch attendance failed:", err);
+    } finally {
       setLoading(false);
-    }, 800);
+    }
+  };
 
+  useEffect(() => {
+    fetchAttendance();
   }, []);
 
-  const presentDays = attendance.filter(a => a.status === "Present").length;
-  const absentDays = attendance.filter(a => a.status === "Absent").length;
-  const lateDays = attendance.filter(a => a.status === "Late").length;
+  /* ───────── FILTER HANDLER ───────── */
+
+  const handleFilter = async (filters: {
+    startDate?: string;
+    endDate?: string;
+    status?: string;
+  }) => {
+    await fetchAttendance({
+      start_date: filters.startDate,
+      end_date: filters.endDate,
+      status: filters.status,
+    });
+
+    setSnackOpen(true);
+  };
+
+  /* ───────── CORRECTION HANDLER ───────── */
+
+  const handleCorrectionSubmit = async (payload: {
+    attendance_id: string;
+    requested_check_in?: string;
+    requested_check_out?: string;
+    reason: string;
+  }) => {
+    try {
+      await requestCorrection(payload);
+
+      setSnackOpen(true);
+
+      // Refresh data after correction
+      fetchAttendance();
+    } catch (err) {
+      console.error("Correction failed:", err);
+    }
+  };
+
+  /* ───────── KPI CALCULATION ───────── */
+
+  const presentDays = attendance.filter((a) =>
+    a.status.toLowerCase().includes("present")
+  ).length;
+
+  const absentDays = attendance.filter((a) =>
+    a.status.toLowerCase().includes("absent")
+  ).length;
+
+  const lateDays = attendance.filter((a) =>
+    a.status.toLowerCase().includes("late")
+  ).length;
 
   const attendancePercent =
     attendance.length === 0
@@ -74,31 +132,32 @@ const MyAttendancePage = () => {
       title: "Present Days",
       value: presentDays,
       color: "#4CAF50",
-      icon: <CalendarMonthIcon />
+      icon: <CalendarMonthIcon />,
     },
     {
       title: "Absent Days",
       value: absentDays,
       color: "#F44336",
-      icon: <CancelIcon />
+      icon: <CancelIcon />,
     },
     {
       title: "Late Marks",
       value: lateDays,
       color: "#FB8C00",
-      icon: <ScheduleIcon />
+      icon: <ScheduleIcon />,
     },
     {
       title: "Attendance %",
       value: `${attendancePercent}%`,
       color: "#7E57C2",
-      icon: <PercentIcon />
-    }
+      icon: <PercentIcon />,
+    },
   ];
 
-  return (
-    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: "auto", mt:8 }}>
+  /* ───────── UI ───────── */
 
+  return (
+    <Box sx={{ p: { xs: 2, md: 3 }, maxWidth: 1400, mx: "auto", mt: 8 }}>
       <Typography
         variant="h4"
         fontWeight="bold"
@@ -108,112 +167,89 @@ const MyAttendancePage = () => {
         My Attendance
       </Typography>
 
-      {/* KPI CARDS */}
-
+      {/* KPI */}
       <Grid container spacing={3}>
+        {stats.map((stat) => (
+          <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
+            <Paper
+              sx={{
+                p: 3,
+                borderRadius: 3,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                "&:hover": {
+                  transform: "translateY(-4px)",
+                  boxShadow: 6,
+                },
+              }}
+            >
+              <Box>
+                <Typography color="text.secondary">
+                  {stat.title}
+                </Typography>
+                <Typography variant="h4" fontWeight="bold">
+                  {stat.value}
+                </Typography>
+              </Box>
 
-  {stats.map((stat) => (
-
-    <Grid size={{ xs: 12, sm: 6, md: 3 }} key={stat.title}>
-
-      <Paper
-        sx={{
-          p: 3,
-          borderRadius: 3,
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          transition: "0.25s",
-          "&:hover": {
-            transform: "translateY(-4px)",
-            boxShadow: 6
-          }
-        }}
-      >
-
-        <Box>
-
-          <Typography color="text.secondary">
-            {stat.title}
-          </Typography>
-
-          <Typography variant="h4" fontWeight="bold">
-            {stat.value}
-          </Typography>
-
-        </Box>
-
-        <Box
-          sx={{
-            bgcolor: stat.color + "20",
-            color: stat.color,
-            p: 1.5,
-            borderRadius: 2
-          }}
-        >
-          {stat.icon}
-        </Box>
-
-      </Paper>
-
-    </Grid>
-
-  ))}
-
-</Grid>
+              <Box
+                sx={{
+                  bgcolor: stat.color + "20",
+                  color: stat.color,
+                  p: 1.5,
+                  borderRadius: 2,
+                }}
+              >
+                {stat.icon}
+              </Box>
+            </Paper>
+          </Grid>
+        ))}
+      </Grid>
 
       {/* FILTERS */}
-
       <Box mt={4}>
-        <AttendanceFilters
-          onFilter={() => setSnackOpen(true)}
-        />
+        <AttendanceFilters onFilter={handleFilter} />
       </Box>
 
       {/* CALENDAR */}
-
       <Box mt={4}>
-        <AttendanceCalendar />
+        <AttendanceCalendar data={attendance} />
       </Box>
 
       {/* TABLE */}
-
       <Box mt={4}>
-
         {loading ? (
           <Typography>Loading attendance...</Typography>
         ) : (
           <AttendanceTable rows={attendance} />
         )}
-
       </Box>
 
-      {/* LEAVE PANEL */}
-
+      {/* LEAVE */}
       <Box mt={4}>
         <LeaveManagementPanel />
       </Box>
 
-      {/* DISPUTE FORM */}
-
+      {/* CORRECTION */}
       <Box mt={4}>
-        <CorrectionForm />
+        <CorrectionForm
+          attendance={attendance}
+          onSubmit={handleCorrectionSubmit}
+        />
       </Box>
 
       {/* SNACKBAR */}
-
       <Snackbar
         open={snackOpen}
         autoHideDuration={3000}
         onClose={() => setSnackOpen(false)}
       >
-
         <Alert severity="success">
-          Filters applied successfully
+          Operation completed successfully
         </Alert>
-
       </Snackbar>
-
     </Box>
   );
 };

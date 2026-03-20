@@ -18,16 +18,19 @@ const UserDashboardPage = () => {
   
 const [historyData, setHistoryData] = useState<AttendanceHistoryData[]>([]);
 const [historyLoading, setHistoryLoading] = useState(true);
+const [historyError, setHistoryError] = useState<string | null>(null);
 
 
 useEffect(() => {
   const fetchHistory = async () => {
     try {
       // Fetch the last 7 records (you can change this number)
+      setHistoryLoading(true);
       const data = await getAttendanceHistory(7); 
       setHistoryData(data);
     } catch (error) {
       console.error("Failed to fetch attendance history:", error);
+      setHistoryError("Failed to load attendance history");
     } finally {
       setHistoryLoading(false);
     }
