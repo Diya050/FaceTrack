@@ -3,7 +3,7 @@ import { createContext, useContext, useState, useEffect } from "react";
 import instance from "../services/api"; // axios instance
 
 export type UserRole = "SUPER_ADMIN" | "HR_ADMIN" | "ADMIN" | "USER";
-export type UserStatus = "pending" | "approved" | "active";
+export type UserStatus = "pending" | "approved" | "active" | "rejected" | "inactive";
 
 interface AuthState {
   token: string | null;

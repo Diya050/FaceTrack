@@ -1,60 +1,111 @@
-import { Paper, Typography, Grid, TextField, Button } from "@mui/material";
+import {
+  Box,
+  Button,
+  TextField,
+  MenuItem,
+  Typography,
+} from "@mui/material";
 import { useState } from "react";
-import AppSnackbar from "../notifications/AppSnackbar";
 
-const CorrectionForm = () => {
+/* ───────── TYPES ───────── */
 
-  const [open,setOpen] = useState(false);
+type AttendanceRow = {
+  attendance_id: string;
+  date: string;
+  status: string;
+};
+
+type Props = {
+  attendance: AttendanceRow[];
+  onSubmit: (data: {
+    attendance_id: string;
+    requested_check_in?: string;
+    requested_check_out?: string;
+    reason: string;
+  }) => void;
+};
+
+/* ───────── COMPONENT ───────── */
+
+const CorrectionForm = ({ attendance, onSubmit }: Props) => {
+  const [attendanceId, setAttendanceId] = useState("");
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [reason, setReason] = useState("");
 
   const handleSubmit = () => {
-    setOpen(true);
+    if (!attendanceId || !reason) {
+      alert("Please select record and provide reason");
+      return;
+    }
+
+    onSubmit({
+      attendance_id: attendanceId,
+      requested_check_in: checkIn || undefined,
+      requested_check_out: checkOut || undefined,
+      reason,
+    });
+
+    // Reset form
+    setAttendanceId("");
+    setCheckIn("");
+    setCheckOut("");
+    setReason("");
   };
 
   return (
-    <>
-      <Paper sx={{ p:3, borderRadius:3 }}>
+    <Box>
+      <Typography variant="h6" fontWeight="bold" mb={2}>
+        Request Attendance Correction
+      </Typography>
 
-        <Typography variant="h6" fontWeight="bold" mb={2}>
-          Raise Attendance Dispute
-        </Typography>
+      <Box display="flex" flexDirection="column" gap={2} maxWidth={400}>
+        {/* SELECT ATTENDANCE */}
+        <TextField
+          select
+          label="Select Date"
+          value={attendanceId}
+          onChange={(e) => setAttendanceId(e.target.value)}
+        >
+          {attendance.map((a) => (
+            <MenuItem key={a.attendance_id} value={a.attendance_id}>
+              {a.date} - {a.status}
+            </MenuItem>
+          ))}
+        </TextField>
 
-        <Grid container spacing={2}>
+        {/* CHECK IN */}
+        <TextField
+          type="time"
+          label="Requested Check In"
+          InputLabelProps={{ shrink: true }}
+          value={checkIn}
+          onChange={(e) => setCheckIn(e.target.value)}
+        />
 
-          <Grid size={{ xs:12, md:4 }}>
-            <TextField
-              type="date"
-              label="Date"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-            />
-          </Grid>
+        {/* CHECK OUT */}
+        <TextField
+          type="time"
+          label="Requested Check Out"
+          InputLabelProps={{ shrink: true }}
+          value={checkOut}
+          onChange={(e) => setCheckOut(e.target.value)}
+        />
 
-          <Grid size={{ xs:12, md:8 }}>
-            <TextField
-              label="Explanation"
-              multiline
-              rows={3}
-              fullWidth
-            />
-          </Grid>
+        {/* REASON */}
+        <TextField
+          label="Reason"
+          multiline
+          rows={3}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
 
-          <Grid size={{ xs:12 }}>
-            <Button variant="contained" onClick={handleSubmit}>
-              Submit Request
-            </Button>
-          </Grid>
-
-        </Grid>
-
-      </Paper>
-
-      <AppSnackbar
-        open={open}
-        message="Attendance dispute submitted"
-        severity="warning"
-        onClose={()=>setOpen(false)}
-      />
-    </>
+        <Button variant="contained" onClick={handleSubmit}>
+          Submit Request
+        </Button>
+      </Box>
+    </Box>
   );
 };
 
