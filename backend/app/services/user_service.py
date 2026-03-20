@@ -92,10 +92,13 @@ class UserService:
         user = db.get(User, user_id)
 
         if not user:
-            raise Exception("User not found")
+            raise HTTPException(404, "User not found")
 
         if user.organization_id != current_user.organization_id:
-            raise Exception("Unauthorized")
+            raise HTTPException(403, "Unauthorized")
+
+        if user.status != UserStatusEnum.PENDING:
+            raise HTTPException(400, "User is not pending")
 
         user.status = UserStatusEnum.REJECTED
         user.approved_by = current_user.user_id
