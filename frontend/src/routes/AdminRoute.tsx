@@ -11,6 +11,7 @@ import SystemHealth from "../components/admin/dashboard/SystemHealth";
 import LiveAlerts from "../components/admin/dashboard/LiveAlerts";
 import LiveMonitoringPage from "../pages/admin/LiveMonitoringPage";
 import AttendancePage from "../pages/admin/AttendancePage";
+import ReportsPage from "../pages/admin/ReportsPage";
 import SystemSettingsPage from "../pages/admin/settings/SystemSettingsPage";
 import SecuritySettingsPage from "../pages/admin/settings/SecuritySettingsPage";
 import ManagePage from "../pages/admin/ManagePage";
@@ -44,6 +45,9 @@ export const adminRoutes: RouteObject = {
 
     // Attendance
     { path: "attendance", element: <AttendancePage /> },
+
+    // Reports
+    { path: "reports", element: <ReportsPage /> },
 
     // Manage Department
     { path: "manage", element: <ManagePage /> },

@@ -27,13 +27,15 @@ const userNavItems = [
 ];
 
 const UserHeader = () => {
-  const { user } = useAuth();
+  const { role } = useAuth();
+
+  const badgeLetter = role === "USER" ? "U" : "M";
 
   return (
     <BaseHeader
       logoLink="/user/dashboard"
       navItems={userNavItems}
-      rightSlot={<HeaderIcons firstName={user?.firstName ?? "U"} />}
+      rightSlot={<HeaderIcons firstName={badgeLetter} />}
     />
   );
 };

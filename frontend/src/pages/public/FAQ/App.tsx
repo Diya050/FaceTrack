@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
-import FAQ from './faq';
+import FAQ from './FAQ';
 import QueryForm from './QueryForm';
 
 // Create a central FaceTrack theme

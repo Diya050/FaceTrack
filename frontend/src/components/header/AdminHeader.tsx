@@ -34,6 +34,16 @@ const adminNavItems = [
     ],
   },
   {
+    label: "Reports",
+    path: "/admin/reports",
+    children: [
+      { label: "Summary", path: "/admin/reports#summary" },
+      { label: "Trend Analysis", path: "/admin/reports#trends" },
+      { label: "Detections", path: "/admin/reports#detections" },
+      { label: "Exports", path: "/admin/reports#exports" },
+    ],
+  },
+  {
     label: "Manage Department",
     path: "/admin/manage",
     children: [
@@ -89,13 +99,15 @@ const adminNavItems = [
 ];
 
 const AdminHeader = () => {
-  const { user } = useAuth();
+  const { role } = useAuth();
+
+  const badgeLetter = role === "SUPER_ADMIN" ? "S" : "A";
 
   return (
     <BaseHeader
       logoLink="/admin/dashboard"
       navItems={adminNavItems}
-      rightSlot={<HeaderIcons firstName={user?.firstName ?? "A"} />}
+      rightSlot={<HeaderIcons firstName={badgeLetter} />}
     />
   );
 };
