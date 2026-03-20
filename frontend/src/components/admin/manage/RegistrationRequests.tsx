@@ -53,7 +53,7 @@ const RegistrationRequests: React.FC = () => {
   const fetchPendingUsers = () => {
     fetch("http://localhost:8000/api/v1/users/pending", {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
       },
     })
       .then((res) => res.json())
@@ -90,7 +90,7 @@ const RegistrationRequests: React.FC = () => {
           {
             method: "PATCH",
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
             },
           }
         );
@@ -102,7 +102,7 @@ const RegistrationRequests: React.FC = () => {
           {
             method: "POST",
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
             },
           }
         );
@@ -120,7 +120,7 @@ const RegistrationRequests: React.FC = () => {
           {
             method: "PATCH",
             headers: {
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
             },
           }
         );
