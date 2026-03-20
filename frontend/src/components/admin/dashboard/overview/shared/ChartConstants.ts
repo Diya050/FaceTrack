@@ -1,44 +1,21 @@
-import { alpha } from "@mui/material";
-import { COLORS } from "../../../../../theme/dashboardTheme";
-
-export const DEPT_COLORS = [
-  COLORS.present, 
-  COLORS.early, 
-  COLORS.navy, 
-  COLORS.late, 
-  COLORS.absent
-];
-
-export const getChartTooltip = () => ({
-  backgroundColor: '#FFFFFF', 
-  borderColor: alpha(COLORS.navy, 0.1),
-  borderWidth: 1,
-  titleColor: COLORS.navy,
-  bodyColor: COLORS.slate,
-  padding: 12,
-  cornerRadius: 8,
-  displayColors: true,
-  boxPadding: 6,
-});
-
+// src/pages/admin/dashboard/shared/ChartConstants.ts
 export const getChartScales = () => ({
   x: {
-    ticks: { 
-      color: COLORS.slate, 
-      font: { size: 11, weight: 600 as const } 
-    },
-    grid: { 
-      display: false 
-    },
+    grid: { display: false },
+    ticks: { color: "#94A3B8", font: { size: 11 } },
   },
   y: {
-    ticks: { 
-      color: COLORS.slate, 
-      font: { size: 11 } 
-    },
-    grid: { 
-      color: alpha(COLORS.slate, 0.05),
-      drawBorder: false 
-    },
+    grid: { color: "#F1F5F9", drawBorder: false },
+    ticks: { color: "#94A3B8", font: { size: 11 } },
+    border: { display: false },
   },
+});
+
+export const getChartTooltip = () => ({
+  backgroundColor: "#1F2937",
+  titleColor: "#F9FAFB",
+  bodyColor: "#D1D5DB",
+  padding: 10,
+  cornerRadius: 8,
+  displayColors: true,
 });
