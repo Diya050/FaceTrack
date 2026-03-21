@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from fastapi.responses import StreamingResponse
 from typing import Optional,List
 from datetime import datetime,date
+from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from uuid import UUID
 from io import BytesIO
@@ -133,29 +134,43 @@ def export_attendance(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user),
 ):
-    # 1. Fetch Real Data from DB
-    query = db.query(Attendance)
+    # Build query that selects Attendance plus the user's full_name
+    query = db.query(
+    Attendance.attendance_date.label("attendance_date"),
+    User.full_name.label("full_name"),
+    Attendance.status.label("status"),
+    Attendance.first_check_in.label("first_check_in"),
+    Attendance.last_check_out.label("last_check_out"),
+).join(User, Attendance.user_id == User.user_id)
+
+# ✅ IMPORTANT: restrict to current user
+    query = query.filter(Attendance.user_id == current_user.user_id)
+
+    # Optional filters
     if organization_id:
         query = query.filter(Attendance.organization_id == organization_id)
+
     if start_date:
         query = query.filter(Attendance.attendance_date >= start_date)
+
     if end_date:
         query = query.filter(Attendance.attendance_date <= end_date)
-    
-    rows = query.order_by(Attendance.attendance_date.desc()).all()
 
-    # 2. Generate Content
+    # Avoid deleted records
+    query = query.filter(Attendance.is_deleted == False)
+
+    rows = query.order_by(desc(Attendance.attendance_date)).all()# rows are tuples (Attendance, user_full_name)
+
     try:
         if type == "pdf":
             content = generate_attendance_pdf(rows, organization_id, start_date, end_date)
             media_type = "application/pdf"
-            filename = f"attendance_{date.today()}.pdf"
+            filename = f"attendance_{date.today().isoformat()}.pdf"
         else:
             content = generate_attendance_csv(rows)
             media_type = "text/csv"
-            filename = f"attendance_{date.today()}.csv"
+            filename = f"attendance_{date.today().isoformat()}.csv"
 
-        # 3. Return StreamingResponse
         return StreamingResponse(
             BytesIO(content),
             media_type=media_type,
