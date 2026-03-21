@@ -7,6 +7,9 @@ from app.core.security import (
     get_password_hash,
     create_access_token
 )
+from app.services.email_service import EmailService
+from app.models.system import PasswordResetToken
+from datetime import timedelta
 import datetime
 from datetime import timezone, datetime
 
@@ -231,6 +234,101 @@ class AuthService:
         )
         
         return user, token
+    
+    # Forgot password flow for both platform and org users (org name optional)
+    @staticmethod
+    def forgot_password(db, email: str, organization_name: str | None):
+
+        # Step 1: Resolve user (platform or org)
+        query = select(User).where(User.email == email)
+
+        if organization_name:
+            org = db.execute(
+                select(Organization).where(
+                    Organization.name == organization_name,
+                    Organization.is_deleted == False
+                )
+            ).scalars().first()
+
+            if not org:
+                return {"message": "If user exists, reset link sent"}
+
+            query = query.where(User.organization_id == org.organization_id)
+        else:
+            query = query.where(User.organization_id.is_(None))
+
+        user = db.execute(query).scalars().first()
+
+        # Step 2: Prevent user enumeration
+        if not user:
+            return {"message": "If user exists, reset link sent"}
+
+        # Step 3: Invalidate old tokens
+        existing_tokens = db.execute(
+            select(PasswordResetToken).where(
+                PasswordResetToken.user_id == user.user_id,
+                PasswordResetToken.is_used == False
+            )
+        ).scalars().all()
+
+        for t in existing_tokens:
+            t.is_used = True
+
+        # Step 4: Create new token
+        token = PasswordResetToken(
+            user_id=user.user_id,
+            organization_id=user.organization_id,
+            expires_at=datetime.utcnow() + timedelta(minutes=15)
+        )
+
+        db.add(token)
+        db.commit()
+        db.refresh(token)
+
+        # Step 5: Create reset link
+        reset_link = f"http://localhost:5173/reset-password/{token.token_id}"
+
+        # Step 6: Send email
+        EmailService.send_reset_email(
+            to_email=user.email,
+            reset_link=reset_link
+        )
+
+        return {"message": "If user exists, reset link sent"}
+    
+    # Reset password using token (same for platform and org users)
+    @staticmethod
+    def reset_password(db, token_id: str, new_password: str):
+
+        token = db.execute(
+            select(PasswordResetToken).where(
+                PasswordResetToken.token_id == token_id
+            )
+        ).scalars().first()
+
+        if not token:
+            raise HTTPException(400, "Invalid token")
+
+        if token.is_used:
+            raise HTTPException(400, "Token already used")
+
+        if token.expires_at < datetime.now(timezone.utc):
+            raise HTTPException(400, "Token expired")
+
+        user = db.get(User, token.user_id)
+
+        if not user:
+            raise HTTPException(404, "User not found")
+
+        # Update password
+        user.password_hash = get_password_hash(new_password)
+
+        # Mark token as used
+        token.is_used = True
+
+        db.commit()
+
+        return {"message": "Password reset successful"}
     
     @staticmethod
     async def initial_admin_approval(db, user_id):

@@ -118,7 +118,7 @@ export default function AppRoutes() {
     { path: "/login", element: <Login /> },
     { path: "/register", element: <Register /> },
     { path: "/forgot-password", element: <ForgotPassword /> },
-    { path: "/reset-password", element: <ResetPassword /> },
+    { path: "/reset-password/:token", element: <ResetPassword /> },
 
     /*  FALLBACK */
     {

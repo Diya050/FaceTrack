@@ -182,6 +182,11 @@ class User(Base, TenantMixin):
     support_tickets = relationship("SupportTicket", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")
     login_history = relationship("LoginHistory", back_populates="user", cascade="all, delete-orphan")
+    password_reset_tokens = relationship(
+        "PasswordResetToken",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
 
     __table_args__ = (
         UniqueConstraint("organization_id", "email", name="uq_user_org_email"),

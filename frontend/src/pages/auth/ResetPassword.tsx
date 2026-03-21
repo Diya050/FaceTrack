@@ -9,14 +9,13 @@ import {
   Alert,
 } from "@mui/material";
 import { useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import AuthLayout from "../../layout/AuthLayout";
+import { resetPassword } from "../../services/authService";
 
 export default function ResetPassword() {
   const navigate = useNavigate();
-  const location = useLocation();
-
-  const token = new URLSearchParams(location.search).get("token");
+  const { token } = useParams();
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -45,31 +44,34 @@ export default function ResetPassword() {
   };
 
   const handleSubmit = async () => {
-    const validationError = validate();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
+  const validationError = validate();
+  if (validationError) {
+    setError(validationError);
+    return;
+  }
 
-    try {
-      setLoading(true);
-      setError("");
-      setSuccess("");
+  try {
+    setLoading(true);
+    setError("");
+    setSuccess("");
 
-      // TODO: Replace with axios call
-      console.log("Resetting password:", { token, password });
+    await resetPassword({
+      token_id: token!,
+      new_password: password,
+    });
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    setSuccess("Password reset successful. Redirecting to login...");
 
-      setSuccess("Password reset successful. Redirecting to login...");
-
-      setTimeout(() => navigate("/login"), 2000);
-    } catch (err) {
-      setError("Reset failed. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    setTimeout(() => navigate("/login"), 2000);
+  } catch (err: any) {
+    setError(
+      err?.response?.data?.detail ||
+      "Reset failed. Please try again."
+    );
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
   <AuthLayout>
