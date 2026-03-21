@@ -1,24 +1,113 @@
 import { useRef, useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../../services/api";
 import * as faceapi from "face-api.js";
+import { useAuth } from "../../context/AuthContext";
+import { 
+  CheckCircle, 
+  CameraAlt, 
+  Replay, 
+  CloudUpload, 
+  Face, 
+  InfoOutlined,
+  VideocamOff
+} from "@mui/icons-material";
+import { Typography } from "@mui/material";
 
 const MAX_IMAGES = 7;
 const MIN_IMAGES = 5;
-// const MAX_SIZE = 5 * 1024 * 1024;
-const BLUR_THRESHOLD = 150;
+const THEME_NAVY = "#30364F";
 
 export default function FaceEnrollment() {
+  const navigate = useNavigate();
+  const { face_enrolled, status, role } = useAuth();
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   const [images, setImages] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [faceValid, setFaceValid] = useState(false);
-  const [statusMessage, setStatusMessage] = useState("Loading models...");
+  const [statusMessage, setStatusMessage] = useState("Initializing biometrics...");
+  const [isCapturing, setIsCapturing] = useState(false);
 
   const detectionIntervalRef = useRef<number | null>(null);
   const lastDetectionRef = useRef<faceapi.WithFaceLandmarks<any> | null>(null);
+
+  const getStatusBadge = () => {
+    switch (status) {
+      case "active": return { bg: "#E8F5E9", color: "#2E7D32", text: "Status: Active" };
+      case "pending": return { bg: "#FFF3E0", color: "#EF6C00", text: "Status: Pending Approval" };
+      default: return { bg: "#FFEBEE", color: "#D32F2F", text: "Enrollment Required" };
+    }
+  };
+
+  const badge = getStatusBadge();
+
+  // --- CAMERA AUTO-STOP LOGIC ---
+  useEffect(() => {
+    const loadModels = async () => {
+      try {
+        const MODEL_URL = "/models";
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
+        ]);
+        setStatusMessage("Ready to begin");
+      } catch (err) {
+        setStatusMessage("System Error: Failed to load AI models");
+      }
+    };
+    loadModels();
+
+    // The Return function acts as a "Cleanup" when the component unmounts
+    return () => {
+      stopCamera(); 
+    };
+  }, []);
+
+  const startCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+      
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => {
+          setIsCapturing(true);
+          runDetection();
+        };
+      }
+    } catch (err) {
+      alert("Please enable camera permissions.");
+    }
+  };
+
+  const stopCamera = () => {
+    if (detectionIntervalRef.current) {
+      clearInterval(detectionIntervalRef.current);
+      detectionIntervalRef.current = null;
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => {
+        track.stop();
+        console.log("Hardware track stopped manually");
+      });
+      streamRef.current = null;
+    }
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+
+    setIsCapturing(false);
+    setFaceValid(false);
+    setStatusMessage("Camera Stopped");
+  };
 
   useEffect(() => {
     const loadModels = async () => {
@@ -28,195 +117,204 @@ export default function FaceEnrollment() {
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
           faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL)
         ]);
-        setStatusMessage("Models loaded. Start camera.");
+        setStatusMessage("Ready to begin");
       } catch (err) {
-        console.error(err);
-        setStatusMessage("Error loading models.");
+        setStatusMessage("System Error: Failed to load AI models");
       }
     };
     loadModels();
-    return () => { if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current); };
-  }, []);
 
-  const startCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.onloadedmetadata = () => runDetection();
+    // AUTO-STOP LOGIC: This cleanup runs when navigating away from the page
+    return () => {
+      console.log("Component unmounting: Cleaning up hardware resources...");
+      
+      if (detectionIntervalRef.current) {
+        clearInterval(detectionIntervalRef.current);
       }
-    } catch (err) {
-      console.error(err);
-      alert("Could not access camera.");
-    }
-  };
 
-  const stopCamera = () => {
-  if (videoRef.current && videoRef.current.srcObject) {
-    const stream = videoRef.current.srcObject as MediaStream;
-    stream.getTracks().forEach(track => track.stop());
-    videoRef.current.srcObject = null;
-  }
-
-  if (detectionIntervalRef.current) {
-    clearInterval(detectionIntervalRef.current);
-    detectionIntervalRef.current = null;
-  }
-};
-
-  const detectBlur = (imageData: ImageData) => {
-    const data = imageData.data;
-    const gray = [];
-    for (let i = 0; i < data.length; i += 4) {
-      gray.push((data[i] + data[i + 1] + data[i + 2]) / 3);
-    }
-    const mean = gray.reduce((a, b) => a + b, 0) / gray.length;
-    return gray.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / gray.length;
-  };
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => {
+          track.stop();
+          console.log("Hardware track stopped via cleanup");
+        });
+      }
+    };
+  }, []);
 
   const validatePose = (landmarks: faceapi.FaceLandmarks68) => {
     const nose = landmarks.getNose()[3];
-    const leftEye = landmarks.getLeftEye()[0];
-    const rightEye = landmarks.getRightEye()[3];
-    const eyeCenterX = (leftEye.x + rightEye.x) / 2;
+    const eyeCenterX = (landmarks.getLeftEye()[0].x + landmarks.getRightEye()[3].x) / 2;
     return Math.abs(nose.x - eyeCenterX) < 35;
   };
 
   const runDetection = () => {
     if (!videoRef.current || !overlayRef.current) return;
-
     const video = videoRef.current;
     const canvas = overlayRef.current;
     const ctx = canvas.getContext("2d");
 
-    if (detectionIntervalRef.current) clearInterval(detectionIntervalRef.current);
-
     detectionIntervalRef.current = window.setInterval(async () => {
       if (video.paused || video.ended) return;
-
-      // FIX 1: Set canvas internal size to match displayed CSS size
       canvas.width = video.clientWidth;
       canvas.height = video.clientHeight;
 
-      const detection = await faceapi
-        .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions())
-        .withFaceLandmarks();
-
+      const detection = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions()).withFaceLandmarks();
       ctx?.clearRect(0, 0, canvas.width, canvas.height);
 
       if (!detection) {
         setFaceValid(false);
-        setStatusMessage("No face detected");
-        lastDetectionRef.current = null;
+        setStatusMessage("Searching for face...");
         return;
       }
 
-      // FIX 2: Resize results so the box coordinates match the canvas scale
       const resized = faceapi.resizeResults(detection, { width: canvas.width, height: canvas.height });
       lastDetectionRef.current = resized;
-
-      const { box } = resized.detection;
-      const isValid = box.width > 80 && validatePose(resized.landmarks);
+      const isValid = resized.detection.box.width > 100 && validatePose(resized.landmarks);
 
       if (ctx) {
-        ctx.strokeStyle = isValid ? "#2e7d32" : "#d32f2f";
-        ctx.lineWidth = 4;
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
+        ctx.strokeStyle = isValid ? "#4CAF50" : "#F44336";
+        ctx.setLineDash(isValid ? [] : [5, 5]);
+        ctx.lineWidth = 3;
+        ctx.strokeRect(resized.detection.box.x, resized.detection.box.y, resized.detection.box.width, resized.detection.box.height);
       }
 
       setFaceValid(isValid);
-      setStatusMessage(isValid ? "Perfect! Capture now." : "Align face properly");
+      setStatusMessage(isValid ? "Position Perfect" : "Move closer and center face");
     }, 150);
   };
 
   const captureImage = () => {
-    // If lastDetectionRef is null, the loop hasn't found a face yet
-    if (!lastDetectionRef.current) {
-      alert("Face not detected yet. Please wait a moment.");
-      return;
-    }
-
-    const video = videoRef.current;
+    if (!lastDetectionRef.current || !videoRef.current || !canvasRef.current) return;
     const canvas = canvasRef.current;
-    if (!video || !canvas) return;
-
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx?.drawImage(video, 0, 0);
-
-    const imageData = ctx!.getImageData(0, 0, canvas.width, canvas.height);
-    if (detectBlur(imageData) < BLUR_THRESHOLD) {
-      alert("Image is too blurry.");
-      return;
-    }
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    canvas.getContext("2d")?.drawImage(videoRef.current, 0, 0);
 
     canvas.toBlob((blob) => {
       if (blob) {
         const file = new File([blob], `face-${Date.now()}.jpg`, { type: "image/jpeg" });
-        setImages(prev => (prev.length < MAX_IMAGES ? [...prev, file] : prev));
+        setImages(prev => prev.length < MAX_IMAGES ? [...prev, file] : prev);
       }
-    }, "image/jpeg", 0.9);
+    }, "image/jpeg", 0.95);
   };
 
   const submitEnrollment = async () => {
-    if (images.length < MIN_IMAGES) return alert(`Need ${MIN_IMAGES} images.`);
-
+    setLoading(true);
     const formData = new FormData();
-    // Ensure the key 'files' matches exactly what your FastAPI route expects
-    images.forEach((img) => {
-      formData.append("files", img);
-    });
+    images.forEach(img => formData.append("files", img));
 
     try {
-      setLoading(true);
       stopCamera();
-
-      // Note: If using axios, don't manually set Content-Type header, 
-      // let the browser set it with the boundary string.
       await api.post("/face-enrollment/capture", formData);
-      alert("Success!");
-      setImages([]);
-    } catch (err: any) {
-      // Look at the console to see the ACTUAL error message from the backend
-      console.error(err.response?.data);
-      alert(err.response?.data?.detail || "Upload failed.");
+      alert("Biometric Data Securely Uploaded.");
+      navigate(role === "USER" ? "/dashboard" : "/admin/dashboard");
+    } catch (err) {
+      alert("Upload failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: "auto", padding: 20, textAlign: "center", fontFamily: "sans-serif", paddingTop: 60 }}>
-      <h1 style={{ color: "#30364F" }}>Face Enrollment</h1>
-
-      <button onClick={startCamera} style={{ background: "#30364F", color: "white", padding: "10px 20px", marginBottom: 20, border: "none", borderRadius: 5 }}>
-        Start Camera
-      </button>
-
-      {/* FIX 3: Container with explicit size and relative positioning */}
-      <div style={{ position: "relative", width: "480px", height: "360px", margin: "auto", background: "#000", borderRadius: 12, overflow: "hidden" }}>
-        <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-        <canvas ref={overlayRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
+    <div style={{ maxWidth: 900, margin: "auto", padding: "90px 20px", fontFamily: "'Inter', sans-serif", color: THEME_NAVY }}>
+      
+      {/* HEADER SECTION */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 30, borderBottom: "2px solid #eee", paddingBottom: 20 }}>
+        <div style={{ textAlign: "left" }}>
+          <h1 style={{ margin: 0, fontSize: "2rem", fontWeight: 800 }}>Biometric Enrollment</h1>
+          <p style={{ margin: "4px 0 0", color: "#666" }}>Enroll your face for recognition.</p>
+        </div>
+        <div style={{ textAlign: "right" }}>
+          <div style={{ fontSize: "0.90rem", fontWeight: 700, color: "#999", marginBottom: 8 }}>BIOMETRIC: {face_enrolled ? "ENROLLED" : "NOT ENROLLED"}</div>
+          <span style={{ backgroundColor: badge.bg, color: badge.color, padding: "6px 16px", borderRadius: 8, fontSize: "0.90rem", fontWeight: 700 }}>
+            {badge.text}
+          </span>
+        </div>
       </div>
 
-      <div style={{ marginTop: 15 }}>
-        <p style={{ color: faceValid ? "#2e7d32" : "#d32f2f", fontWeight: "bold" }}>{statusMessage}</p>
-        <button disabled={!faceValid} onClick={captureImage} style={{ padding: "12px 24px", background: faceValid ? "#2e7d32" : "#ccc", color: "white", border: "none", borderRadius: 5 }}>
-          Capture ({images.length}/{MAX_IMAGES})
-        </button>
-        <button onClick={() => setImages([])} style={{ marginLeft: 10, padding: "12px 24px", background: "#6c757d", color: "white", border: "none", borderRadius: 5 }}>Reset</button>
-      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1.2fr 0.8fr", gap: 30 }}>
+        
+        {/* LEFT: CAMERA BOX */}
+        <div style={{ background: "#F8F9FB", borderRadius: 24, padding: 25, boxShadow: "0 10px 30px rgba(0,0,0,0.05)" }}>
+          <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", background: "#111", aspectRatio: "4/3", border: `4px solid ${faceValid ? "#4CAF50" : THEME_NAVY}` }}>
+            {!isCapturing && (
+              <div style={{ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "white", zIndex: 2 }}>
+                <Face style={{ fontSize: 80, marginBottom: 15, opacity: 0.2 }} />
+                <button onClick={startCamera} style={{ background: "white", color: THEME_NAVY, padding: "12px 30px", borderRadius: 12, border: "none", fontWeight: 700, cursor: "pointer", display: "flex", alignItems: "center", gap: 10 }}>
+                  <CameraAlt /> Initialize Camera
+                </button>
+              </div>
+            )}
+            <video ref={videoRef} autoPlay muted playsInline style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <canvas ref={overlayRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none" }} />
+          </div>
 
-      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 20, justifyContent: "center" }}>
-        {images.map((img, i) => (
-          <img key={i} src={URL.createObjectURL(img)} width={70} height={70} style={{ borderRadius: 8, border: "2px solid #30364F" }} />
-        ))}
-      </div>
+          <div style={{ marginTop: 20, textAlign: "center" }}>
+             <Typography sx={{ color: faceValid ? "#2E7D32" : "#666", fontWeight: 600, mb: 2 }}>
+               {statusMessage}
+             </Typography>
+             <div style={{ display: "flex", gap: 15, justifyContent: "center" }}>
+                <button disabled={!faceValid || images.length >= MAX_IMAGES} onClick={captureImage} style={{ flex: 1, padding: "15px", background: faceValid ? THEME_NAVY : "#ccc", color: "white", border: "none", borderRadius: 12, fontWeight: 700, cursor: faceValid ? "pointer" : "not-allowed", transition: "0.3s" }}>
+                  Capture Frame ({images.length}/{MAX_IMAGES})
+                </button>
+                
+                {/* STOP CAMERA BUTTON */}
+                {isCapturing && (
+                  <button onClick={stopCamera} style={{ padding: "0 20px", background: "#f44336", color: "white", border: "none", borderRadius: 12, cursor: "pointer" }}>
+                    <VideocamOff />
+                  </button>
+                )}
 
-      <button disabled={loading || images.length < MIN_IMAGES} onClick={submitEnrollment} style={{ marginTop: 30, width: "100%", padding: "15px", background: "#30364F", color: "white", border: "none", borderRadius: 8 }}>
-        {loading ? "Uploading..." : "Submit Enrollment"}
-      </button>
+                <button onClick={() => setImages([])} style={{ width: 60, height: 50, background: "#eee", color: THEME_NAVY, border: "none", borderRadius: 12, cursor: "pointer" }}>
+                  <Replay />
+                </button>
+             </div>
+          </div>
+        </div>
+
+        {/* RIGHT: GALLERY & PROGRESS */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+          <div style={{ background: "white", borderRadius: 24, padding: 25, border: "1px solid #eee", flex: 1 }}>
+            <h3 style={{ marginTop: 0, display: "flex", alignItems: "center", gap: 10 }}>
+              <CheckCircle style={{ color: images.length >= MIN_IMAGES ? "#4CAF50" : "#ddd" }} /> 
+              Captured Assets
+            </h3>
+            
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 10, marginBottom: 20 }}>
+              {Array.from({ length: MAX_IMAGES }).map((_, i) => (
+                <div key={i} style={{ aspectRatio: "1/1", borderRadius: 12, background: "#F0F2F5", border: "2px dashed #D1D5DB", overflow: "hidden", position: "relative" }}>
+                  {images[i] ? (
+                    <img src={URL.createObjectURL(images[i])} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "#999", fontSize: "0.8rem" }}>{i + 1}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div style={{ background: "#F0F4FF", padding: 15, borderRadius: 12, fontSize: "0.85rem", color: "#4A5568", display: "flex", gap: 10 }}>
+              <InfoOutlined style={{ fontSize: 18 }} />
+              <span>Provide various angles (slight left/right) for best recognition accuracy.</span>
+            </div>
+          </div>
+
+          <button 
+            disabled={loading || images.length < MIN_IMAGES} 
+            onClick={submitEnrollment}
+            style={{ 
+              width: "100%", padding: "20px", background: images.length >= MIN_IMAGES ? "#4CAF50" : "#E5E7EB", 
+              color: "white", border: "none", borderRadius: 20, fontSize: "1.1rem", fontWeight: 800, cursor: "pointer",
+              boxShadow: images.length >= MIN_IMAGES ? "0 10px 20px rgba(76, 175, 80, 0.2)" : "none"
+            }}
+          >
+            {loading ? "Securing Data..." : (
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                <CloudUpload /> Complete Enrollment
+              </div>
+            )}
+          </button>
+        </div>
+      </div>
 
       <canvas ref={canvasRef} style={{ display: "none" }} />
     </div>

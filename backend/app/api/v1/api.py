@@ -6,6 +6,11 @@ from app.api.v1.endpoints import notifications
 
 from app.api.v1.endpoints import user_dashboard,face_enrollment_status
 
+from app.api.v1.endpoints import user_analytics, admin_overview
+from app.api.v1.endpoints import admin_kpi
+from app.api.v1.endpoints import system_health
+from app.api.v1.endpoints import live_alerts
+
 api_router = APIRouter()
 
 api_router.include_router(auth.router)
@@ -31,3 +36,11 @@ api_router.include_router(notifications.router)
 api_router.include_router(user_dashboard.router)
 
 api_router.include_router(face_enrollment_status.router)
+
+api_router.include_router(user_analytics.router)
+
+api_router.include_router(admin_overview.router)
+api_router.include_router(admin_kpi.router)
+
+api_router.include_router(system_health.router)
+api_router.include_router(live_alerts.router)

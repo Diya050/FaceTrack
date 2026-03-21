@@ -1,10 +1,10 @@
 import { Box, Typography, Stack, alpha } from "@mui/material";
 import { FaceRetouchingNatural } from "@mui/icons-material";
 import { COLORS } from "../../../../../theme/dashboardTheme";
-import { mockOverviewStats } from "../../../../../data/dashboard.mock";
 
-export default function AvgConfidenceBox() {
-  const confidence = mockOverviewStats.avg_confidence_score;
+
+export default function AvgConfidenceBox({ confidence }: { confidence: number }){
+  
   const brandColor = COLORS.early || "#7A9FC2";
   return (
     <Box

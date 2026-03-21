@@ -1,91 +1,95 @@
+// src/pages/admin/dashboard/charts/DepartmentDonut.tsx
 import { Box, Typography } from "@mui/material";
 import { Doughnut } from "react-chartjs-2";
-import { COLORS } from "../../../../../theme/dashboardTheme";
-import { DEPT_COLORS } from "../shared/ChartConstants";
 import ChartWrapper from "../shared/ChartWrapper";
-import { mockDepartmentSummary } from "../../../../../data/dashboard.mock";
-import { getChartTooltip } from "../shared/ChartConstants";
 
-export default function DepartmentDonut() {
-  const data = {
-    labels: mockDepartmentSummary.map((d) => d.department),
-    datasets: [{
-      data: mockDepartmentSummary.map((d) => d.present),
-      backgroundColor: DEPT_COLORS,
-      borderWidth: 0,
-    }],
+interface DeptSummaryItem {
+  department: string;
+  present: number;
+  total: number;
+}
+
+interface Props {
+  summary: DeptSummaryItem[];
+}
+
+const COLORS = ["#22C55E", "#3B82F6", "#F59E0B", "#EF4444", "#8B5CF6", "#EC4899"];
+
+export default function DepartmentDonut({ summary }: Props) {
+  if (!summary || summary.length === 0) {
+    return <Typography color="text.secondary">No department data</Typography>;
+  }
+
+  const total = summary.reduce((acc, curr) => acc + curr.present, 0);
+
+  if (total === 0) {
+    return <Typography color="text.secondary">No attendance recorded</Typography>;
+  }
+
+  const chartData = {
+    labels: summary.map((d) => d.department),
+    datasets: [
+      {
+        data: summary.map((d) => d.present),
+        backgroundColor: COLORS.slice(0, summary.length),
+        borderWidth: 0,
+        hoverOffset: 4,
+      },
+    ],
   };
 
-
-return (
-  <ChartWrapper label="Today" title="Department Split" height={260}> {/* Increased height slightly */}
-    <Box
-      sx={{
-        position: "relative",
-        height: "100%",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center", // Vertically centers the content
-        alignItems: "center",
-      }}
-    >
-      <Box sx={{ width: '100%', height: '100%', maxHeight: '200px' }}>
+  return (
+    <ChartWrapper label="TODAY" title="Department Split">
+      {/* 
+        KEY FIX: position relative on this wrapper so the absolute center text 
+        is anchored correctly inside the doughnut hole.
+      */}
+      <Box sx={{ position: "relative", width: "100%", height: "100%" }}>
         <Doughnut
-          data={data}
+          data={chartData}
           options={{
             maintainAspectRatio: false,
-            cutout: "70%", // Slightly thicker ring looks better with bold text
+            cutout: "68%",
             plugins: {
               legend: {
                 position: "bottom",
                 labels: {
-                  padding: 15,
+                  padding: 14,
                   usePointStyle: true,
-                  font: { size: 11, weight: 600 }
+                  pointStyleWidth: 8,
+                  font: { size: 12 },
                 },
               },
-              tooltip: getChartTooltip(),
+              tooltip: {
+                callbacks: {
+                  label: (ctx) =>
+                    ` ${ctx.label}: ${ctx.parsed} (${Math.round((ctx.parsed / total) * 100)}%)`,
+                },
+              },
             },
           }}
         />
-      </Box>
 
-      {/* The Centering Fix */}
-      <Box
-        sx={{
-          position: "absolute",
-          // This ensures it centers based on the DONUT, not the whole Box
-          top: "40%", 
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          textAlign: "center",
-          pointerEvents: "none",
-        }}
-      >
-        <Typography
-          variant="h4"
+        {/* Center text — positioned over the hole */}
+        <Box
           sx={{
-            color: COLORS.navy,
-            fontWeight: 900,
-            lineHeight: 1,
+            position: "absolute",
+            // Push up above the legend (~40px)
+            top: "calc(50% - 20px)",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            textAlign: "center",
+            pointerEvents: "none",
           }}
         >
-          {mockDepartmentSummary.reduce((a, b) => a + b.present, 0)}
-        </Typography>
-        <Typography
-          variant="caption"
-          sx={{
-            color: COLORS.slate,
-            fontWeight: 700,
-            textTransform: "uppercase",
-            fontSize: 10,
-            letterSpacing: '0.05em'
-          }}
-        >
-          Total
-        </Typography>
+          <Typography sx={{ fontSize: 28, fontWeight: 800, lineHeight: 1, color: "#111827" }}>
+            {total}
+          </Typography>
+          <Typography sx={{ fontSize: 11, fontWeight: 600, color: "#9CA3AF", mt: 0.3 }}>
+            TOTAL
+          </Typography>
+        </Box>
       </Box>
-    </Box>
-  </ChartWrapper>
-);
+    </ChartWrapper>
+  );
 }

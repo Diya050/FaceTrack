@@ -18,7 +18,7 @@ import AuthLayout from "../../layout/AuthLayout";
 import { useAuth } from "../../context/AuthContext";
 import { orgLogin, platformLogin } from "../../services/authService";
 import type { Organization } from "../../services/orgService";
-import { getOrganizations} from "../../services/orgService";
+import { getOrganizations } from "../../services/orgService";
 
 type LoginMode = "user" | "admin";
 
@@ -36,6 +36,7 @@ export default function Login() {
 
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [loadingOrgs, setLoadingOrgs] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const [error, setError] = useState("");
 
@@ -82,11 +83,12 @@ export default function Login() {
     }
 
     try {
+      setLoading(true);
+
       let response;
 
-      if (loginMode === "admin") {
-        response = await platformLogin(form.identifier, form.password);
-      } else {
+      // ORGANIZATION LOGIN
+      if (loginMode === "user") {
         const organization = organizations.find(
           (org) => org.organization_id === form.organizationId
         );
@@ -103,24 +105,30 @@ export default function Login() {
         });
       }
 
+      // PLATFORM LOGIN
+      else {
+        response = await platformLogin(
+          form.identifier,
+          form.password
+        );
+      }
+
       const token = response.access_token;
 
-      localStorage.setItem("token", token);
+      // Centralized auth handling (fetch /me inside)
+      await login(token);
 
-      login(loginMode, {
-        firstName: loginMode === "admin" ? "Admin" : "User",
-      });
-
-      if (loginMode === "admin") {
-        navigate("/admin");
-      } else {
-        navigate("/user/dashboard");
-      }
+      // Let route guards handle redirect
+      navigate("/");
 
     } catch (err: any) {
       setError(err.response?.data?.detail || "Login failed");
+    } finally {
+      setLoading(false);
     }
   };
+
+  /* ---------------- UI ---------------- */
 
   return (
     <AuthLayout>
@@ -161,7 +169,13 @@ export default function Login() {
               if (value) {
                 setLoginMode(value);
                 setError("");
-                handleChange("organizationId", "");
+
+                // Reset form when switching mode
+                setForm({
+                  identifier: "",
+                  password: "",
+                  organizationId: "",
+                });
               }
             }}
           >
@@ -185,7 +199,10 @@ export default function Login() {
                 </MenuItem>
               ) : (
                 organizations.map((org) => (
-                  <MenuItem key={org.organization_id} value={org.organization_id}>
+                  <MenuItem
+                    key={org.organization_id}
+                    value={org.organization_id}
+                  >
                     {org.name}
                   </MenuItem>
                 ))
@@ -218,9 +235,10 @@ export default function Login() {
             size="large"
             fullWidth
             onClick={handleSubmit}
+            disabled={loading}
             sx={{ py: { xs: 1.4, sm: 1.6 } }}
           >
-            Sign In
+            {loading ? <CircularProgress size={22} /> : "Sign In"}
           </Button>
 
           {/* Footer */}

@@ -1,22 +1,51 @@
+import { useEffect, useState } from "react";
 import { Line } from "react-chartjs-2";
 import { alpha, Box } from "@mui/material";
 import { COLORS } from "../../theme/dashboardTheme";
 import { getChartScales, getChartTooltip } from "../admin/dashboard/overview/shared/ChartConstants";
 import ChartWrapper from"../admin/dashboard/overview/shared/ChartWrapper";
 import TrendBadge from "../admin/dashboard/overview/shared/TrendBadge";
-import { MOCK_WORKING_HOURS } from "../../data/mockdata.useranalytics";
+import { getWorkingHoursTrend } from "../../services/userAnalyticsService";
+import type { WorkingHoursResponse } from "../../types/userAnalyticsBackend.types";
 import type { ScriptableContext } from "chart.js";
 
 export default function WorkingHoursTrend() {
-  const avgHours = MOCK_WORKING_HOURS.reduce((acc, curr) => acc + curr.actual, 0) / MOCK_WORKING_HOURS.length;
+  const [dataResp, setDataResp] = useState<WorkingHoursResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+useEffect(() => {
+  let mounted = true;
+  getWorkingHoursTrend(7)
+    .then((res) => {
+      if (!mounted) return;
+      setDataResp(res);
+      setError(null);
+    })
+    .catch((err) => {
+      console.error(err);
+      if (!mounted) return;
+      setError("Failed to load working hours");
+    })
+    .finally(() => {
+      if (!mounted) return;
+      setLoading(false);
+    });
+
+  return () => { 
+    mounted = false; 
+  };
+}, []);
+  const points = dataResp?.points ?? [];
+  const avgHours = dataResp?.avg_hours ?? 0;
   const isOvertime = avgHours > 8;
 
-  const data = {
-    labels: MOCK_WORKING_HOURS.map(d => d.date),
+  const chartData = {
+    labels: points.map(d => new Date(d.date).toLocaleDateString(undefined, { weekday: 'short' })),
     datasets: [
       {
         label: "Actual Hours",
-        data: MOCK_WORKING_HOURS.map(d => d.actual),
+        data: points.map(d => d.actual),
         borderColor: COLORS.early,
         tension: 0.4,
         fill: true,
@@ -32,7 +61,7 @@ export default function WorkingHoursTrend() {
       },
       {
         label: "Expected (8h)",
-        data: MOCK_WORKING_HOURS.map(() => 8),
+        data: points.map(() => 8),
         borderColor: COLORS.slate,
         borderDash: [6, 6],
         pointRadius: 0,
@@ -53,25 +82,34 @@ export default function WorkingHoursTrend() {
         />
       }
     >
-      {/* Height reduced to 250 to ensure X-axis labels (Mon, Tue...) are visible */}
       <Box sx={{ height: 250, mt: 1 }}>
-        <Line 
-          data={data} 
-          options={{
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { 
-              legend: { 
-                display: true, 
-                position: 'top', 
-                align: 'end',
-                labels: { boxWidth: 8, usePointStyle: true, font: { size: 11 } } 
-              }, 
-              tooltip: getChartTooltip() 
-            },
-            scales: getChartScales(),
-          }} 
-        />
+        {loading ? (
+          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+            <div>Loading...</div>
+          </Box>
+        ) : error ? (
+          <Box sx={{ p: 2 }}>
+            <div style={{ color: 'red' }}>{error}</div>
+          </Box>
+        ) : (
+          <Line 
+            data={chartData} 
+            options={{
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { 
+                legend: { 
+                  display: true, 
+                  position: 'top', 
+                  align: 'end',
+                  labels: { boxWidth: 8, usePointStyle: true, font: { size: 11 } } 
+                }, 
+                tooltip: getChartTooltip() 
+              },
+              scales: getChartScales(),
+            }} 
+          />
+        )}
       </Box>
     </ChartWrapper>
   );

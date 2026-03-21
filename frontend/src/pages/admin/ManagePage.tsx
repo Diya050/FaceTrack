@@ -1,11 +1,13 @@
 import { Box, Stack } from "@mui/material";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
 
 // Manage Department
 import CreateOrganization from "../../components/admin/manage/CreateOrganization";
 import Departments from "../../components/admin/manage/Departments";
 import UserProfiles from "../../components/admin/manage/UserProfiles";
+import ViewOrganizationUsers from "./ViewOrganizationUsers";
 import BulkUpload from "../../components/admin/manage/BulkUpload";
 import Roles from "../../components/admin/manage/Roles";
 import AttendanceRules from "../../components/admin/manage/AttendanceRules";
@@ -16,6 +18,7 @@ const NAVBAR_HEIGHT = 64;
 
 const ManagePage = () => {
   const { hash } = useLocation();
+  const { role } = useAuth();
 
   useEffect(() => {
     if (!hash) return;
@@ -47,6 +50,12 @@ const ManagePage = () => {
         <Box id="users">
           <UserProfiles />
         </Box>
+
+        {role === "HR_ADMIN" && (
+          <Box id="organization-users">
+            <ViewOrganizationUsers embedded />
+          </Box>
+        )}
 
         <Box id="bulk-upload">
           <BulkUpload />

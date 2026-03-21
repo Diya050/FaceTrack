@@ -26,6 +26,12 @@ export const departmentSidebar: SidebarItem[] = [
     icon: People,
   },
   {
+    label: "Organization Users",
+    path: "/admin/manage#organization-users",
+    icon: People,
+    allowedRoles: ["HR_ADMIN"],
+  },
+  {
     label: "Bulk Upload",
     path: "/admin/manage#bulk-upload",
     icon: CloudUpload,

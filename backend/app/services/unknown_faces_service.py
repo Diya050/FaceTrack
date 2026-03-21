@@ -4,6 +4,7 @@ from datetime import datetime
 
 from app.models.streams import UnknownFace
 from app.models.core import User
+from app.services.notification_service import NotificationService
 
 
 class UnknownFacesService:
@@ -83,4 +84,18 @@ class UnknownFacesService:
         db.commit()
         db.refresh(face)
 
-        return {"message": "Unknown face resolved"}
+    
+        if face.resolved_user_id:
+            message = "You were identified from an unknown face detection"
+        else:
+            message = "Security alert: Unknown face marked"
+
+        NotificationService.create_notification(
+            db,
+            face.resolved_user_id if face.resolved_user_id else current_user.user_id,
+            current_user.organization_id,
+            message,
+            "INFO"
+        )
+        
+        # return {"message": "Unknown face resolved"}

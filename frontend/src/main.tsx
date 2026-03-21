@@ -6,6 +6,7 @@ import App from "./App";
 import { theme } from "./theme";
 import './index.css'
 import { AuthProvider } from "./context/AuthContext";
+import "../src/chartSetup"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

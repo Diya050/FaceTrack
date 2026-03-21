@@ -3,12 +3,16 @@ from datetime import date, time
 from typing import Optional
 from uuid import UUID
 
+from pydantic import BaseModel
+
+
 class AttendanceGenerateResponse(BaseModel):
     message: str
     processed_users_count: int
     present_count: int
     absent_count: int
-
+    half_day_count: int
+    late_count: int
 
 class AttendanceRecordResponse(BaseModel):
     attendance_id : UUID

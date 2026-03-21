@@ -49,6 +49,14 @@ def request_face_enrollment(
         user_id
     )
     
+@router.patch("/{user_id}/reject")
+def reject_user(
+    user_id: UUID,
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    db: Session = Depends(get_db)
+):
+    return UserService.reject_user(db, current_user, user_id)
+    
 
 @router.get("/{user_id}/registration-details")
 def get_registration_details(
@@ -62,3 +70,5 @@ def get_registration_details(
         current_user=current_user,
         user_id=user_id
     )
+    
+    

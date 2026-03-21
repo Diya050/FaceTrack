@@ -34,6 +34,16 @@ const adminNavItems = [
     ],
   },
   {
+    label: "Reports",
+    path: "/admin/reports",
+    children: [
+      { label: "Summary", path: "/admin/reports#summary" },
+      { label: "Trend Analysis", path: "/admin/reports#trends" },
+      { label: "Detections", path: "/admin/reports#detections" },
+      { label: "Exports", path: "/admin/reports#exports" },
+    ],
+  },
+  {
     label: "Manage Department",
     path: "/admin/manage",
     children: [
@@ -89,13 +99,16 @@ const adminNavItems = [
 ];
 
 const AdminHeader = () => {
-  const { user } = useAuth();
+  const { fullName } = useAuth();
+
+  // Extract the first letter
+  const userInitial = fullName ? fullName.charAt(0).toUpperCase() : "A";
 
   return (
     <BaseHeader
       logoLink="/admin/dashboard"
       navItems={adminNavItems}
-      rightSlot={<HeaderIcons firstName={user?.firstName ?? "A"} />}
+      rightSlot={<HeaderIcons firstName={userInitial} />}
     />
   );
 };

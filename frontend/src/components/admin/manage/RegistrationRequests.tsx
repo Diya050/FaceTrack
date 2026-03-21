@@ -23,6 +23,7 @@ import {
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import VisibilityIcon from "@mui/icons-material/Visibility";
+import { useEffect } from "react";
 
 type RequestStatus = "Pending" | "Approved" | "Rejected";
 
@@ -41,57 +42,109 @@ interface RegistrationRequest {
   status: RequestStatus;
 }
 
-const mockRequests: RegistrationRequest[] = [
-  {
-    id: "1",
-    fullName: "Amit Kumar",
-    email: "amit.kumar@techcorp.com",
-    organization: "TechCorp Pvt Ltd",
-    department: "Engineering",
-    role: "Staff",
-    employeeId: "EMP1021",
-    submittedAt: "2026-03-01 09:42",
-    device: "Chrome / Windows",
-    ipAddress: "192.168.1.21",
-    images: [
-      "https://randomuser.me/api/portraits/men/75.jpg",
-      "https://randomuser.me/api/portraits/men/76.jpg",
-      "https://randomuser.me/api/portraits/men/77.jpg",
-    ],
-    status: "Pending",
-  },
-  {
-    id: "2",
-    fullName: "Neha Sharma",
-    email: "neha.sharma@techcorp.com",
-    organization: "TechCorp Pvt Ltd",
-    department: "HR",
-    role: "Manager",
-    employeeId: "EMP0842",
-    submittedAt: "2026-03-01 08:30",
-    device: "Safari / iPhone",
-    ipAddress: "10.0.0.14",
-    images: [
-      "https://randomuser.me/api/portraits/women/65.jpg",
-      "https://randomuser.me/api/portraits/women/66.jpg",
-      "https://randomuser.me/api/portraits/women/67.jpg",
-    ],
-    status: "Pending",
-  },
-];
 
 const RegistrationRequests: React.FC = () => {
-  const [requests, setRequests] = useState<RegistrationRequest[]>(mockRequests);
+
+  const [requests, setRequests] = useState<RegistrationRequest[]>([]);
   const [selected, setSelected] = useState<RegistrationRequest | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [remark, setRemark] = useState("");
 
-  const updateStatus = (id: string, status: RequestStatus) => {
-    setRequests((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
-    );
-    setSelected(null);
-    setRemark("");
+  const fetchPendingUsers = () => {
+    fetch("http://localhost:8000/api/v1/users/pending", {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+      },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const formatted = data.map((user: any) => ({
+          id: user.id,
+          fullName: user.full_name,
+          email: user.email,
+          organization: user.organization_name || "",
+          department: user.department_name || "",
+          role: user.role || "",
+          employeeId: user.employee_id || "",
+          submittedAt: user.created_at || "",
+          device: "N/A",
+          ipAddress: "N/A",
+          images: [],
+          status: "Pending",
+        }));
+
+        setRequests(formatted);
+      })
+      .catch((err) => {
+        console.error("Error fetching users", err);
+      });
   };
+
+  const updateStatus = async (id: string, status: RequestStatus) => {
+    setLoadingId(id); // start loading
+
+    try {
+      if (status === "Approved") {
+        const approveRes = await fetch(
+          `http://localhost:8000/api/v1/users/${id}/approve`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          }
+        );
+
+        if (!approveRes.ok) throw new Error("Approval failed");
+
+        const enrollRes = await fetch(
+          `http://localhost:8000/api/v1/users/${id}/request-face-enrollment`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          }
+        );
+
+        if (!enrollRes.ok) {
+          alert("Approved but enrollment failed. Retry later.");
+        } else {
+          alert("User approved and enrollment request sent");
+        }
+      }
+
+      if (status === "Rejected") {
+        const rejectRes = await fetch(
+          `http://localhost:8000/api/v1/users/${id}/reject`,
+          {
+            method: "PATCH",
+            headers: {
+              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
+            },
+          }
+        );
+
+        if (!rejectRes.ok) throw new Error("Rejection failed");
+
+        alert("User rejected successfully");
+      }
+
+      fetchPendingUsers();
+      setSelected(null);
+      setRemark("");
+
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message);
+    } finally {
+      setLoadingId(null); // stop loading
+    }
+  };
+
+  useEffect(() => {
+    fetchPendingUsers();
+  }, []);
 
   return (
     <Box p={3} mt={8}>
@@ -142,9 +195,10 @@ const RegistrationRequests: React.FC = () => {
                       color="success"
                       variant="contained"
                       startIcon={<CheckCircleIcon />}
+                      disabled={loadingId === req.id}
                       onClick={() => updateStatus(req.id, "Approved")}
                     >
-                      Approve
+                      {loadingId === req.id ? "Processing..." : "Approve"}
                     </Button>
 
                     <Button
@@ -152,6 +206,7 @@ const RegistrationRequests: React.FC = () => {
                       color="error"
                       variant="outlined"
                       startIcon={<CancelIcon />}
+                      disabled={loadingId === req.id}
                       onClick={() => setSelected(req)}
                     >
                       Reject
@@ -256,20 +311,28 @@ const RegistrationRequests: React.FC = () => {
         </DialogContent>
 
         <DialogActions>
-          <Button onClick={() => setSelected(null)}>Cancel</Button>
+          <Button
+            onClick={() => setSelected(null)}
+            disabled={loadingId === selected?.id}
+          >
+            Cancel
+          </Button>
           <Button
             color="error"
             variant="outlined"
+            disabled={loadingId === selected?.id}
             onClick={() => updateStatus(selected!.id, "Rejected")}
           >
-            Reject
+            {loadingId === selected?.id ? "Processing..." : "Reject"}
           </Button>
+
           <Button
             color="success"
             variant="contained"
+            disabled={loadingId === selected?.id}
             onClick={() => updateStatus(selected!.id, "Approved")}
           >
-            Approve & Enroll
+            {loadingId === selected?.id ? "Processing..." : "Approve & Enroll"}
           </Button>
         </DialogActions>
       </Dialog>

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
+from typing import Optional
 
 class PlatformLoginRequest(BaseModel):
     email: str
@@ -14,7 +15,8 @@ class OrgLoginRequest(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
-
+    role: str
+    organization_id: Optional[str] = None
 
 class RegisterRequest(BaseModel):
     full_name: str

@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import { 
   Box, Grid, Card, Typography, LinearProgress, Chip, 
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  CssBaseline 
+  CssBaseline, CircularProgress 
 } from '@mui/material';
 
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -12,7 +13,18 @@ import StorageIcon from '@mui/icons-material/Storage';
 import NetworkCheckIcon from '@mui/icons-material/NetworkCheck';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import FaceRetouchingNaturalIcon from '@mui/icons-material/FaceRetouchingNatural';
-import healthData from '../../../data/healthData.json';
+
+
+// Import Types and Service instead of JSON
+import { getSystemHealth } from '../../../services/systemHealthService';
+import type { SystemHealthResponse } from '../../../types/systemHealth.types';
+
+interface MetricValueProps {
+  value: string | number;
+  label: string;
+  subtext?: string;
+  color?: string;
+}
 
 // REUSABLE UI COMPONENTS 
 const cardStyle = {
@@ -35,38 +47,74 @@ const SectionHeader = ({ title }: { title: string }) => (
   </Box>
 );
 
-const MetricValue = ({ value, label, subtext, color = '#30364F' }: any) => (
+const MetricValue: React.FC<MetricValueProps> = ({ 
+  value, 
+  label, 
+  subtext, 
+  color = '#30364F' 
+}) => (
   <Box sx={{ flexGrow: 1 }}>
     <Typography sx={{ fontSize: '2rem', fontWeight: 900, color, lineHeight: 1.2 }}>
       {value}
     </Typography>
-    <Typography sx={{ fontWeight: 700, color: '#30364F', mt: 0.5 }}>{label}</Typography>
-    {subtext && <Typography sx={{ fontSize: '0.85rem', color: '#ACBAC4', mt: 0.5 }}>{subtext}</Typography>}
+    <Typography sx={{ fontWeight: 700, color: '#30364F', mt: 0.5 }}>
+      {label}
+    </Typography>
+    {subtext && (
+      <Typography sx={{ fontSize: '0.85rem', color: '#ACBAC4', mt: 0.5 }}>
+        {subtext}
+      </Typography>
+    )}
   </Box>
 );
 
-// THE MAIN DASHBOARD PAGE
 const SystemHealth = () => {
-  // TOGGLE THIS VARIABLE 
-  // Options: healthData.warningState OR healthData.healthyState
-  const currentData = healthData.warningState; 
+  const [data, setData] = useState<SystemHealthResponse | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Boolean to check if system is healthy
-  const isHealthy = currentData.overview.activeIncidents.length === 0;
+  useEffect(() => {
+  // Clean and simple - no manual ID passing
+  getSystemHealth()
+    .then((res) => {
+      setData(res);
+      setLoading(false);
+    })
+    .catch(() => {
+      setError("Failed to load system metrics.");
+      setLoading(false);
+    });
+}, []);
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', bgcolor: '#F4F6F8' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <Box sx={{ p: 4, bgcolor: '#F4F6F8', minHeight: '100vh' }}>
+        <Typography color="error" variant="h6">{error || "No data available"}</Typography>
+      </Box>
+    );
+  }
+
+  // Determine global state
+  const isHealthy = data.overview.activeIncidents.length === 0;
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, pb: 10, bgcolor: '#F4F6F8', minHeight: '100vh', fontFamily: 'sans-serif' }}>
-      
       <CssBaseline />
 
-      {/* Page Title */}
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 900, color: '#30364F' }}>System Health</Typography>
         <Typography sx={{ color: '#ACBAC4', fontWeight: 600 }}>Live metrics and infrastructure status</Typography>
       </Box>
 
       <Grid container spacing={3}>
-        
         {/* OVERVIEW  */}
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={cardStyle}>
@@ -82,7 +130,7 @@ const SystemHealth = () => {
                   {isHealthy ? 'Operational' : 'Degraded'}
                 </Typography>
                 <Typography sx={{ color: '#ACBAC4', fontSize: '0.9rem', fontWeight: 500 }}>
-                  {isHealthy ? 'All systems nominal' : `${currentData.overview.activeIncidents.length} Active Warning(s)`}
+                  {isHealthy ? 'All systems nominal' : `${data.overview.activeIncidents.length} Active Warning(s)`}
                 </Typography>
               </Box>
             </Box>
@@ -92,7 +140,7 @@ const SystemHealth = () => {
         <Grid size={{ xs: 12, md: 4 }}>
           <Card sx={cardStyle}>
             <SectionHeader title="System Uptime" />
-            <MetricValue value={`${currentData.overview.uptimePercent}%`} label="Last 30 Days" color="#4caf50" />
+            <MetricValue value={`${data.overview.uptimePercent}%`} label="Last 30 Days" color="#4caf50" />
           </Card>
         </Grid>
 
@@ -109,8 +157,7 @@ const SystemHealth = () => {
                 <Typography sx={{ color: '#4caf50', fontSize: '0.9rem' }}>No active incidents reported.</Typography>
               </Box>
             ) : (
-              // FIX: Added (inc: any) right here to fix the TypeScript 'never' error
-              currentData.overview.activeIncidents.map((inc: any) => (
+              data.overview.activeIncidents.map((inc) => (
                 <Box key={inc.id} sx={{ mt: 1 }}>
                   <Typography sx={{ fontWeight: 800, color: '#ed6c02', fontSize: '0.9rem' }}>{inc.id}</Typography>
                   <Typography sx={{ color: '#ed6c02', fontSize: '0.9rem' }}>{inc.message}</Typography>
@@ -128,19 +175,19 @@ const SystemHealth = () => {
               <Grid size={{ xs: 12, md: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <VideocamIcon sx={{ fontSize: 40, color: '#ACBAC4', opacity: 0.5 }} />
-                  <MetricValue value={`${currentData.faceTrackEngine.averageFps} FPS`} label="Global Processing Rate" subtext="Optimal is > 24 FPS" />
+                  <MetricValue value={`${data.faceTrackEngine.averageFps} FPS`} label="Global Processing Rate" subtext="Optimal is > 24 FPS" />
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <SpeedIcon sx={{ fontSize: 40, color: '#ACBAC4', opacity: 0.5 }} />
-                  <MetricValue value={`${currentData.faceTrackEngine.matchingLatencyMs} ms`} label="Matching Latency" subtext="Time to cross-reference face" />
+                  <MetricValue value={`${data.faceTrackEngine.matchingLatencyMs} ms`} label="Matching Latency" subtext="Time to cross-reference face" />
                 </Box>
               </Grid>
               <Grid size={{ xs: 12, md: 4 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <FaceRetouchingNaturalIcon sx={{ fontSize: 40, color: '#ACBAC4', opacity: 0.5 }} />
-                  <MetricValue value={currentData.faceTrackEngine.livenessFailuresToday} label="Spoofing Attempts Blocked" color="#d32f2f" subtext="Failed liveness checks today" />
+                  <MetricValue value={data.faceTrackEngine.livenessFailuresToday} label="Spoofing Attempts Blocked" color="#d32f2f" subtext="Failed liveness checks today" />
                 </Box>
               </Grid>
             </Grid>
@@ -158,7 +205,7 @@ const SystemHealth = () => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {currentData.faceTrackEngine.cameras.map((cam) => (
+                    {data.faceTrackEngine.cameras.map((cam) => (
                       <TableRow key={cam.id} sx={{ '& td': { borderBottom: '1px solid #F4F6F8' }}}>
                         <TableCell sx={{ fontWeight: 700, color: '#30364F' }}>{cam.name} ({cam.id})</TableCell>
                         <TableCell>
@@ -192,23 +239,23 @@ const SystemHealth = () => {
             <Grid container spacing={4}>
               <Grid size={{ xs: 12, md: 3 }}>
                 <Typography sx={{ fontWeight: 700, color: '#30364F', mb: 1, display: 'flex', alignItems: 'center' }}><MemoryIcon sx={{ mr: 1, color: '#ACBAC4' }}/>CPU Usage</Typography>
-                <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#30364F' }}>{currentData.infrastructure.cpu.usagePercent}%</Typography>
-                <LinearProgress variant="determinate" value={currentData.infrastructure.cpu.usagePercent} sx={{ mt: 1.5, height: 8, borderRadius: 4, bgcolor: '#F4F6F8', '& .MuiLinearProgress-bar': { bgcolor: '#30364F' } }} />
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#30364F' }}>{data.infrastructure.cpu.usagePercent}%</Typography>
+                <LinearProgress variant="determinate" value={data.infrastructure.cpu.usagePercent} sx={{ mt: 1.5, height: 8, borderRadius: 4, bgcolor: '#F4F6F8', '& .MuiLinearProgress-bar': { bgcolor: '#30364F' } }} />
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
                 <Typography sx={{ fontWeight: 700, color: '#30364F', mb: 1, display: 'flex', alignItems: 'center' }}><StorageIcon sx={{ mr: 1, color: '#ACBAC4' }}/>Memory (RAM)</Typography>
-                <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#30364F' }}>{currentData.infrastructure.memory.usedGB} / {currentData.infrastructure.memory.totalGB} GB</Typography>
-                <LinearProgress variant="determinate" value={(currentData.infrastructure.memory.usedGB / currentData.infrastructure.memory.totalGB) * 100} sx={{ mt: 1.5, height: 8, borderRadius: 4, bgcolor: '#F4F6F8', '& .MuiLinearProgress-bar': { bgcolor: '#30364F' } }} />
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#30364F' }}>{data.infrastructure.memory.usedGB} / {data.infrastructure.memory.totalGB} GB</Typography>
+                <LinearProgress variant="determinate" value={(data.infrastructure.memory.usedGB / data.infrastructure.memory.totalGB) * 100} sx={{ mt: 1.5, height: 8, borderRadius: 4, bgcolor: '#F4F6F8', '& .MuiLinearProgress-bar': { bgcolor: '#30364F' } }} />
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
                 <Typography sx={{ fontWeight: 700, color: '#30364F', mb: 1, display: 'flex', alignItems: 'center' }}><StorageIcon sx={{ mr: 1, color: '#ACBAC4' }}/>Disk Space</Typography>
-                <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#30364F' }}>{currentData.infrastructure.disk.usedTB} / {currentData.infrastructure.disk.totalTB} TB</Typography>
-                <LinearProgress variant="determinate" value={(currentData.infrastructure.disk.usedTB / currentData.infrastructure.disk.totalTB) * 100} sx={{ mt: 1.5, height: 8, borderRadius: 4, bgcolor: '#F4F6F8', '& .MuiLinearProgress-bar': { bgcolor: '#30364F' } }} />
+                <Typography sx={{ fontSize: '1.5rem', fontWeight: 800, color: '#30364F' }}>{data.infrastructure.disk.usedTB} / {data.infrastructure.disk.totalTB} TB</Typography>
+                <LinearProgress variant="determinate" value={(data.infrastructure.disk.usedTB / data.infrastructure.disk.totalTB) * 100} sx={{ mt: 1.5, height: 8, borderRadius: 4, bgcolor: '#F4F6F8', '& .MuiLinearProgress-bar': { bgcolor: '#30364F' } }} />
               </Grid>
               <Grid size={{ xs: 12, md: 3 }}>
                 <Typography sx={{ fontWeight: 700, color: '#30364F', mb: 1, display: 'flex', alignItems: 'center' }}><NetworkCheckIcon sx={{ mr: 1, color: '#ACBAC4' }}/>Network Traffic</Typography>
-                <Typography sx={{ fontSize: '1.2rem', fontWeight: 800, color: '#4caf50' }}>↓ {currentData.infrastructure.network.inboundMbps} Mbps</Typography>
-                <Typography sx={{ fontSize: '1.2rem', fontWeight: 800, color: '#2196f3' }}>↑ {currentData.infrastructure.network.outboundMbps} Mbps</Typography>
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 800, color: '#4caf50' }}>↓ {data.infrastructure.network.inboundMbps} Mbps</Typography>
+                <Typography sx={{ fontSize: '1.2rem', fontWeight: 800, color: '#2196f3' }}>↑ {data.infrastructure.network.outboundMbps} Mbps</Typography>
               </Grid>
             </Grid>
           </Card>
@@ -219,9 +266,9 @@ const SystemHealth = () => {
           <Card sx={cardStyle}>
             <SectionHeader title="Application Metrics" />
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <MetricValue value={`${currentData.apm.averageResponseTimeMs} ms`} label="Avg Response Time" />
-              <MetricValue value={currentData.apm.requestsPerMinute} label="Throughput" />
-              <MetricValue value={`${currentData.apm.errorRatePercent}%`} label="HTTP Error Rate" color={currentData.apm.errorRatePercent > 1 ? '#d32f2f' : '#4caf50'} />
+              <MetricValue value={`${data.apm.averageResponseTimeMs} ms`} label="Avg Response Time" />
+              <MetricValue value={data.apm.requestsPerMinute} label="Throughput" />
+              <MetricValue value={`${data.apm.errorRatePercent}%`} label="HTTP Error Rate" color={data.apm.errorRatePercent > 1 ? '#d32f2f' : '#4caf50'} />
             </Box>
           </Card>
         </Grid>
@@ -232,10 +279,10 @@ const SystemHealth = () => {
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <Box>
                 <Typography sx={{ fontWeight: 700, color: '#30364F' }}>Status</Typography>
-                <Chip icon={<CheckCircleIcon />} label={currentData.database.status.toUpperCase()} size="small" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 800, mt: 0.5, borderRadius: 1 }} />
+                <Chip icon={<CheckCircleIcon />} label={data.database.status.toUpperCase()} size="small" sx={{ bgcolor: '#e8f5e9', color: '#2e7d32', fontWeight: 800, mt: 0.5, borderRadius: 1 }} />
               </Box>
-              <MetricValue value={currentData.database.activeConnections} label="Active Connections" subtext={`${currentData.database.idleConnections} idle`} />
-              <MetricValue value={`${currentData.database.averageQueryTimeMs} ms`} label="Avg Query Time" />
+              <MetricValue value={data.database.activeConnections} label="Active Connections" subtext={`${data.database.idleConnections} idle`} />
+              <MetricValue value={`${data.database.averageQueryTimeMs} ms`} label="Avg Query Time" />
             </Box>
           </Card>
         </Grid>
@@ -244,9 +291,9 @@ const SystemHealth = () => {
           <Card sx={cardStyle}>
             <SectionHeader title="Background Queues" />
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <MetricValue value={currentData.queues.videoProcessingBacklog} label="Video Processing Backlog" subtext="Frames waiting to be processed" />
-              <MetricValue value={currentData.queues.processingRatePerMinute} label="Clear Rate (per min)" color="#2196f3" />
-              <MetricValue value={currentData.queues.failedJobsToday} label="Failed Tasks Today" color={currentData.queues.failedJobsToday > 0 ? '#ff9800' : '#4caf50'} />
+              <MetricValue value={data.queues.videoProcessingBacklog} label="Video Processing Backlog" subtext="Frames waiting to be processed" />
+              <MetricValue value={data.queues.processingRatePerMinute} label="Clear Rate (per min)" color="#2196f3" />
+              <MetricValue value={data.queues.failedJobsToday} label="Failed Tasks Today" color={data.queues.failedJobsToday > 0 ? '#ff9800' : '#4caf50'} />
             </Box>
           </Card>
         </Grid>

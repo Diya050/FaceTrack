@@ -4,6 +4,7 @@ from datetime import datetime
 
 from app.models.core import User, UserStatusEnum
 from app.models.biometrics import FaceEnrollmentSession
+from app.models.core import Department, Role, Organization
 
 
 class UserService:
@@ -11,10 +12,16 @@ class UserService:
     @staticmethod
     def get_pending_users(db, current_user):
 
-        query = select(User).where(
-            User.organization_id == current_user.organization_id,
-            User.status == UserStatusEnum.PENDING,
-            User.is_deleted == False
+        query = (
+            select(User, Department, Role, Organization)
+            .join(Department, User.department_id == Department.department_id, isouter=True)
+            .join(Role, User.role_id == Role.role_id, isouter=True)
+            .join(Organization, User.organization_id == Organization.organization_id, isouter=True)
+            .where(
+                User.organization_id == current_user.organization_id,
+                User.status == UserStatusEnum.PENDING,
+                User.is_deleted == False
+            )
         )
 
         if current_user.role.role_name == "ADMIN":
@@ -22,9 +29,23 @@ class UserService:
                 User.department_id == current_user.department_id
             )
 
-        result = db.execute(query)
+        result = db.execute(query).all()
 
-        return result.scalars().all()
+        users = []
+
+        for user, dept, role, org in result:
+            users.append({
+                "id": user.user_id,
+                "full_name": user.full_name,
+                "email": user.email,
+                "employee_id": getattr(user, "employee_id", None),
+                "created_at": user.created_at,
+                "department_name": dept.name if dept else None,
+                "role": role.role_name if role else None,
+                "organization_name": org.name if org else None
+            })
+
+        return users
 
     @staticmethod
     def approve_user(db, current_user, target_user_id):
@@ -71,10 +92,13 @@ class UserService:
         user = db.get(User, user_id)
 
         if not user:
-            raise Exception("User not found")
+            raise HTTPException(404, "User not found")
 
         if user.organization_id != current_user.organization_id:
-            raise Exception("Unauthorized")
+            raise HTTPException(403, "Unauthorized")
+
+        if user.status != UserStatusEnum.PENDING:
+            raise HTTPException(400, "User is not pending")
 
         user.status = UserStatusEnum.REJECTED
         user.approved_by = current_user.user_id

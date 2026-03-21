@@ -1,0 +1,49 @@
+import { 
+  Typography, 
+  Stack,
+  Container 
+} from "@mui/material";
+import AuthLayout from "../../layout/AuthLayout";
+
+export default function PendingFaceApproval() {
+  return (
+    <AuthLayout>
+      <Container
+        maxWidth="sm"
+        sx={{
+          px: { xs: 2, sm: 3 },
+        }}
+      >
+        <Stack
+          spacing={{ xs: 2, sm: 3 }}
+          alignItems="center"
+          textAlign="center"
+        >
+          <Typography
+            variant="h5"
+            sx={{
+              fontSize: {
+                xs: "1.5rem",
+                sm: "1.75rem",
+              },
+              fontWeight: 600,
+            }}
+          >
+            Images Submitted
+          </Typography>
+
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{
+              maxWidth: 420,
+            }}
+          >
+            Your account is pending admin approval for images provided.
+            You will be notified once approved. Give 2 business days time.
+          </Typography>
+        </Stack>
+      </Container>
+    </AuthLayout>
+  );
+}
