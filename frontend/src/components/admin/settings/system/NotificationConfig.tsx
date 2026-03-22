@@ -205,7 +205,6 @@ const NotificationConfig = () => {
   const handleReset = () => {
     setS({
       ...DEFAULTS,
-      matrix: DEFAULT_MATRIX.map((r) => ({ ...r })),
       adminContacts: [{ id: "1", email: "", phone: "" }],
       batchEvents: [...DEFAULTS.batchEvents],
     });
