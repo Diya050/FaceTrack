@@ -6,7 +6,7 @@ import { useLocation } from "react-router-dom";
 import CameraGrid from "../../components/admin/monitoring/CameraGrid";
 import CameraManagement from "../../components/admin/monitoring/CameraManagement";
 import RecognitionEvents from "../../components/admin/monitoring/RecognitionEvents";
-import EventHistory from "../../components/admin/monitoring/EventHistory";
+import UnknownFacesPage from "../../components/admin/monitoring/UnknownFacesPage";
 
 
 const NAVBAR_HEIGHT = 64;
@@ -45,8 +45,8 @@ const LiveMonitoringPage = () => {
         <RecognitionEvents />
       </Box>
 
-      <Box id="history">
-        <EventHistory />
+      <Box id="unknown-faces">
+        <UnknownFacesPage />
       </Box>
     </Stack>
   );

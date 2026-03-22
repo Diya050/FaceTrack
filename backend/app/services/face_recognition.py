@@ -116,7 +116,9 @@ def recognize_frame(db, frame, camera_id):
                 stream_id=stream.stream_id,
                 organization_id=organization_id,
                 image_path=filename,
-                confidence_score=similarity_score if match else None
+                resolved=False,
+                confidence_score=similarity_score if match else None,
+                status="Unresolved"
             )
             db.add(unknown)
             should_commit = True

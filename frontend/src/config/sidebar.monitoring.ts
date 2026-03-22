@@ -23,8 +23,8 @@ export const monitoringSidebar: SidebarItem[] = [
     icon: SensorOccupied,
   },
   {
-    label: "Event History",
-    path: "/admin/monitoring#history",
+    label: "Unknown Faces",
+    path: "/admin/monitoring#unknown-faces",
     icon: History,
   },
 ];
