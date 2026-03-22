@@ -3,6 +3,7 @@ import {
   People,
   CloudUpload,
   HowToReg,
+  Face,
   Badge,
   Rule,
   AssignmentInd
@@ -36,6 +37,11 @@ export const departmentSidebar: SidebarItem[] = [
     label: "Registration Requests",
     path: "/admin/manage#requests",
     icon: HowToReg,
+  },
+  {
+    label: "Face Enrollment Requests",
+    path: "/admin/manage#face-enrollment-requests",
+    icon: Face,
   },
   {
     label: "Manage Permissions",

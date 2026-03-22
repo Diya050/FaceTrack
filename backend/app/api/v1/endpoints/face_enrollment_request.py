@@ -42,10 +42,16 @@ def approve_request(
 @router.post("/{session_id}/reject")
 def reject_request(
     session_id: UUID,
+    payload: dict, # This captures {"reason": "..."} from the frontend
     db: Session = Depends(get_db),
     current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
 ):
+    # Extract reason safely, provide a fallback if it's missing
+    reason = payload.get("reason", "No specific reason provided.")
+
     return AdminFaceApprovalService.reject_enrollment(
-        db,
-        session_id
+        db=db,
+        current_user=current_user,
+        session_id=session_id,
+        reason=reason
     )

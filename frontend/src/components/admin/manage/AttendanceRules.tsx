@@ -177,7 +177,7 @@ const AttendanceRules: React.FC = () => {
 
 
   return (
-    <Box mt={8}>
+    <Box mt={2}>
       <Card elevation={0}>
         <CardContent>
           <Stack spacing={3}>
