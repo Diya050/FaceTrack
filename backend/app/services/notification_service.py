@@ -13,15 +13,20 @@ class NotificationService:
         user_id: UUID,
         organization_id: UUID,
         message: str,
-        type: str = "INFO"
+        type: str = "INFO",
+        redirect_path: str = None,
+        entity_id: UUID = None,
+        event_type: str = None
     ):
-
         notification = Notification(
             user_id=user_id,
             organization_id=organization_id,
             message=message,
             type=type,
-            is_read=False
+            is_read=False,
+            redirect_path=redirect_path,
+            entity_id=entity_id,
+            event_type=event_type
         )
 
         db.add(notification)
@@ -29,7 +34,6 @@ class NotificationService:
         db.refresh(notification)
 
         return notification
-
 
     @staticmethod
     def get_user_notifications(

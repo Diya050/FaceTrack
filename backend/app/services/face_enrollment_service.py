@@ -95,7 +95,10 @@ class FaceEnrollmentService:
                 for hr in hr_admins:
                     NotificationService.create_notification(
                         db, hr.user_id, hr.organization_id,
-                        f"{current_user.full_name} submitted face images for approval", "INFO"
+                        f"{current_user.full_name} submitted face images for approval",
+                        "INFO",
+                        redirect_path="/admin/face-enrollment/requests",
+                        event_type="FACE_ENROLLMENT_SUBMITTED"
                     )
 
                 db.commit()
