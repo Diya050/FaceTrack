@@ -44,7 +44,7 @@ const adminNavItems = [
     ],
   },
   {
-    label: "Manage Department",
+    label: "Manage",
     path: "/admin/manage",
     children: [
       { label: "Departments", path: "/admin/manage#departments" },
@@ -112,5 +112,22 @@ const AdminHeader = () => {
     />
   );
 };
+
+// const AdminHeader = () => {
+//   const { fullName, role } = useAuth();
+  
+//   const getBadgeInitial = () => {
+//     if (fullName) return fullName.charAt(0).toUpperCase();
+//     return role === "SUPER_ADMIN" ? "S" : "A";
+//   };
+
+//   return (
+//     <BaseHeader
+//       logoLink="/admin/dashboard"
+//       navItems={adminNavItems}
+//       rightSlot={<HeaderIcons firstName={getBadgeInitial()} />}
+//     />
+//   );
+// };
 
 export default AdminHeader;

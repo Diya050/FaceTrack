@@ -70,5 +70,12 @@ def get_registration_details(
         current_user=current_user,
         user_id=user_id
     )
+
+@router.get("/assignable")
+def get_assignable_users(
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user)
+):
+    return UserService.get_assignable_users(db, current_user)
     
     

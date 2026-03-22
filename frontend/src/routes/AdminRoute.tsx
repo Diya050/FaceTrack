@@ -21,6 +21,7 @@ import UnknownFacesPage from "../pages/admin/UnknownFacesPage";
 import SupportTickets from "../pages/admin/SupportTickets";
 import FaceEnrollment from "../pages/user/FaceEnrollment";
 import Profiles from "../pages/user/Profiles";
+import AssignRolePage from "../components/admin/manage/AssignRolePage";
 
 export const adminRoutes: RouteObject = {
   path: "/admin",
@@ -62,6 +63,7 @@ export const adminRoutes: RouteObject = {
       ),
     },
     { path: "me", element: <Profiles /> },
+    { path: "assign-role", element: <AssignRolePage /> },
     { path: "face-enrollment-requests", element: <FaceEnrollmentRequests /> },
     { path: "capture", element: <FaceEnrollment /> },
     

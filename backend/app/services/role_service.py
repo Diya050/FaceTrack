@@ -1,25 +1,27 @@
 from sqlalchemy.orm import Session
-from app.models.core import User, Role
+from sqlalchemy import select
+from fastapi import HTTPException
+from uuid import UUID
+
+from app.models.core import User, Role, OrganizationRole
 
 
-def assign_role(db: Session, user_id, role_name):
+class RoleService:
 
-    # find role
-    role = db.query(Role).filter(Role.role_name == role_name).first()
+    @staticmethod
+    def assign_role(db: Session, current_user, target_user_id, role_name):
+        if current_user.role.role_name != "HR_ADMIN":
+            raise HTTPException(403, "Only HR_ADMIN can manage roles")
 
-    if not role:
-        raise Exception("Role not found")
+        user = db.get(User, target_user_id)
+        if not user or str(user.user_id) == str(current_user.user_id):
+            raise HTTPException(400, "Cannot modify yourself or user not found")
 
-    # find user
-    user = db.query(User).filter(User.user_id == user_id).first()
+        role = db.execute(select(Role).join(OrganizationRole).where(
+            Role.role_name == role_name,
+            OrganizationRole.organization_id == current_user.organization_id
+        )).scalars().first()
 
-    if not user:
-        raise Exception("User not found")
-
-    # assign role
-    user.role_id = role.role_id
-
-    db.commit()
-    db.refresh(user)
-
-    return user
+        user.role_id = role.role_id
+        db.commit()
+        return {"message": "Success"}
