@@ -3,7 +3,6 @@ import { Box, Typography, Grid } from "@mui/material";
 import UserContextPanel from "../../components/user/UserContextPanel";
 import TodayAttendanceCard from "../../components/user/TodayAttendanceCard";
 import UserKPISection from "../../components/user/UserKPISection";
-import QuickActionsPanel from "../../components/user/QuickActionsPanel";
 import RecognitionAnalytics from "../../components/user/RecognitionAnalytics";
 import UserAttendanceCard from "../../components/user/UserAttendanceCard";
 
@@ -61,16 +60,10 @@ return (
 
       {/* QUICK ACTIONS + ANALYTICS */}
       <Grid container spacing={3}>
-
-        <Grid size={{ xs: 12, md: 4 }}>
-          <QuickActionsPanel />
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 8 }}>
-          <RecognitionAnalytics />
-        </Grid>
-
-      </Grid>
+  <Grid size={{ xs: 12 }}>
+    <RecognitionAnalytics />
+  </Grid>
+</Grid>
 
 
     {/* ATTENDANCE HISTORY */}
