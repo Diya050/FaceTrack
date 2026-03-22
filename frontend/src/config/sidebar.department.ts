@@ -4,7 +4,6 @@ import {
   CloudUpload,
   HowToReg,
   Face,
-  Badge,
   Rule,
   AssignmentInd
 } from "@mui/icons-material";
@@ -42,11 +41,6 @@ export const departmentSidebar: SidebarItem[] = [
     label: "Face Enrollment Requests",
     path: "/admin/manage#face-enrollment-requests",
     icon: Face,
-  },
-  {
-    label: "Manage Permissions",
-    path: "/admin/manage#roles",
-    icon: Badge,
   },
   {
     label: "Attendance Rules",

@@ -8,7 +8,6 @@ import Departments from "../../components/admin/manage/Departments";
 import AssignRolePage from "../../components/admin/manage/AssignRolePage";
 import ViewOrganizationUsers from "./ViewOrganizationUsers";
 import BulkUpload from "../../components/admin/manage/BulkUpload";
-import Roles from "../../components/admin/manage/Roles";
 import AttendanceRules from "../../components/admin/manage/AttendanceRules";
 import RegistrationRequests from "../../components/admin/manage/RegistrationRequests";
 import AdminFaceEnrollmentRequests from "../../components/admin/manage/FaceEnrollmentRequests";
@@ -67,11 +66,6 @@ const ManagePage = () => {
 
         <Box id="face-enrollment-requests">
           <AdminFaceEnrollmentRequests />
-        </Box>
-
-
-        <Box id="roles">
-          <Roles />
         </Box>
 
         <Box id="rules">

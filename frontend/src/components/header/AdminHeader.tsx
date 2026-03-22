@@ -18,9 +18,9 @@ const adminNavItems = [
     path: "/admin/monitoring",
     children: [
       { label: "Camera Grid", path: "/admin/monitoring#grid" },
-      { label: "Full Screen View", path: "/admin/monitoring#fullscreen" },
+      { label: "Camera Management", path: "/admin/monitoring#manage" },
       { label: "Recognition Events", path: "/admin/monitoring#events" },
-      { label: "Event History", path: "/admin/monitoring#history" },
+      { label: "Unknown Faces", path: "/admin/monitoring#unknown-faces" },
     ],
   },
   {
@@ -48,11 +48,12 @@ const adminNavItems = [
     path: "/admin/manage",
     children: [
       { label: "Departments", path: "/admin/manage#departments" },
-      { label: "User Profiles", path: "/admin/manage#profiles" },
+      { label: "Organization Users", path: "/admin/manage#organization-users" },
       { label: "Bulk Upload", path: "/admin/manage#upload" },
-      { label: "Face Gallery", path: "/admin/manage#gallery" },
-      { label: "Roles", path: "/admin/manage#roles" },
-      { label: "Access Control", path: "/admin/manage#access" },
+      { label: "Assign Roles", path: "/admin/manage#assign-role" },
+      { label: "Registration Requests", path: "/admin/manage#requests" },
+      { label: "Face Enrollment Requests", path: "/admin/manage#face-enrollment-requests" },
+      { label: "Attendance Rules", path: "/admin/manage#rules"},
     ],
   },
   {
