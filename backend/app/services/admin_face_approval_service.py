@@ -9,6 +9,7 @@ from app.models.biometrics import (
     FaceEnrollmentImage
 )
 from app.models.core import User, UserStatusEnum
+from app.models.core import Organization
 from app.utils.supabase_storage import supabase
 from app.services.notification_service import NotificationService
 from app.models.biometrics import FaceEnrollmentImage
@@ -39,6 +40,10 @@ class AdminFaceApprovalService:
 
         print(f"Found {len(images)} images in DB")
 
+        org_settings = db.execute(
+            select(Organization).where(Organization.organization_id == session.organization_id)
+        ).scalars().first()
+
         embeddings = []
         processed_records = []
 
@@ -52,7 +57,11 @@ class AdminFaceApprovalService:
                     print(f"Failed to download {img.image_path}")
                     continue
 
-                embedding = extract_face_embedding(response, is_admin_approval=True)
+                embedding = extract_face_embedding(
+                    response,
+                    is_admin_approval=True,
+                    min_face_size=org_settings.min_face_size if org_settings else None,
+                )
 
                 if embedding is not None:
                     embeddings.append(embedding)
