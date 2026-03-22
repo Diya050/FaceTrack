@@ -1,7 +1,7 @@
 import uuid
 import enum
 from sqlalchemy import Integer, Column, String, DateTime, ForeignKey, Boolean, Enum, UniqueConstraint, Index, Float
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, JSON
 from sqlalchemy.orm import relationship, declared_attr
 from sqlalchemy.sql import func
 from app.db.session import Base
@@ -44,6 +44,7 @@ class Organization(Base):
     unknown_face_threshold = Column(Float, default=0.45, nullable=False)
     liveness_threshold = Column(Float, default=0.8, nullable=False)
     min_face_size = Column(Integer, default=60, nullable=False)
+    notification_config = Column(JSON, nullable=True)
     status = Column(
         Enum(
             OrganizationStatusEnum,

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
+from typing import Any
 
 class OrganizationCreate(BaseModel):
     name: str
@@ -12,6 +13,7 @@ class OrganizationCreate(BaseModel):
     unknown_face_threshold: float = 0.45
     liveness_threshold: float = 0.8
     min_face_size: int = 60
+    notification_config: Any | None = None
 
 class OrganizationResponse(BaseModel):
     organization_id: UUID
@@ -24,6 +26,7 @@ class OrganizationResponse(BaseModel):
     recognition_confidence: float
     unknown_face_threshold: float
     liveness_threshold: float
+    notification_config: Any | None = None
     min_face_size: int
 
     class Config:
@@ -39,4 +42,5 @@ class OrganizationUpdate(BaseModel):
     recognition_confidence: float | None = None
     unknown_face_threshold: float | None = None
     liveness_threshold: float | None = None
+    notification_config: Any | None = None
     min_face_size: int | None = None
