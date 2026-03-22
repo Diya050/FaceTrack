@@ -8,8 +8,11 @@ import {
   Divider,
   ListItemIcon,
   ListItemText,
+  Badge,
 } from "@mui/material";
-import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
+import NotificationsIcon from "@mui/icons-material/Notifications";
+import NotificationDrawer from "../notifications/NotificationDrawer";
+import { useNotifications } from "../../hooks/useNotifications";
 import SettingsOutlinedIcon from "@mui/icons-material/SettingsOutlined";
 import LogoutIcon from "@mui/icons-material/Logout";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
@@ -28,6 +31,21 @@ const HeaderIcons = ({ firstName }: Props) => {
 
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
+
+  const {
+    notifications,
+    unreadCount,
+    loading,
+    open: notifOpen,
+    anchorEl: notifAnchorEl,
+    handleBellClick,
+    handleClose: handleNotifClose,
+    handleMarkAsRead,
+  } = useNotifications();
+
+  const handleNotifNavigate = (path: string | null) => {
+    if (path) navigate(path);
+  };
 
   const handleProfileClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -74,8 +92,14 @@ const HeaderIcons = ({ firstName }: Props) => {
     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
 
       <Tooltip title="Notifications">
-        <IconButton>
-          <NotificationsNoneIcon />
+        <IconButton onClick={handleBellClick} sx={{ color: "inherit" }}>
+          <Badge
+            badgeContent={unreadCount > 0 ? unreadCount : null}
+            color="error"
+            max={99}
+          >
+            <NotificationsIcon />
+          </Badge>
         </IconButton>
       </Tooltip>
 
@@ -165,6 +189,16 @@ const HeaderIcons = ({ firstName }: Props) => {
           <ListItemText>Logout</ListItemText>
         </MenuItem>
       </Menu>
+
+      <NotificationDrawer
+        anchorEl={notifAnchorEl}
+        open={notifOpen}
+        onClose={handleNotifClose}
+        notifications={notifications}
+        loading={loading}
+        onMarkRead={handleMarkAsRead}
+        onNavigate={handleNotifNavigate}
+      />
     </Box>
   );
 };
