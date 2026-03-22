@@ -1,6 +1,8 @@
 from pydantic import BaseModel, EmailStr
 from uuid import UUID
 
+from app.models.core import OrganizationStatusEnum
+
 class OrganizationCreate(BaseModel):
     name: str
     email: EmailStr
@@ -16,7 +18,8 @@ class OrganizationResponse(BaseModel):
     contact_number: str
     address: str
     # Added this so the frontend can read the setting
-    min_hours_for_present: int 
+    min_hours_for_present: int
+    status: OrganizationStatusEnum
 
     class Config:
         from_attributes = True

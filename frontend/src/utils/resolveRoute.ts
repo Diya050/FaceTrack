@@ -1,12 +1,19 @@
 export const resolveRoute = async (auth: any, axios: any) => {
   try {
-    const { status, face_enrolled, role } = auth;
+    const { status, face_enrolled, role, organization_id } = auth;
 
+    // ---------------- SUPER ADMIN ----------------
+    if (!organization_id && role === "SUPER_ADMIN") {
+      return "/super-admin/dashboard";
+    }
+
+    // ---------------- ORG ADMINS ----------------
+    if (role === "HR_ADMIN" || role === "ADMIN") {
+      return "/admin/dashboard";
+    }
+
+    // ---------------- USER FLOW ----------------
     if (!status) return "/pending-approval";
-
-    if (role === "SUPER_ADMIN") return "/admin/dashboard";
-    if (role === "HR_ADMIN") return "/admin/dashboard";
-    if (role === "ADMIN") return "/admin/dashboard";
 
     if (status === "pending") return "/pending-approval";
 

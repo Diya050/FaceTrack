@@ -1,6 +1,7 @@
 import { useRoutes, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { adminRoutes } from "./AdminRoute";
+import { superAdminRoutes } from "./SuperAdminRoute";
 
 import PublicLayout from "../layout/PublicLayout";
 import UserLayout from "../layout/UserLayout";
@@ -57,6 +58,9 @@ export default function AppRoutes() {
 
     /*  ADMIN ROUTES */
     adminRoutes,
+
+    /*  SUPER ADMIN ROUTES */
+    superAdminRoutes,
 
     /*  USER ROUTES */
     {

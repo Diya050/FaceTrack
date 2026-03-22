@@ -7,9 +7,14 @@ import { settingsSidebar } from "../config/sidebar.settings";
 import { userSidebar } from "../config/sidebar.user";
 import { reportsSidebar } from "../config/sidebar.reports";
 import type { SidebarItem } from "../types/sidebar";
+import { superAdminSidebar } from "../config/sidebar.superadmin";
+import { useAuth } from "../context/AuthContext";
 
 export const useSidebarConfig = (): SidebarItem[] => {
   const { pathname } = useLocation();
+  const { role } = useAuth();
+
+  if (role === "SUPER_ADMIN" && pathname.startsWith("/super-admin")) return superAdminSidebar;
 
   if (pathname.includes("/dashboard")) return dashboardSidebar;
   if (pathname.includes("/monitoring")) return monitoringSidebar;

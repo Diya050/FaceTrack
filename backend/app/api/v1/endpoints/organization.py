@@ -5,7 +5,9 @@ from app.schemas.organization import OrganizationCreate, OrganizationResponse, O
 from app.services.organization_service import create_organization
 from app.core.permissions import require_roles
 from sqlalchemy import select
-from app.models.core import Organization, User # Assuming User model is here
+from app.models.core import Organization, User 
+from sqlalchemy import func
+
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
@@ -79,3 +81,76 @@ def list_orgs_public(
         select(Organization).where(Organization.is_deleted == False)
     )
     return result.scalars().all()
+
+
+@router.patch("/{org_id}/status", response_model=OrganizationResponse)
+def update_org_status(
+    org_id: str,
+    status: str,
+    db: Session = Depends(get_db),
+    user=Depends(require_roles(["SUPER_ADMIN"]))
+):
+    org = db.execute(
+        select(Organization).where(Organization.organization_id == org_id)
+    ).scalars().first()
+
+    if not org:
+        raise HTTPException(404, "Organization not found")
+
+    if status not in ["active", "suspended", "inactive"]:
+        raise HTTPException(400, "Invalid status")
+
+    org.status = status
+    db.commit()
+    db.refresh(org)
+
+    return org
+
+
+@router.delete("/{org_id}")
+def delete_org(
+    org_id: str,
+    db: Session = Depends(get_db),
+    user=Depends(require_roles(["SUPER_ADMIN"]))
+):
+    org = db.execute(
+        select(Organization).where(Organization.organization_id == org_id)
+    ).scalars().first()
+
+    if not org:
+        raise HTTPException(404, "Organization not found")
+
+    org.is_deleted = True
+    db.commit()
+
+    return {"message": "Organization deleted"}
+
+
+
+@router.get("/stats")
+def get_platform_stats(
+    db: Session = Depends(get_db),
+    user=Depends(require_roles(["SUPER_ADMIN"]))
+):
+    total_orgs = db.execute(
+        select(func.count(Organization.organization_id))
+        .where(Organization.is_deleted == False)
+    ).scalar()
+
+    active_orgs = db.execute(
+        select(func.count(Organization.organization_id))
+        .where(
+            Organization.status == "active",
+            Organization.is_deleted == False
+        )
+    ).scalar()
+
+    total_users = db.execute(
+        select(func.count(User.user_id))
+    ).scalar()
+
+    return {
+        "total_organizations": total_orgs,
+        "active_organizations": active_orgs,
+        "total_users": total_users,
+    }
