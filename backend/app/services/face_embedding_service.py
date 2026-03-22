@@ -51,7 +51,11 @@ def detect_blur(image):
     return cv2.Laplacian(gray, cv2.CV_64F).var()
 
 
-def extract_face_embedding(image_bytes: bytes, is_admin_approval: bool = False) -> np.ndarray:
+def extract_face_embedding(
+    image_bytes: bytes,
+    is_admin_approval: bool = False,
+    min_face_size: int | None = None,
+) -> np.ndarray:
 
     # Get global model instance
     app = get_face_app()
@@ -105,7 +109,9 @@ def extract_face_embedding(image_bytes: bytes, is_admin_approval: bool = False) 
     width = bbox[2] - bbox[0]
     height = bbox[3] - bbox[1]
 
-    if width < MIN_FACE_SIZE or height < MIN_FACE_SIZE:
+    effective_min_face_size = min_face_size if min_face_size is not None else MIN_FACE_SIZE
+
+    if width < effective_min_face_size or height < effective_min_face_size:
         raise HTTPException(
             400,
             "Face too small. Move slightly closer."

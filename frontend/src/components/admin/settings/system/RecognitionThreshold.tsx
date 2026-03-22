@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
   Typography,
@@ -15,6 +15,7 @@ import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import TuneIcon from "@mui/icons-material/Tune";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
+import api from "../../../../services/api";
 
 //  Defaults 
 const DEFAULTS = {
@@ -102,20 +103,67 @@ const ThresholdRow = ({
 const RecognitionThreshold = () => {
   const [values, setValues] = useState({ ...DEFAULTS });
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const loadThresholds = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const { data } = await api.get("/organizations/me");
+
+        setValues({
+          recognitionConfidence:
+            data.recognition_confidence ?? DEFAULTS.recognitionConfidence,
+          unknownFaceThreshold:
+            data.unknown_face_threshold ?? DEFAULTS.unknownFaceThreshold,
+          livenessThreshold: data.liveness_threshold ?? DEFAULTS.livenessThreshold,
+          minFaceSize: data.min_face_size ?? DEFAULTS.minFaceSize,
+        });
+      } catch {
+        setError("Failed to load threshold settings from backend.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadThresholds();
+  }, []);
 
   const set = (key: keyof typeof DEFAULTS) => (v: number) => {
     setSaved(false);
+    setError("");
     setValues((prev) => ({ ...prev, [key]: v }));
   };
 
-  const handleSave = () => {
-    // TODO: wire to settings API
-    setSaved(true);
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setSaved(false);
+      setError("");
+
+      await api.put("/organizations/me", {
+        recognition_confidence: values.recognitionConfidence,
+        unknown_face_threshold: values.unknownFaceThreshold,
+        liveness_threshold: values.livenessThreshold,
+        min_face_size: values.minFaceSize,
+      });
+
+      setSaved(true);
+    } catch {
+      setError("Failed to save threshold settings.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleReset = () => {
     setValues({ ...DEFAULTS });
     setSaved(false);
+    setError("");
   };
 
   const chip = getConfidenceChip(values.recognitionConfidence);
@@ -256,6 +304,12 @@ const RecognitionThreshold = () => {
 
       <Divider sx={{ my: 3 }} />
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       {/* Info alert */}
       <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
         Changes take effect on the next recognition cycle. Lowering thresholds
@@ -269,6 +323,7 @@ const RecognitionThreshold = () => {
           variant="outlined"
           startIcon={<RestartAltOutlinedIcon />}
           onClick={handleReset}
+          disabled={loading || saving}
           sx={{ borderRadius: 2, textTransform: "none" }}
         >
           Reset to Defaults
@@ -277,9 +332,10 @@ const RecognitionThreshold = () => {
           variant="contained"
           startIcon={<SaveOutlinedIcon />}
           onClick={handleSave}
+          disabled={loading || saving}
           sx={{ borderRadius: 2, textTransform: "none" }}
         >
-          Save Changes
+          {loading ? "Loading..." : saving ? "Saving..." : "Save Changes"}
         </Button>
       </Stack>
 

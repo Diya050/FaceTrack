@@ -7,7 +7,7 @@ from sqlalchemy import select
 from insightface.app import FaceAnalysis
 from app.models.streams import Camera, VideoStream, UnknownFace
 from app.models.biometrics import FacialBiometric
-from app.models.core import User
+from app.models.core import User, Organization
 from app.services.attendance_service import record_attendance_event
 from app.utils.supabase_storage import upload_image
 from app.enums.attendance_enums import AttendanceEventType
@@ -15,7 +15,8 @@ from app.services.face_embedding_service import get_face_app
 from app.services.notification_service import NotificationService
 
 
-THRESHOLD = 0.65
+DEFAULT_RECOGNITION_CONFIDENCE = 0.75
+DEFAULT_UNKNOWN_FACE_THRESHOLD = 0.45
 UNKNOWN_SIMILARITY_THRESHOLD = 0.85
 UNKNOWN_COOLDOWN_SECONDS = 60
 UNKNOWN_FACE_CACHE = {}
@@ -38,6 +39,21 @@ def recognize_frame(db, frame, camera_id):
         return []
 
     organization_id = camera.organization_id
+
+    org_settings = db.execute(
+        select(Organization).where(Organization.organization_id == organization_id)
+    ).scalars().first()
+
+    recognition_threshold = (
+        org_settings.recognition_confidence
+        if org_settings and org_settings.recognition_confidence is not None
+        else DEFAULT_RECOGNITION_CONFIDENCE
+    )
+    unknown_detection_threshold = (
+        org_settings.unknown_face_threshold
+        if org_settings and org_settings.unknown_face_threshold is not None
+        else DEFAULT_UNKNOWN_FACE_THRESHOLD
+    )
 
     # Ensure active VideoStream exists for Foreign Key constraints
     stream = db.query(VideoStream).filter(
@@ -86,10 +102,16 @@ def recognize_frame(db, frame, camera_id):
             db=db,
             matched_user=match.FacialBiometric.user if match else None,
             camera_id=camera_id,
-            similarity_score=similarity_score
+            similarity_score=similarity_score,
+            recognition_threshold=recognition_threshold,
+            unknown_detection_threshold=unknown_detection_threshold,
         )
 
         if recognition_result["status"] == "recognized":
+            results.append(recognition_result)
+            continue
+
+        if recognition_result["status"] == "unknown":
             results.append(recognition_result)
             continue
 
@@ -150,11 +172,18 @@ def recognize_frame(db, frame, camera_id):
     
     return results
 
-def process_recognition(db, matched_user, camera_id, similarity_score):
+def process_recognition(
+    db,
+    matched_user,
+    camera_id,
+    similarity_score,
+    recognition_threshold,
+    unknown_detection_threshold,
+):
     """
     Original logic preserved: Attendance event generated ONLY when face is recognized
     """
-    if matched_user and similarity_score >= THRESHOLD:
+    if matched_user and similarity_score >= recognition_threshold:
         try:
             record_attendance_event(
                 db=db,
@@ -173,8 +202,11 @@ def process_recognition(db, matched_user, camera_id, similarity_score):
             "user_id": str(matched_user.user_id),
             "confidence": round(similarity_score, 3)
         }
+
+    if similarity_score <= unknown_detection_threshold:
+        return {"status": "unknown_store"}
     
-    return {"status": "unknown_store"}
+    return {"status": "unknown"}
 
 def should_store_unknown(camera_id, embedding):
     now = datetime.now(timezone.utc)
