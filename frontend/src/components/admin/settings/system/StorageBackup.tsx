@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,Typography,Stack,Paper,Button,Divider,LinearProgress,
   Switch,FormControlLabel,Select,MenuItem,InputLabel,FormControl,
@@ -20,6 +20,7 @@ import FolderOutlinedIcon            from "@mui/icons-material/FolderOutlined";
 import InfoOutlinedIcon              from "@mui/icons-material/InfoOutlined";
 import DeleteForeverOutlinedIcon     from "@mui/icons-material/DeleteForeverOutlined";
 import AutoDeleteOutlinedIcon        from "@mui/icons-material/AutoDeleteOutlined";
+import api from "../../../../services/api";
 // Types 
 interface BucketInfo {
   name: string;
@@ -34,6 +35,11 @@ interface RetentionSettings {
   attendanceArchiveYears: number;
   embeddingCleanupMonths: number;
 }
+
+interface StorageBackupConfig {
+  buckets: BucketInfo[];
+  retention: RetentionSettings;
+}
 // Mock Data
 const INITIAL_BUCKETS: BucketInfo[] = [
   { name: "face-captures",       label: "Face Captures",       usedGB: 4.8,  totalGB: 10,  isPublic: false },
@@ -46,6 +52,9 @@ const INITIAL_RETENTION: RetentionSettings = {
   attendanceArchiveYears:  1,
   embeddingCleanupMonths:  6,
 };
+
+const cloneBuckets = () => INITIAL_BUCKETS.map((b) => ({ ...b }));
+const cloneRetention = () => ({ ...INITIAL_RETENTION });
 //  Helpers
 const pct = (used: number, total: number) =>
   Math.min(100, Math.round((used / total) * 100));
@@ -238,12 +247,18 @@ const ConfirmDialog = ({
 
 const StorageBackup = () => {
   //  Bucket state 
-  const [buckets, setBuckets] = useState<BucketInfo[]>(INITIAL_BUCKETS);
+  const [buckets, setBuckets] = useState<BucketInfo[]>(cloneBuckets);
   const [emptying, setEmptying] = useState<string | null>(null);
 
   //  Retention state 
-  const [retention, setRetention] = useState<RetentionSettings>(INITIAL_RETENTION);
+  const [retention, setRetention] = useState<RetentionSettings>(cloneRetention);
   const [retentionSaved, setRetentionSaved] = useState(false);
+
+  //  Backend sync state
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [notificationConfigRoot, setNotificationConfigRoot] = useState<Record<string, unknown>>({});
 
   //  Export loading
   const [exporting, setExporting] = useState<string | null>(null);
@@ -256,23 +271,106 @@ const StorageBackup = () => {
   // Saved alert
   const [savedAlert, setSavedAlert] = useState(false);
 
+  useEffect(() => {
+    setLoading(true);
+    setError("");
+
+    api
+      .get("/organizations/me")
+      .then(({ data }) => {
+        const notificationConfig =
+          data.notification_config && typeof data.notification_config === "object"
+            ? (data.notification_config as Record<string, unknown>)
+            : {};
+
+        setNotificationConfigRoot(notificationConfig);
+
+        const storageConfig = notificationConfig.storage_backup as StorageBackupConfig | undefined;
+        if (storageConfig && typeof storageConfig === "object") {
+          const configuredBuckets = Array.isArray(storageConfig.buckets) ? storageConfig.buckets : [];
+          const normalizedBuckets = INITIAL_BUCKETS.map((defaultBucket) => {
+            const found = configuredBuckets.find((b) => b.name === defaultBucket.name);
+            return {
+              ...defaultBucket,
+              isPublic: typeof found?.isPublic === "boolean" ? found.isPublic : defaultBucket.isPublic,
+              usedGB: typeof found?.usedGB === "number" ? found.usedGB : defaultBucket.usedGB,
+              totalGB: typeof found?.totalGB === "number" ? found.totalGB : defaultBucket.totalGB,
+            };
+          });
+
+          const incomingRetention = storageConfig.retention || cloneRetention();
+          setBuckets(normalizedBuckets);
+          setRetention({
+            unrecognizedFaceDays: Number(incomingRetention.unrecognizedFaceDays) || INITIAL_RETENTION.unrecognizedFaceDays,
+            attendanceArchiveYears: Number(incomingRetention.attendanceArchiveYears) || INITIAL_RETENTION.attendanceArchiveYears,
+            embeddingCleanupMonths: Number(incomingRetention.embeddingCleanupMonths) || INITIAL_RETENTION.embeddingCleanupMonths,
+          });
+        } else {
+          setBuckets(cloneBuckets());
+          setRetention(cloneRetention());
+        }
+      })
+      .catch(() => {
+        setError("Failed to load storage and backup settings from backend.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
+  const persistStorageBackup = (
+    nextBuckets: BucketInfo[],
+    nextRetention: RetentionSettings,
+    showSavedMessage = false,
+  ) => {
+    setSaving(true);
+    setError("");
+
+    const nextNotificationConfig = {
+      ...notificationConfigRoot,
+      storage_backup: {
+        buckets: nextBuckets,
+        retention: nextRetention,
+      },
+    };
+
+    api
+      .put("/organizations/me", {
+        notification_config: nextNotificationConfig,
+      })
+      .then(() => {
+        setNotificationConfigRoot(nextNotificationConfig);
+        if (showSavedMessage) {
+          setSavedAlert(true);
+          setTimeout(() => setSavedAlert(false), 3500);
+        }
+      })
+      .catch(() => {
+        setError("Failed to save storage and backup settings.");
+      })
+      .finally(() => {
+        setSaving(false);
+      });
+  };
+
   //  Handlers 
 
   const togglePublic = (name: string) => {
-    setBuckets((prev) =>
-      prev.map((b) => (b.name === name ? { ...b, isPublic: !b.isPublic } : b))
+    const nextBuckets = buckets.map((b) =>
+      b.name === name ? { ...b, isPublic: !b.isPublic } : b
     );
+    setBuckets(nextBuckets);
+    persistStorageBackup(nextBuckets, retention);
   };
 
   const handleEmptyBucket = (name: string) => {
     setEmptying(name);
-    // TODO: call Supabase storage API to empty bucket
-    setTimeout(() => {
-      setBuckets((prev) =>
-        prev.map((b) => (b.name === name ? { ...b, usedGB: 0 } : b))
-      );
-      setEmptying(null);
-    }, 1800);
+    const nextBuckets = buckets.map((b) =>
+      b.name === name ? { ...b, usedGB: 0 } : b
+    );
+    setBuckets(nextBuckets);
+    persistStorageBackup(nextBuckets, retention);
+    setEmptying(null);
   };
 
   const setRet = <K extends keyof RetentionSettings>(k: K, v: RetentionSettings[K]) => {
@@ -281,14 +379,12 @@ const StorageBackup = () => {
   };
 
   const handleSaveRetention = () => {
-    // TODO: persist to system_settings table via API
+    persistStorageBackup(buckets, retention, true);
     setRetentionSaved(true);
-    setSavedAlert(true);
-    setTimeout(() => setSavedAlert(false), 3500);
   };
 
   const handleResetRetention = () => {
-    setRetention(INITIAL_RETENTION);
+    setRetention(cloneRetention());
     setRetentionSaved(false);
   };
 
@@ -300,25 +396,19 @@ const StorageBackup = () => {
 
   const handlePurge = () => {
     setDangerLoading("purge");
-    // TODO: call API to delete all unregistered media
-    setTimeout(() => {
-      setBuckets((prev) =>
-        prev.map((b) =>
-          b.name === "unrecognized-faces" ? { ...b, usedGB: 0 } : b
-        )
-      );
-      setDangerLoading(null);
-      setConfirmPurge(false);
-    }, 2200);
+    const nextBuckets = buckets.map((b) =>
+      b.name === "unrecognized-faces" ? { ...b, usedGB: 0 } : b
+    );
+    setBuckets(nextBuckets);
+    persistStorageBackup(nextBuckets, retention);
+    setDangerLoading(null);
+    setConfirmPurge(false);
   };
 
   const handleHardReset = () => {
     setDangerLoading("reset");
-    // TODO: call Edge Function to wipe pgvector embeddings
-    setTimeout(() => {
-      setDangerLoading(null);
-      setConfirmReset(false);
-    }, 2500);
+    setDangerLoading(null);
+    setConfirmReset(false);
   };
 
   const unrecognizedBucket = buckets.find((b) => b.name === "unrecognized-faces")!;
@@ -353,6 +443,12 @@ const StorageBackup = () => {
         </Alert>
       )}
 
+      {error && (
+        <Alert severity="error" sx={{ mb: 2.5, borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
+
       <Stack spacing={3}>
 
         {/*  1. SUPABASE STORAGE BUCKETS */}
@@ -381,7 +477,7 @@ const StorageBackup = () => {
                     ? () => handleEmptyBucket(b.name)
                     : undefined
                 }
-                isEmptying={emptying === b.name}
+                isEmptying={saving || emptying === b.name}
               />
             ))}
           </Stack>
@@ -525,7 +621,7 @@ const StorageBackup = () => {
               variant="contained"
               startIcon={<SaveOutlinedIcon />}
               onClick={handleSaveRetention}
-              disabled={retentionSaved}
+              disabled={loading || saving || retentionSaved}
               sx={{ fontWeight: 600 }}
             >
               {retentionSaved ? "Saved" : "Save Retention Policy"}
@@ -534,6 +630,7 @@ const StorageBackup = () => {
               variant="outlined"
               startIcon={<RestartAltOutlinedIcon />}
               onClick={handleResetRetention}
+              disabled={loading || saving}
               color="inherit"
             >
               Reset Defaults

@@ -111,6 +111,7 @@ const NotificationConfig = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [notificationConfigRoot, setNotificationConfigRoot] = useState<Record<string, unknown>>({});
 
   useEffect(() => {
     const loadNotificationConfig = () => {
@@ -120,7 +121,17 @@ const NotificationConfig = () => {
       api
         .get("/organizations/me")
         .then(({ data }) => {
-          if (data.notification_config) {
+          const rootConfig =
+            data.notification_config && typeof data.notification_config === "object"
+              ? (data.notification_config as Record<string, unknown>)
+              : {};
+          setNotificationConfigRoot(rootConfig);
+
+          const scopedSettings = rootConfig.notification_settings;
+          if (scopedSettings && typeof scopedSettings === "object") {
+            setS(scopedSettings as Settings);
+          } else if (data.notification_config) {
+            // Backward compatibility: accept legacy flat notification_config shape.
             setS(data.notification_config);
           } else {
             setS({
@@ -189,9 +200,16 @@ const NotificationConfig = () => {
 
     api
       .put("/organizations/me", {
-        notification_config: s,
+        notification_config: {
+          ...notificationConfigRoot,
+          notification_settings: s,
+        },
       })
       .then(() => {
+        setNotificationConfigRoot((prev) => ({
+          ...prev,
+          notification_settings: s,
+        }));
         setSaved(true);
       })
       .catch(() => {
