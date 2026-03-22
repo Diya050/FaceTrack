@@ -139,7 +139,9 @@ def recognize_frame(db, frame, camera_id):
                 hr.user_id,
                 organization_id,
                 "Unknown face detected on camera",
-                "ALERT"
+                "ALERT",
+                redirect_path="/admin/unknown-faces",
+                event_type="UNKNOWN_FACE_DETECTED"
             )
         
     

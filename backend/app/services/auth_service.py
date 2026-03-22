@@ -142,13 +142,15 @@ class AuthService:
         ).all()
 
         for hr in hr_admins:
-
             NotificationService.create_notification(
                 db,
                 hr.user_id,
                 hr.organization_id,
                 f"New user registered: {new_user.full_name}",
-                "INFO"
+                "INFO",
+                redirect_path="/admin/users/pending",
+                entity_id=new_user.user_id,
+                event_type="NEW_USER_REGISTERED"
             )
 
         return new_user

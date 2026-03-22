@@ -339,7 +339,10 @@ def review_attendance_correction(
         correction.user_id,
         current_user.organization_id,
         f"Your attendance correction has been {correction.status.value}",
-        "INFO"
+        "INFO",
+        redirect_path="/attendance/corrections",
+        entity_id=correction.correction_id,
+        event_type="ATTENDANCE_CORRECTION_REVIEWED"
     )
 
     return correction

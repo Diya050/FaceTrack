@@ -117,7 +117,9 @@ class AdminFaceApprovalService:
             user.user_id,
             user.organization_id,
             "Face enrollment approved. Your biometric data has been generated.",
-            "SUCCESS"
+            "SUCCESS",
+            redirect_path="/dashboard",
+            event_type="FACE_ENROLLMENT_APPROVED"
         )
 
         return {"message": "Face enrollment approved successfully"}
@@ -165,7 +167,9 @@ class AdminFaceApprovalService:
             user.user_id,
             user.organization_id,
             "Face enrollment rejected. Please upload new images.",
-            "ERROR"
+            "ERROR",
+            redirect_path="/face-enrollment",
+            event_type="FACE_ENROLLMENT_REJECTED"
         )
 
         return {"message": "Enrollment rejected and images cleared"}

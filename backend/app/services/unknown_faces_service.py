@@ -95,7 +95,10 @@ class UnknownFacesService:
             face.resolved_user_id if face.resolved_user_id else current_user.user_id,
             current_user.organization_id,
             message,
-            "INFO"
+            "INFO",
+            redirect_path="/admin/unknown-faces",
+            entity_id=face.unknown_id,
+            event_type="UNKNOWN_FACE_RESOLVED"
         )
         
-        # return {"message": "Unknown face resolved"}
+        return {"message": "Unknown face resolved"}
