@@ -17,6 +17,12 @@ const adminNavItems = [
   {
     label: "Live Monitoring",
     path: "/admin/monitoring",
+    children: [
+      { label: "Camera Grid", path: "/admin/monitoring#grid" },
+      { label: "Camera Management", path: "/admin/monitoring#manage" },
+      { label: "Recognition Events", path: "/admin/monitoring#events" },
+      { label: "Unknown Faces", path: "/admin/monitoring#unknown-faces" },
+    ],
   },
   {
     label: "Attendance",
@@ -27,16 +33,54 @@ const adminNavItems = [
     path: "/admin/reports",
   },
   {
-    label: "Manage Department",
+    label: "Manage",
     path: "/admin/manage",
+    children: [
+      { label: "Departments", path: "/admin/manage#departments" },
+      { label: "Organization Users", path: "/admin/manage#organization-users" },
+      { label: "Bulk Upload", path: "/admin/manage#upload" },
+      { label: "Assign Roles", path: "/admin/manage#assign-role" },
+      { label: "Registration Requests", path: "/admin/manage#requests" },
+      { label: "Face Enrollment Requests", path: "/admin/manage#face-enrollment-requests" },
+      { label: "Attendance Rules", path: "/admin/manage#rules"},
+    ],
   },
   {
     label: "Support Ticket",
     path: "/admin/support-ticket",
   },
+  // THESE WILL BE HIDDEN ON DESKTOP
   {
-    label: "Unknown Faces",
-    path: "/admin/unknown-faces",
+    label: "System Settings",
+    path: "/admin/settings/system",
+    hideOnDesktop: true,
+    children: [
+      { label: "AI Models", path: "/admin/settings/system#ai" },
+      { label: "Recognition Threshold", path: "/admin/settings/system#threshold" },
+      { label: "Notifications Config", path: "/admin/settings/system#notifications" },
+      { label: "Storage & Backup", path: "/admin/settings/system#storage" },
+      { label: "Camera Setup", path: "/admin/settings/system#camera" },
+    ],
+  },
+  {
+    label: "Security & Compliance",
+    path: "/admin/settings/security",
+    hideOnDesktop: true,
+    children: [
+      { label: "Audit Logs", path: "/admin/settings/security#audit" },
+      { label: "Access Logs", path: "/admin/settings/security#access" },
+      { label: "Consent Management", path: "/admin/settings/security#consent" },
+      { label: "Data Retention", path: "/admin/settings/security#retention" },
+    ],
+  },
+  {
+    label: "Help & Support",
+    path: "/admin/settings/help",
+    hideOnDesktop: true,
+    children: [
+      { label: "User Guide", path: "/admin/settings/help/user-guide" },
+      { label: "Admin Guide", path: "/admin/settings/help/admin-guide" },
+    ],
   },
 ];
 
@@ -77,5 +121,22 @@ const AdminHeader = () => {
     />
   );
 };
+
+// const AdminHeader = () => {
+//   const { fullName, role } = useAuth();
+  
+//   const getBadgeInitial = () => {
+//     if (fullName) return fullName.charAt(0).toUpperCase();
+//     return role === "SUPER_ADMIN" ? "S" : "A";
+//   };
+
+//   return (
+//     <BaseHeader
+//       logoLink="/admin/dashboard"
+//       navItems={adminNavItems}
+//       rightSlot={<HeaderIcons firstName={getBadgeInitial()} />}
+//     />
+//   );
+// };
 
 export default AdminHeader;

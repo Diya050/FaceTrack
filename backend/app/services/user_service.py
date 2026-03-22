@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from fastapi import HTTPException
 from datetime import datetime
-
+from sqlalchemy.orm import Session, joinedload
 from app.models.core import User, UserStatusEnum
 from app.models.biometrics import FaceEnrollmentSession
 from app.models.core import Department, Role, Organization
@@ -46,7 +46,27 @@ class UserService:
             })
 
         return users
+    
+    @staticmethod
+    def get_assignable_users(db: Session, current_user: User):
+        # Fetch users who are either APPROVED or ACTIVE
+        result = db.execute(
+            select(User).options(joinedload(User.role)).where(
+                User.organization_id == current_user.organization_id,
+                User.status.in_([UserStatusEnum.APPROVED, UserStatusEnum.ACTIVE]),
+                User.is_deleted == False
+            )
+        ).scalars().all()
 
+        return [{
+            "user_id": str(u.user_id),
+            "full_name": u.full_name,
+            "email": u.email,
+            "role": u.role.role_name if u.role else "USER",
+            "status": u.status
+        } for u in result]
+    
+    
     @staticmethod
     def approve_user(db, current_user, target_user_id):
 

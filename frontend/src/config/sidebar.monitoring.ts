@@ -2,7 +2,7 @@ import {
   GridView,
   PhotoCamera,
   SensorOccupied,
-  History,
+  HelpOutline,
 } from "@mui/icons-material";
 import type { SidebarItem } from "../types/sidebar";
 
@@ -23,8 +23,8 @@ export const monitoringSidebar: SidebarItem[] = [
     icon: SensorOccupied,
   },
   {
-    label: "Event History",
-    path: "/admin/monitoring#history",
-    icon: History,
+    label: "Unknown Faces",
+    path: "/admin/monitoring#unknown-faces",
+    icon: HelpOutline,
   },
 ];

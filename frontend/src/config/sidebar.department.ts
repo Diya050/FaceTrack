@@ -1,34 +1,30 @@
 import {
   Apartment,
-  AddCircle,
   People,
   CloudUpload,
   HowToReg,
-  Badge,
+  Face,
   Rule,
+  AssignmentInd
 } from "@mui/icons-material";
 import type { SidebarItem } from "../types/sidebar";
 
 export const departmentSidebar: SidebarItem[] = [
-  {
-    label: "Create Organisation",
-    path: "/admin/manage#create-org",
-    icon: AddCircle,
-  },
   {
     label: "Departments",
     path: "/admin/manage#departments",
     icon: Apartment,
   },
   {
-    label: "User Profiles",
-    path: "/admin/manage#users",
-    icon: People,
-  },
-  {
     label: "Organization Users",
     path: "/admin/manage#organization-users",
     icon: People,
+    allowedRoles: ["HR_ADMIN"],
+  },
+  {
+    label: "Assign Roles",
+    path: "/admin/manage#assign-role",
+    icon: AssignmentInd,
     allowedRoles: ["HR_ADMIN"],
   },
   {
@@ -42,9 +38,9 @@ export const departmentSidebar: SidebarItem[] = [
     icon: HowToReg,
   },
   {
-    label: "Roles",
-    path: "/admin/manage#roles",
-    icon: Badge,
+    label: "Face Enrollment Requests",
+    path: "/admin/manage#face-enrollment-requests",
+    icon: Face,
   },
   {
     label: "Attendance Rules",

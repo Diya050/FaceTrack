@@ -54,7 +54,9 @@ class FaceEnrollmentAdminService:
             user_id=user.user_id,
             organization_id=user.organization_id,
             message="HR Admin requested you to complete face enrollment",
-            type="INFO"
+            type="INFO",
+            redirect_path="/face-enrollment",
+            event_type="FACE_ENROLLMENT_REQUESTED"
         )
 
         return {

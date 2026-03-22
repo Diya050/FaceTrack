@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.get("", response_model=List[UnknownFaceResponse])
+@router.get("/", response_model=List[UnknownFaceResponse])
 def get_unknown_faces(
     current_user = Depends(require_roles(["HR_ADMIN"])),
     db: Session = Depends(get_db)
