@@ -16,7 +16,7 @@ import SystemSettingsPage from "../pages/admin/settings/SystemSettingsPage";
 import SecuritySettingsPage from "../pages/admin/settings/SecuritySettingsPage";
 import ManagePage from "../pages/admin/ManagePage";
 import ViewOrganizationUsers from "../pages/admin/ViewOrganizationUsers";
-import FaceEnrollmentRequests from "../pages/admin/FaceEnrollmentRequests";
+import FaceEnrollmentRequests from "../components/admin/manage/FaceEnrollmentRequests";
 import UnknownFacesPage from "../pages/admin/UnknownFacesPage";
 import SupportTickets from "../pages/admin/SupportTickets";
 import FaceEnrollment from "../pages/user/FaceEnrollment";

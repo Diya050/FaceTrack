@@ -1,339 +1,237 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Button,
-  Avatar,
-  Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Stack,
-  Divider,
-  Table,
-  TableBody,
-  TableCell,
-  TableRow,
+  Box, Typography, Grid, Card, CardContent, Stack, Avatar, 
+  Chip, Divider, Button, CircularProgress, Alert, Dialog,
+  DialogTitle, DialogContent, TextField, DialogActions,
+  Table, TableBody, TableCell, TableRow
 } from "@mui/material";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import { useEffect } from "react";
+import api from "../../../services/api";
+import type { RegistrationRequest } from "../../../services/registrationRequests";
+import { getPendingUsers, rejectUserRequest } from "../../../services/registrationRequests";
 
-type RequestStatus = "Pending" | "Approved" | "Rejected";
-
-interface RegistrationRequest {
-  id: string;
-  fullName: string;
-  email: string;
-  organization: string;
-  department: string;
-  role: string;
-  employeeId: string;
-  submittedAt: string;
-  device: string;
-  ipAddress: string;
-  images: string[];
-  status: RequestStatus;
-}
-
+const THEME_NAVY = "#30364F";
+const SUCCESS_GREEN = "#4CAF50";
 
 const RegistrationRequests: React.FC = () => {
-
   const [requests, setRequests] = useState<RegistrationRequest[]>([]);
-  const [selected, setSelected] = useState<RegistrationRequest | null>(null);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [remark, setRemark] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  
+  // Track IDs that are approved but haven't been removed from the list yet
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
+  
+  const [selectedUser, setSelectedUser] = useState<RegistrationRequest | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
-  const fetchPendingUsers = () => {
-    fetch("http://localhost:8000/api/v1/users/pending", {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const formatted = data.map((user: any) => ({
-          id: user.id,
-          fullName: user.full_name,
-          email: user.email,
-          organization: user.organization_name || "",
-          department: user.department_name || "",
-          role: user.role || "",
-          employeeId: user.employee_id || "",
-          submittedAt: user.created_at || "",
-          device: "N/A",
-          ipAddress: "N/A",
-          images: [],
-          status: "Pending",
-        }));
-
-        setRequests(formatted);
-      })
-      .catch((err) => {
-        console.error("Error fetching users", err);
-      });
-  };
-
-  const updateStatus = async (id: string, status: RequestStatus) => {
-    setLoadingId(id); // start loading
-
+  const loadRequests = async () => {
+    setLoading(true);
     try {
-      if (status === "Approved") {
-        const approveRes = await fetch(
-          `http://localhost:8000/api/v1/users/${id}/approve`,
-          {
-            method: "PATCH",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-            },
-          }
-        );
-
-        if (!approveRes.ok) throw new Error("Approval failed");
-
-        const enrollRes = await fetch(
-          `http://localhost:8000/api/v1/users/${id}/request-face-enrollment`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-            },
-          }
-        );
-
-        if (!enrollRes.ok) {
-          alert("Approved but enrollment failed. Retry later.");
-        } else {
-          alert("User approved and enrollment request sent");
-        }
-      }
-
-      if (status === "Rejected") {
-        const rejectRes = await fetch(
-          `http://localhost:8000/api/v1/users/${id}/reject`,
-          {
-            method: "PATCH",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("access_token")}`,
-            },
-          }
-        );
-
-        if (!rejectRes.ok) throw new Error("Rejection failed");
-
-        alert("User rejected successfully");
-      }
-
-      fetchPendingUsers();
-      setSelected(null);
-      setRemark("");
-
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message);
+      const data = await getPendingUsers();
+      setRequests(data);
+    } catch (err) {
+      console.error("Fetch error:", err);
     } finally {
-      setLoadingId(null); // stop loading
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchPendingUsers();
+  useEffect(() => { 
+    loadRequests(); 
   }, []);
 
+  const handleApproveAndEnroll = async (id: string) => {
+    setActionLoading(id);
+    try {
+      // 1. Approve Account
+      await api.patch(`/users/${id}/approve`);
+      
+      // 2. Request Enrollment Session (Triggers Notification for User)
+      await api.post(`/users/${id}/request-face-enrollment`);
+      
+      // Mark as approved locally for immediate UI feedback
+      setApprovedIds((prev) => new Set(prev).add(id));
+
+      // Wait 2 seconds so the Admin sees the "Approved" state before the card vanishes
+      setTimeout(async () => {
+        await loadRequests();
+        setApprovedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        // If the dialog was open for this user, close it after the refresh
+        if (selectedUser?.id === id) setSelectedUser(null);
+      }, 2000);
+
+    } catch (err) {
+      alert("Failed to complete approval process. The user might already be active.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!selectedUser) return;
+    setActionLoading(selectedUser.id);
+    try {
+      await rejectUserRequest(selectedUser.id, rejectionReason);
+      await loadRequests();
+      setSelectedUser(null);
+      setRejectionReason("");
+    } catch (err) {
+      alert("Rejection failed");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   return (
-    <Box p={3} mt={8}>
-      <Typography variant="h5" fontWeight={600}>
-        Face Registration Approval Queue
+    <Box p={3} mt={2} sx={{ backgroundColor: "#F8F9FA", minHeight: "100vh" }}>
+      <Typography variant="h5" fontWeight={700} color={THEME_NAVY} gutterBottom>
+        User Registration Queue
       </Typography>
 
-      <Typography variant="body2" color="text.secondary" mb={3}>
-        Review identity, organization, and biometric samples before enrollment.
-      </Typography>
+      {loading && requests.length === 0 ? (
+        <CircularProgress sx={{ color: THEME_NAVY, display: "block", mx: "auto", mt: 5 }} />
+      ) : requests.length === 0 ? (
+        <Alert severity="info" variant="outlined">No pending registration requests.</Alert>
+      ) : (
+        <Grid container spacing={3}>
+          {requests.map((req) => {
+            const isProcessing = actionLoading === req.id;
+            const isApproved = approvedIds.has(req.id);
 
-      <Grid container spacing={2}>
-        {requests
-          .filter((r) => r.status === "Pending")
-          .map((req) => (
-            <Grid size={{ xs: 12, md: 6 }} key={req.id}>
-              <Card variant="outlined">
-                <CardContent>
-                  <Stack direction="row" spacing={2} alignItems="center">
-                    <Avatar src={req.images[0]} sx={{ width: 56, height: 56 }} />
+            return (
+              <Grid key={req.id} size={{ xs: 12, md: 6, lg: 4 }}>
+                <Card 
+                  variant="outlined" 
+                  sx={{ 
+                    borderRadius: "12px", 
+                    border: isApproved ? `1px solid ${SUCCESS_GREEN}` : "1px solid #E0E4EC",
+                    bgcolor: isApproved ? "#F1F8E9" : "white",
+                    transition: "all 0.3s ease",
+                    boxShadow: isApproved ? "0 4px 12px rgba(76, 175, 80, 0.1)" : "none"
+                  }}
+                >
+                  <CardContent>
+                    <Stack direction="row" spacing={2} alignItems="center">
+                      <Avatar sx={{ bgcolor: isApproved ? SUCCESS_GREEN : THEME_NAVY, fontWeight: 700 }}>
+                        {req.full_name.charAt(0)}
+                      </Avatar>
+                      <Box flex={1}>
+                        <Typography fontWeight={600}>{req.full_name}</Typography>
+                        <Typography variant="caption" color="text.secondary">{req.email}</Typography>
+                      </Box>
+                      <Chip label={req.role} size="small" variant={isApproved ? "filled" : "outlined"} />
+                    </Stack>
+                    
+                    <Divider sx={{ my: 2 }} />
+                    
+                    <Stack direction="row" spacing={1} justifyContent="flex-end">
+                      {!isApproved && (
+                        <Button 
+                          size="small" 
+                          startIcon={<VisibilityIcon />} 
+                          onClick={() => setSelectedUser(req)}
+                          // !! converts string|null to boolean to fix TS2769
+                          disabled={!!actionLoading} 
+                        >
+                          Review
+                        </Button>
+                      )}
+                      
+                      <Button
+                        size="small"
+                        variant="contained"
+                        color="success"
+                        startIcon={<CheckCircleIcon />}
+                        disabled={!!actionLoading || isApproved}
+                        onClick={() => handleApproveAndEnroll(req.id)}
+                        sx={{ minWidth: "140px" }}
+                      >
+                        {isProcessing ? "Processing..." : isApproved ? "Approved" : "Approve & Enroll"}
+                      </Button>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              </Grid>
+            );
+          })}
+        </Grid>
+      )}
 
-                    <Box flex={1}>
-                      <Typography fontWeight={600}>{req.fullName}</Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {req.email}
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        {req.organization} • {req.department}
-                      </Typography>
-                    </Box>
-
-                    <Chip label={req.role} size="small" />
-                  </Stack>
-
-                  <Divider sx={{ my: 2 }} />
-
-                  <Stack direction="row" spacing={1} justifyContent="flex-end">
-                    <Button
-                      size="small"
-                      startIcon={<VisibilityIcon />}
-                      onClick={() => setSelected(req)}
-                    >
-                      Review
-                    </Button>
-
-                    <Button
-                      size="small"
-                      color="success"
-                      variant="contained"
-                      startIcon={<CheckCircleIcon />}
-                      disabled={loadingId === req.id}
-                      onClick={() => updateStatus(req.id, "Approved")}
-                    >
-                      {loadingId === req.id ? "Processing..." : "Approve"}
-                    </Button>
-
-                    <Button
-                      size="small"
-                      color="error"
-                      variant="outlined"
-                      startIcon={<CancelIcon />}
-                      disabled={loadingId === req.id}
-                      onClick={() => setSelected(req)}
-                    >
-                      Reject
-                    </Button>
-                  </Stack>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-      </Grid>
-
-      {/* Review Modal */}
-      <Dialog
-        open={Boolean(selected)}
-        onClose={() => setSelected(null)}
-        maxWidth="md"
-        fullWidth
+      {/* REVIEW DIALOG */}
+      <Dialog 
+        open={Boolean(selectedUser)} 
+        onClose={() => !actionLoading && setSelectedUser(null)} 
+        fullWidth 
+        maxWidth="sm"
       >
-        <DialogTitle>Identity & Biometric Review</DialogTitle>
-
+        <DialogTitle sx={{ fontWeight: 700 }}>Registration Review</DialogTitle>
         <DialogContent dividers>
-          {selected && (
+          {selectedUser && (
             <Stack spacing={3}>
-              {/* Identity Details */}
-              <Box>
-                <Typography fontWeight={600} gutterBottom>
-                  Identity Information
-                </Typography>
-
-                <Table size="small">
-                  <TableBody>
-                    <TableRow>
-                      <TableCell>Full Name</TableCell>
-                      <TableCell>{selected.fullName}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Email</TableCell>
-                      <TableCell>{selected.email}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Organization</TableCell>
-                      <TableCell>{selected.organization}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Department</TableCell>
-                      <TableCell>{selected.department}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Role</TableCell>
-                      <TableCell>{selected.role}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Employee ID</TableCell>
-                      <TableCell>{selected.employeeId}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Submitted</TableCell>
-                      <TableCell>{selected.submittedAt}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>Device</TableCell>
-                      <TableCell>{selected.device}</TableCell>
-                    </TableRow>
-                    <TableRow>
-                      <TableCell>IP Address</TableCell>
-                      <TableCell>{selected.ipAddress}</TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </Box>
-
-              {/* Face Samples */}
-              <Box>
-                <Typography fontWeight={600} gutterBottom>
-                  Biometric Samples
-                </Typography>
-
-                <Stack direction="row" spacing={2}>
-                  {selected.images.map((img, i) => (
-                    <Avatar
-                      key={i}
-                      src={img}
-                      variant="rounded"
-                      sx={{ width: 120, height: 120 }}
-                    />
-                  ))}
-                </Stack>
-              </Box>
-
-              {/* Admin Remarks */}
-              <TextField
-                label="Admin Verification Notes"
-                fullWidth
-                multiline
-                minRows={3}
-                placeholder="Verification remarks / compliance notes"
-                value={remark}
-                onChange={(e) => setRemark(e.target.value)}
-              />
+              <Table size="small">
+                <TableBody>
+                  <TableRow><TableCell sx={{ fontWeight: 600 }}>Name</TableCell><TableCell>{selectedUser.full_name}</TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 600 }}>Email</TableCell><TableCell>{selectedUser.email}</TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 600 }}>Employee ID</TableCell><TableCell>{selectedUser.employee_id}</TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 600 }}>Organization</TableCell><TableCell>{selectedUser.organization_name}</TableCell></TableRow>
+                  <TableRow><TableCell sx={{ fontWeight: 600 }}>Department</TableCell><TableCell>{selectedUser.department_name}</TableCell></TableRow>
+                </TableBody>
+              </Table>
+              
+              {/* Hide rejection field if already approved */}
+              {!approvedIds.has(selectedUser.id) && (
+                <TextField
+                  label="Rejection Reason (Optional)"
+                  fullWidth multiline rows={2}
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  disabled={!!actionLoading}
+                />
+              )}
             </Stack>
           )}
         </DialogContent>
-
-        <DialogActions>
-          <Button
-            onClick={() => setSelected(null)}
-            disabled={loadingId === selected?.id}
-          >
-            Cancel
+        
+        <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
+          <Button onClick={() => setSelectedUser(null)} disabled={!!actionLoading}>
+            Close
           </Button>
-          <Button
-            color="error"
-            variant="outlined"
-            disabled={loadingId === selected?.id}
-            onClick={() => updateStatus(selected!.id, "Rejected")}
-          >
-            {loadingId === selected?.id ? "Processing..." : "Reject"}
-          </Button>
-
-          <Button
-            color="success"
-            variant="contained"
-            disabled={loadingId === selected?.id}
-            onClick={() => updateStatus(selected!.id, "Approved")}
-          >
-            {loadingId === selected?.id ? "Processing..." : "Approve & Enroll"}
-          </Button>
+          
+          <Stack direction="row" spacing={1}>
+            {selectedUser && !approvedIds.has(selectedUser.id) && (
+              <Button 
+                color="error" 
+                variant="outlined" 
+                startIcon={<CancelIcon />} 
+                onClick={handleReject} 
+                disabled={!!actionLoading}
+              >
+                Reject
+              </Button>
+            )}
+            
+            <Button 
+              variant="contained" 
+              sx={{ 
+                bgcolor: selectedUser && approvedIds.has(selectedUser.id) ? SUCCESS_GREEN : THEME_NAVY,
+                "&:hover": { bgcolor: selectedUser && approvedIds.has(selectedUser.id) ? SUCCESS_GREEN : "#3d4563" }
+              }} 
+              onClick={() => selectedUser && handleApproveAndEnroll(selectedUser.id)} 
+              disabled={!!actionLoading || (!!selectedUser && approvedIds.has(selectedUser.id))}
+            >
+              {actionLoading === selectedUser?.id 
+                ? "Processing..." 
+                : selectedUser && approvedIds.has(selectedUser.id) 
+                  ? "Approved" 
+                  : "Approve & Send Request"}
+            </Button>
+          </Stack>
         </DialogActions>
       </Dialog>
     </Box>

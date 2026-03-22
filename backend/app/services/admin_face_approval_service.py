@@ -11,7 +11,9 @@ from app.models.biometrics import (
 from app.models.core import User, UserStatusEnum
 from app.utils.supabase_storage import supabase
 from app.services.notification_service import NotificationService
-
+from app.models.biometrics import FaceEnrollmentImage
+from app.utils.supabase_storage import supabase 
+from app.services.face_enrollment_admin_service import FaceEnrollmentAdminService
 BUCKET = "face-images"
 
 
@@ -125,8 +127,26 @@ class AdminFaceApprovalService:
         return {"message": "Face enrollment approved successfully"}
 
     @staticmethod
-    def reject_enrollment(db, session_id):
+    def request_enrollment(db, current_user, user_id):
+        user = db.execute(
+            select(User).where(User.user_id == user_id, User.is_deleted == False)
+        ).scalars().first()
+        
+        # Logic to create session...
+        session = FaceEnrollmentSession(
+            user_id=user.user_id,
+            organization_id=user.organization_id,
+            status="started"
+        )
+        db.add(session)
+        db.commit()
+        
+        # Notification logic...
+        return {"session_id": session.session_id}
 
+    @staticmethod
+    def reject_enrollment(db, current_user, session_id, reason: str):
+        # 1. Find the current session
         session = db.execute(
             select(FaceEnrollmentSession).where(
                 FaceEnrollmentSession.session_id == session_id
@@ -136,40 +156,40 @@ class AdminFaceApprovalService:
         if not session:
             raise HTTPException(404, "Session not found")
 
+        user_id = session.user_id
+
+        # 2. Cleanup: Delete images from DB and Storage (Supabase/MinIO)        
         images = db.execute(
-            select(FaceEnrollmentImage).where(
-                FaceEnrollmentImage.session_id == session_id
-            )
+            select(FaceEnrollmentImage).where(FaceEnrollmentImage.session_id == session_id)
         ).scalars().all()
 
         for img in images:
-
             try:
-                supabase.storage.from_(BUCKET).remove([img.image_path])
-            except Exception as e:
-                print(f"Failed to delete storage file {img.image_path}")
-
+                supabase.storage.from_("face-images").remove([img.image_path])
+            except Exception:
+                pass
             db.delete(img)
 
+        # 3. Mark current session as failed
         session.status = "failed"
-
-        user = db.execute(
-            select(User).where(User.user_id == session.user_id)
-        ).scalars().first()
-
-        if user:
-            user.status = UserStatusEnum.PENDING
-
         db.commit()
 
+        # 4. Trigger a NEW enrollment request automatically
+        # This will create a NEW session and send the "HR Admin requested..." notification
+        new_request = FaceEnrollmentAdminService.request_enrollment(db, current_user, user_id)
+
+        # 5. Send an ADDITIONAL specific notification for the Rejection Reason
         NotificationService.create_notification(
-            db,
-            user.user_id,
-            user.organization_id,
-            "Face enrollment rejected. Please upload new images.",
-            "ERROR",
+            db=db,
+            user_id=user_id,
+            organization_id=current_user.organization_id,
+            message=f"Last enrollment rejected: {reason}. Please follow the new request to try again.",
+            type="ERROR",
             redirect_path="/face-enrollment",
             event_type="FACE_ENROLLMENT_REJECTED"
         )
 
-        return {"message": "Enrollment rejected and images cleared"}
+        return {
+            "message": "Enrollment rejected and new request generated",
+            "new_session_id": new_request["session_id"]
+        }
