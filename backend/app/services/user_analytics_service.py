@@ -1,6 +1,8 @@
+from collections import defaultdict
 from datetime import date, datetime, timedelta
 from typing import Tuple,List, Dict,Optional
 from uuid import UUID
+from reportlab.lib import styles
 from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from io import BytesIO
@@ -13,6 +15,11 @@ from fastapi.responses import StreamingResponse
 from app.models.attendance import Attendance  # adjust import path
 from app.models.attendance import AttendanceEvent 
 from app.models.biometrics import FacialBiometric
+
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet
 
 from app.schemas.user_analytics_schema import ProductivityMetricsResponse, RecognitionInsightsResponse, WorkingHoursPoint, AttendanceStat, RecognitionTrendPoint, RecognitionPerformance
 
@@ -277,92 +284,162 @@ def get_working_hours_summary(
 
 
 def get_monthly_attendance_stats(
-    db: Session,
+    db,
     organization_id: UUID | None,
     year: int,
     month: int
 ) -> List[AttendanceStat]:
     """
-    Group attendance rows by status for the given month/year and return counts.
+    Returns DAY-LEVEL attendance stats (not per-user rows). 
     """
+
+    # ✅ Month range
     start_date = date(year, month, 1)
     if month == 12:
         end_date = date(year + 1, 1, 1)
     else:
         end_date = date(year, month + 1, 1)
 
+    # ✅ Fetch all attendance rows
     stmt = (
-        select(Attendance.status, func.count().label("count"))
+        select(
+            Attendance.attendance_date,
+            Attendance.status
+        )
         .where(Attendance.attendance_date >= start_date)
         .where(Attendance.attendance_date < end_date)
+        .where(Attendance.is_deleted == False)   # 🔥 IMPORTANT FIX
     )
 
     if organization_id:
         stmt = stmt.where(Attendance.organization_id == organization_id)
 
-    stmt = stmt.group_by(Attendance.status).order_by(func.count().desc())
+    rows = db.execute(stmt).all()
 
-    result = db.execute(stmt)
-    rows = result.all()
+    # ✅ Group by date
+    day_status_map = defaultdict(list)
 
-    stats = [AttendanceStat(status=row[0], count=int(row[1])) for row in rows]
+    for att_date, status in rows:
+        normalized_status = (status or "absent").lower()
+        day_status_map[att_date].append(normalized_status)
+
+    # ✅ Final aggregation (per day)
+    final_counts = {
+        "present": 0,
+        "absent": 0,
+        "late": 0,
+        "half_day": 0
+    }
+
+    for att_date, statuses in day_status_map.items():
+
+        # Priority logic (you can tweak this)
+        if any(s in ["present", "on time"] for s in statuses):
+            final_counts["present"] += 1
+        elif any(s == "late" for s in statuses):
+            final_counts["late"] += 1
+        elif any(s == "half_day" for s in statuses):
+            final_counts["half_day"] += 1
+        else:
+            final_counts["absent"] += 1
+
+    # ✅ Convert to response format
+    stats = [
+        AttendanceStat(status=status, count=count)
+        for status, count in final_counts.items()
+    ]
+
     return stats
 
 
+def _extract_att_and_name(row):
+    try:
+        # Case 1: SQLAlchemy Row (modern versions)
+        if hasattr(row, "_mapping"):
+            att = row._mapping.get(Attendance)
+            name = row._mapping.get("user_full_name", "-")
+            return att, name or "-"
+
+        # Case 2: tuple fallback
+        if isinstance(row, tuple):
+            att = row[0]
+            name = row[1] if len(row) > 1 else "-"
+            return att, name or "-"
+
+        # Case 3: direct Attendance object
+        att = row
+        name = getattr(att, "user_full_name", None) or \
+               (getattr(att, "user", None) and getattr(att.user, "full_name", None)) or "-"
+        return att, name
+
+    except Exception as e:
+        print("Extract Error:", e)
+        return row, "-"
+
 def generate_attendance_pdf(rows, organization_id, start_date, end_date) -> bytes:
-    buf = BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
-    
-    # Header
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(40, 800, "Attendance Report")
-    c.setFont("Helvetica", 10)
-    c.drawString(40, 780, f"Organization: {organization_id or 'All'}")
-    c.drawString(40, 765, f"Period: {start_date or 'Start'} to {end_date or 'Today'}")
-    
-    # Table Header
-    c.line(40, 750, 550, 750)
-    c.setFont("Helvetica-Bold", 10)
-    c.drawString(40, 735, "Date")
-    c.drawString(120, 735, "User Name")
-    c.drawString(300, 735, "Status")
-    c.drawString(400, 735, "In")
-    c.drawString(480, 735, "Out")
-    c.line(40, 730, 550, 730)
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=A4)
 
-    # Data Rows
-    y = 715
-    c.setFont("Helvetica", 9)
-    for r in rows:
-        c.drawString(40, y, str(r.attendance_date))
-        c.drawString(120, y, str(r.user_full_name)[:30]) # Truncate long names
-        c.drawString(300, y, str(r.status))
-        c.drawString(400, y, str(r.first_check_in or "-"))
-        c.drawString(480, y, str(r.last_check_out or "-"))
-        y -= 20
-        
-        # Page Break Logic
-        if y < 50:
-            c.showPage()
-            y = 800
-            c.setFont("Helvetica", 9)
+    styles = getSampleStyleSheet()
+    elements = []
 
-    c.save()
-    buf.seek(0)
-    return buf.getvalue()
+    # Title
+    elements.append(Paragraph("Attendance Report", styles["Title"]))
+    elements.append(Spacer(1, 10))
+
+    # Meta info
+    elements.append(Paragraph(f"User: {rows[0].full_name if rows else 'N/A'}", styles["Normal"]))
+    elements.append(Paragraph(f"Period: {start_date or 'Start'} to {end_date or 'Today'}", styles["Normal"]))
+    elements.append(Spacer(1, 20))
+
+    # Table Data
+    data = [["Date", "User Name", "Status", "Check In", "Check Out"]]
+
+    for row in rows:
+        data.append([
+            str(row.attendance_date or "-"),
+            str(row.full_name or "-"),
+            str(row.status or "-"),
+            str(row.first_check_in or "-"),
+            str(row.last_check_out or "-"),
+        ])
+
+    # Table
+    table = Table(data, repeatRows=1)
+
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.black),
+
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("ALIGN", (3, 1), (-1, -1), "CENTER"),
+
+        ("BOTTOMPADDING", (0, 0), (-1, 0), 10),
+    ]))
+
+    elements.append(table)
+
+    doc.build(elements)
+
+    buffer.seek(0)
+    return buffer.getvalue()
 
 def generate_attendance_csv(rows) -> bytes:
     sio = StringIO()
     writer = csv.writer(sio)
-    writer.writerow(["Date", "User", "Status", "Check In", "Check Out"])
-    
-    for r in rows:
+
+    # Header
+    writer.writerow(["Date", "User Name", "Status", "Check In", "Check Out"])
+
+    for row in rows:
         writer.writerow([
-            r.attendance_date, 
-            r.user_full_name, 
-            r.status, 
-            r.first_check_in, 
-            r.last_check_out
+            row.attendance_date or "-",
+            row.full_name or "-",
+            row.status or "-",
+            row.first_check_in or "-",
+            row.last_check_out or "-",
         ])
-    
+
     return sio.getvalue().encode("utf-8")

@@ -24,3 +24,12 @@ class RegisterRequest(BaseModel):
     password: str
     organization_name: str
     department_name: str
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+    organization_name: str
+
+class ResetPasswordRequest(BaseModel):
+    token_id: str
+    new_password: str

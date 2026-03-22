@@ -38,8 +38,9 @@ const StatusGuard = ({ children }: any) => {
 
   const targetBase = getBasePath(route);
   const currentBase = getBasePath(location.pathname);
+  const isSectionRoot = location.pathname === "/user" || location.pathname === "/admin";
 
-  if (targetBase !== currentBase) {
+  if (targetBase !== currentBase || (isSectionRoot && location.pathname !== route)) {
     return <Navigate to={route} replace />;
   }
 

@@ -31,3 +31,21 @@ export const registerUser = async (data: {
   const res = await api.post("/auth/register", data);
   return res.data;
 };
+
+// Forgot Password
+export const forgotPassword = async (data: {
+  email: string;
+  organization_name?: string | null;
+}) => {
+  const res = await api.post("/auth/forgot-password", data);
+  return res.data;
+};
+
+// Reset Password
+export const resetPassword = async (data: {
+  token_id: string;
+  new_password: string;
+}) => {
+  const res = await api.post("/auth/reset-password", data);
+  return res.data;
+};

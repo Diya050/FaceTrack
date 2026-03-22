@@ -22,6 +22,11 @@ class Notification(TenantMixin, Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
     message = Column(String, nullable=False)
     type = Column(String, nullable=True)
+
+    redirect_path = Column(String, nullable=True)
+    entity_id = Column(UUID(as_uuid=True), nullable=True)
+    event_type = Column(String, nullable=True)
+    
     is_read = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
     
@@ -57,3 +62,15 @@ class LoginHistory(TenantMixin, Base):
     login_status = Column(String, nullable=False)
     
     user = relationship("User", back_populates="login_history")
+
+
+class PasswordResetToken(TenantMixin, Base):
+    __tablename__ = "password_reset_tokens"
+    token_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
+
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_used = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())    
+    
+    user = relationship("User", back_populates="password_reset_tokens")

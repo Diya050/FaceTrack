@@ -1,9 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
-from app.schemas.auth import RegisterRequest, PlatformLoginRequest, OrgLoginRequest, TokenResponse
+from sqlalchemy.orm import Session
+from app.schemas.auth import RegisterRequest, PlatformLoginRequest, OrgLoginRequest, TokenResponse, ResetPasswordRequest, ForgotPasswordRequest
 from app.services.auth_service import AuthService
 from fastapi.security import OAuth2PasswordRequestForm
+
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
 
@@ -55,3 +57,23 @@ def org_login_route(
     }
 
 
+@router.post("/forgot-password")
+def forgot_password(
+    data: ForgotPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    email = data.email
+    org_name = data.organization_name
+    return AuthService.forgot_password(db, email, org_name)
+
+
+@router.post("/reset-password")
+def reset_password(
+    data: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    return AuthService.reset_password(
+        db,
+        data.token_id,
+        data.new_password
+    )

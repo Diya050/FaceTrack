@@ -7,10 +7,10 @@ import ChartWrapper from "../admin/dashboard/overview/shared/ChartWrapper";
 import { getMonthlyAttendanceStats } from '../../services/userAnalyticsService';
 
 export default function MonthlyAttendanceChart() {
-  
   const [stats, setStats] = useState<{ status: string; count: number; color?: string | null }[]>([]);
-  
-  
+  const [month, setMonth] = useState<number | null>(null);
+  const [year, setYear] = useState<number | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -20,7 +20,9 @@ export default function MonthlyAttendanceChart() {
       .then((res) => {
         if (!mounted) return;
         setStats(res.stats);
-        setError(null); 
+        setMonth(res.month);
+        setYear(res.year);
+        setError(null);
       })
       .catch((err) => {
         console.error(err);
@@ -48,11 +50,22 @@ export default function MonthlyAttendanceChart() {
     ],
   };
 
+  // ✅ Format month/year nicely
+  const formattedPeriod =
+    month && year
+      ? new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' })
+          .format(new Date(year, month - 1))
+      : '';
+
   return (
     <ChartWrapper 
       label="Monthly Summary" 
       title="Attendance Distribution"
-      action={<Typography variant="caption" fontWeight="900" color="text.secondary">FEB 2026</Typography>}
+      action={
+        <Typography variant="caption" fontWeight="900" color="text.secondary">
+          {formattedPeriod}
+        </Typography>
+      }
     >
       <Box sx={{ height: 280, width: '100%' }}>
         {loading ? (
