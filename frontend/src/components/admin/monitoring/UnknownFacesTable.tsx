@@ -20,6 +20,7 @@ export default function UnknownFacesTable() {
     setLoading(true);
     try {
       const data = await unknownFacesService.getUnknownFaces();
+      // Filter out resolved ones if the backend hasn't already
       setFaces(data.filter(f => !f.resolved));
     } catch (err) {
       console.error("Failed to load unknown faces", err);
@@ -45,12 +46,12 @@ export default function UnknownFacesTable() {
       sx={{ 
         borderRadius: "16px", 
         border: "1px solid #E0E4EC",
-        overflow: "hidden" // Keeps the header background within rounded corners
+        overflow: "hidden" 
       }}
     >
-      {/* Header Section with proper horizontal padding */}
+      {/* Header Section */}
       <Box sx={{ 
-        px: 4, // Left and Right padding for the header
+        px: 4, 
         py: 3, 
         borderBottom: "1px solid #F0F2F5", 
         display: 'flex', 
@@ -76,20 +77,22 @@ export default function UnknownFacesTable() {
         </Stack>
       </Box>
 
-      <Table >
+      <Table>
         <TableHead sx={{ bgcolor: "#F8F9FB" }}>
           <TableRow>
-            <TableCell sx={{ fontWeight: 700, pl: 6 }}>Snapshot</TableCell>
+            <TableCell sx={{ fontWeight: 700, pl: 4 }}>Snapshot</TableCell>
             <TableCell sx={{ fontWeight: 700 }}>Detected At</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>Source Camera</TableCell>
             <TableCell sx={{ fontWeight: 700 }}>Confidence</TableCell>
-            <TableCell sx={{ fontWeight: 700, pr: 12 }} align="right">Actions</TableCell>
+            <TableCell sx={{ fontWeight: 700, pr: 4 }} align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
+        
         <TableBody>
           {faces.map((face) => (
             <TableRow key={face.unknown_id} hover sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
               <TableCell sx={{ pl: 4, py: 2 }}>
-                <Box sx={{ width: 180 }}>
+                <Box sx={{ width: 160 }}>
                   <FaceDetectionCard 
                     imagePath={face.image_path} 
                     confidence={null} 
@@ -109,6 +112,12 @@ export default function UnknownFacesTable() {
               </TableCell>
 
               <TableCell>
+                <Typography variant="body2" fontWeight={600} color={THEME_NAVY}>
+                  {face.camera_name || "Unknown Camera"}
+                </Typography>
+              </TableCell>
+
+              <TableCell>
                 <Chip 
                   label={face.confidence_score ? `${(face.confidence_score * 100).toFixed(1)}%` : "N/A"} 
                   size="small"
@@ -116,13 +125,12 @@ export default function UnknownFacesTable() {
                   sx={{ 
                     fontWeight: 700,
                     bgcolor: face.confidence_score && face.confidence_score > 0.7 ? "#E8F5E9" : "#FFF3E0",
-                    color: face.confidence_score && face.confidence_score > 0.7 ? "#2E7D32" : "#E65100",
-                    border: 'None'
+                    color: face.confidence_score && face.confidence_score > 0.7 ? "#2E7D32" : "#E65100"
                   }}
                 />
               </TableCell>
 
-              <TableCell align="right" sx={{ pr: 10 }}>
+              <TableCell align="right" sx={{ pr: 4 }}>
                 <Stack direction="row" spacing={1} justifyContent="flex-end">
                   <Tooltip title="Assign to User">
                     <IconButton 
@@ -148,7 +156,7 @@ export default function UnknownFacesTable() {
           
           {faces.length === 0 && (
             <TableRow>
-              <TableCell colSpan={4} align="center" sx={{ py: 10 }}>
+              <TableCell colSpan={5} align="center" sx={{ py: 10 }}>
                 <Box sx={{ opacity: 0.5 }}>
                   <Typography variant="h6">All clear!</Typography>
                   <Typography variant="body2">No unknown faces require your attention.</Typography>

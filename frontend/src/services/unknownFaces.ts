@@ -10,6 +10,7 @@ export type UnknownFaceAction = typeof UnknownFaceAction[keyof typeof UnknownFac
 export interface UnknownFace {
   unknown_id: string;
   stream_id: string;
+  camera_name: string;
   detected_time: string;
   image_path: string;
   confidence_score: number | null;

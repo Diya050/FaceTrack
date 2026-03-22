@@ -13,6 +13,7 @@ class UnknownFaceAction(str, Enum):
 class UnknownFaceResponse(BaseModel):
     unknown_id: UUID
     stream_id: UUID
+    camera_name: str
     detected_time: datetime
     image_path: str
     confidence_score: Optional[float]
