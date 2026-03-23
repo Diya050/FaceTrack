@@ -102,27 +102,31 @@ def monthly_attendance_stats(
     try:
         stats: List[AttendanceStat] = get_monthly_attendance_stats(
             db=db,
-            user_id=current_user.user_id,  # ✅ was passing organization_id before
+            user_id=current_user.user_id,
             year=req_year,
             month=req_month,
         )
+
+        color_map = {"present": "#2ECC71", "absent": "#E74C3C", "late": "#F39C12"}
+        stats_with_colors = [
+            AttendanceStat(
+                status=s.status,
+                count=s.count,
+                color=color_map.get(s.status.lower())
+            )
+            for s in stats
+        ]
+
+        return AttendanceStatsResponse(
+            month=req_month,
+            year=req_year,
+            user_id=current_user.user_id,
+            organization_id=organization_id,
+            stats=stats_with_colors,
+        )
+
     except Exception as exc:
         raise HTTPException(status_code=500, detail="Unable to fetch attendance statistics.")
-
-    color_map = {"present": "#2ECC71", "absent": "#E74C3C", "late": "#F39C12"}
-    stats_with_colors = [
-        AttendanceStat(status=s.status, count=s.count, color=color_map.get(s.status.lower()))
-        for s in stats
-    ]
-
-    return AttendanceStatsResponse(
-        month=req_month,
-        year=req_year,
-        user_id=current_user.user_id,
-        organization_id=organization_id,
-        stats=stats_with_colors,
-    )
-
 
 @router.get("/export")
 def export_attendance(
