@@ -1,5 +1,5 @@
 from collections import defaultdict
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Tuple,List, Dict,Optional
 from uuid import UUID
 from reportlab.lib import styles
@@ -135,14 +135,10 @@ def get_recognition_trends_for_user(
     hours: int = 72,
     interval_minutes: int = 60
 ) -> List[RecognitionTrendPoint]:
-    """
-    Aggregate confidence scores for the user over the past `hours` in `interval_minutes` buckets.
-    Returns list of timestamped average confidence (0..1).
-    """
-    end_ts = datetime.utcnow()
+    # 1. Use timezone-aware UTC now
+    end_ts = datetime.now(timezone.utc) 
     start_ts = end_ts - timedelta(hours=hours)
 
-    # Simple approach: fetch raw events and compute bucket averages in Python
     stmt = (
         select(
             AttendanceEvent.scan_timestamp,
@@ -154,10 +150,12 @@ def get_recognition_trends_for_user(
     )
     rows = db.execute(stmt).all()
 
-    # bucketize
     buckets: Dict[datetime, list] = {}
     for ts, score in rows:
-        # normalize to bucket start
+        # 2. Ensure the DB timestamp is also aware if it isn't already
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+            
         minutes_since_start = int((ts - start_ts).total_seconds() // 60)
         bucket_index = (minutes_since_start // interval_minutes)
         bucket_start = start_ts + timedelta(minutes=bucket_index * interval_minutes)

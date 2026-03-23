@@ -40,7 +40,7 @@ def get_productivity_metrics(
 
     return ProductivityMetricsResponse(**metrics)
 
-@router.get("/insights", response_model=RecognitionInsightsResponse, summary="Get recognition trends and performance for current user")
+@router.get("/insights", response_model=RecognitionInsightsResponse)
 def recognition_insights(
     hours: int = Query(72, ge=1, le=168),
     interval_minutes: int = Query(60, ge=5, le=360),
@@ -49,17 +49,31 @@ def recognition_insights(
     current_user: User = Depends(get_current_user),
 ):
     try:
-        trends = get_recognition_trends_for_user(db=db, user_id=str(current_user.user_id), hours=hours, interval_minutes=interval_minutes)
-        perf, model_version = get_recognition_performance_for_user(db=db, user_id=str(current_user.user_id), lookback_days=lookback_days)
-    except Exception:
-        raise HTTPException(status_code=500, detail="Unable to fetch recognition insights.")
+        trends = get_recognition_trends_for_user(
+            db=db, 
+            user_id=str(current_user.user_id), 
+            hours=hours, 
+            interval_minutes=interval_minutes
+        )
+        
+        # Ensure service returns the expected tuple
+        perf_data = get_recognition_performance_for_user(
+            db=db, 
+            user_id=str(current_user.user_id), 
+            lookback_days=lookback_days
+        )
+        
+        perf, model_version = perf_data
 
-    return RecognitionInsightsResponse(
-        model_version=model_version,
-        trends=trends,
-        performance=perf
-    )
-
+        return RecognitionInsightsResponse(
+            model_version=str(model_version) if model_version else "Unknown",
+            trends=trends,
+            performance=perf
+        )
+    except Exception as e:
+        # Logging the error helps you see the REAL cause in terminal
+        print(f"Error in recognition_insights: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error fetching insights")
 
 @router.get("/trend", response_model=WorkingHoursResponse, summary="Get working hours trend for current user")
 def working_hours_trend(

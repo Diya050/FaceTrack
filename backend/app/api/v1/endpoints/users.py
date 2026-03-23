@@ -31,9 +31,6 @@ def approve_user(
     current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
     db: Session = Depends(get_db)
 ):
-    """
-    Approve a user after face enrollment is completed.
-    """
     return UserService.approve_user(db, current_user, user_id)
 
 @router.post("/{user_id}/request-face-enrollment")
