@@ -93,22 +93,20 @@ def monthly_attendance_stats(
     year: Optional[int] = Query(None, ge=2000),
     month: Optional[int] = Query(None, ge=1, le=12),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
-    """
-    Returns attendance counts grouped by status for the requested month.
-    Defaults to current month if year/month not provided.
-    """
     now = datetime.utcnow()
     req_year = year or now.year
     req_month = month or now.month
 
     try:
-        
         stats: List[AttendanceStat] = get_monthly_attendance_stats(
-            db=db, organization_id=organization_id, year=req_year, month=req_month
+            db=db,
+            user_id=current_user.user_id,  # ✅ was passing organization_id before
+            year=req_year,
+            month=req_month,
         )
     except Exception as exc:
-       
         raise HTTPException(status_code=500, detail="Unable to fetch attendance statistics.")
 
     color_map = {"present": "#2ECC71", "absent": "#E74C3C", "late": "#F39C12"}
@@ -120,8 +118,9 @@ def monthly_attendance_stats(
     return AttendanceStatsResponse(
         month=req_month,
         year=req_year,
+        user_id=current_user.user_id,
         organization_id=organization_id,
-        stats=stats_with_colors
+        stats=stats_with_colors,
     )
 
 

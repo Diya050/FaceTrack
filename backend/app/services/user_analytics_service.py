@@ -283,67 +283,72 @@ def get_working_hours_summary(
     }
 
 
+from datetime import date
+from typing import List
+from uuid import UUID
+from collections import defaultdict
+
+from sqlalchemy import select
+
+from app.models.attendance import Attendance
+from app.schemas.user_analytics_schema import AttendanceStat 
+
+
+from datetime import date
+from typing import List
+from collections import defaultdict
+
+from sqlalchemy import select
+from sqlalchemy.orm import Session
+
+from app.models.attendance import Attendance
+from app.schemas.user_analytics_schema import AttendanceStat
+
+
 def get_monthly_attendance_stats(
-    db,
-    organization_id: UUID | None,
+    db: Session,
+    user_id,
     year: int,
     month: int
 ) -> List[AttendanceStat]:
-    """
-    Returns DAY-LEVEL attendance stats (not per-user rows). 
-    """
-
-    # ✅ Month range
     start_date = date(year, month, 1)
     if month == 12:
         end_date = date(year + 1, 1, 1)
     else:
         end_date = date(year, month + 1, 1)
 
-    # ✅ Fetch all attendance rows
     stmt = (
         select(
             Attendance.attendance_date,
             Attendance.status
         )
+        .where(Attendance.user_id == user_id)
         .where(Attendance.attendance_date >= start_date)
         .where(Attendance.attendance_date < end_date)
-        .where(Attendance.is_deleted == False)   # 🔥 IMPORTANT FIX
+        .where(Attendance.is_deleted == False)
     )
-
-    if organization_id:
-        stmt = stmt.where(Attendance.organization_id == organization_id)
 
     rows = db.execute(stmt).all()
 
-    # ✅ Group by date
-    day_status_map = defaultdict(list)
-
-    for att_date, status in rows:
-        normalized_status = (status or "absent").lower()
-        day_status_map[att_date].append(normalized_status)
-
-    # ✅ Final aggregation (per day)
     final_counts = {
         "present": 0,
         "absent": 0,
         "late": 0,
-        "half_day": 0
+        "half_day": 0,   # ✅ kept so schema/frontend don't break
     }
 
-    for att_date, statuses in day_status_map.items():
+    for att_date, status in rows:
+        normalized_status = (status.value if status else "absent").lower()
 
-        # Priority logic (you can tweak this)
-        if any(s in ["present", "on time"] for s in statuses):
+        if normalized_status in ["present", "on time"]:
             final_counts["present"] += 1
-        elif any(s == "late" for s in statuses):
+        elif normalized_status == "late":
             final_counts["late"] += 1
-        elif any(s == "half_day" for s in statuses):
-            final_counts["half_day"] += 1
+        elif normalized_status == "half_day":
+            final_counts["absent"] += 1  # ✅ half_day record → counts as absent
         else:
             final_counts["absent"] += 1
 
-    # ✅ Convert to response format
     stats = [
         AttendanceStat(status=status, count=count)
         for status, count in final_counts.items()
