@@ -59,7 +59,6 @@ const adminNavItems = [
       { label: "Recognition Threshold", path: "/admin/settings/system#threshold" },
       { label: "Notifications Config", path: "/admin/settings/system#notifications" },
       { label: "Storage & Backup", path: "/admin/settings/system#storage" },
-      { label: "Camera Setup", path: "/admin/settings/system#camera" },
     ],
   },
   {
