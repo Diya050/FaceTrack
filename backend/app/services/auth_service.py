@@ -148,7 +148,7 @@ class AuthService:
                 hr.organization_id,
                 f"New user registered: {new_user.full_name}",
                 "INFO",
-                redirect_path="/admin/users/pending",
+                redirect_path="/admin/manage#requests",
                 entity_id=new_user.user_id,
                 event_type="NEW_USER_REGISTERED"
             )
