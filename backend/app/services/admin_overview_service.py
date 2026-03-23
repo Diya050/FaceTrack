@@ -5,8 +5,6 @@ from datetime import date, timedelta
 from app.models.core import User, Department
 from app.models.attendance import Attendance
 
-
-# ✅ CENTRAL STATUS RULE (USE EVERYWHERE)
 PRESENT_STATUSES = ['present', 'late', 'half_day']
 
 
