@@ -1,9 +1,16 @@
-import { Box, Typography, Stack, alpha } from "@mui/material";
+import { Box, Typography, Stack, alpha, IconButton, Tooltip } from "@mui/material";
+import { Delete as DeleteIcon } from "@mui/icons-material";
 import { COLORS } from "../../../../theme/dashboardTheme";
 import AlertChip from "../shared/AlertChip";
 import type { LiveAlert } from "../../../../data/liveAlerts.mock";
 
-export default function LiveAlertRow({ alert }: { alert: LiveAlert }) {
+export default function LiveAlertRow({ 
+  alert, 
+  onDelete 
+}: { 
+  alert: LiveAlert;
+  onDelete?: () => void;
+}) {
   return (
     <Box
       sx={{
@@ -18,7 +25,7 @@ export default function LiveAlertRow({ alert }: { alert: LiveAlert }) {
       }}
     >
       <Stack direction="row" justifyContent="space-between" alignItems="center">
-        <Box>
+        <Box sx={{ flex: 1 }}>
           <Typography sx={{ fontWeight: 700, color: COLORS.navy }}>
             {alert.source}
           </Typography>
@@ -33,6 +40,24 @@ export default function LiveAlertRow({ alert }: { alert: LiveAlert }) {
             {new Date(alert.timestamp).toLocaleString()}
           </Typography>
         </Stack>
+
+        {onDelete && (
+          <Tooltip title="Delete alert">
+            <IconButton
+              size="small"
+              onClick={onDelete}
+              sx={{ 
+                ml: 1, 
+                color: "error.main",
+                "&:hover": {
+                  bgcolor: alpha("#ff0000", 0.1),
+                }
+              }}
+            >
+              <DeleteIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </Stack>
     </Box>
   );

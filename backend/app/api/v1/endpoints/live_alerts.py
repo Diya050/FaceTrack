@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import desc
+from sqlalchemy import desc, and_
+from datetime import datetime, date
 from app.db.session import get_db
 from app.core.dependencies import get_org_id
 from app.models.system import Notification
@@ -32,3 +33,48 @@ def get_live_alerts(
         })
         
     return response
+
+
+@router.delete("/live-alerts/{alert_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_live_alert(
+    alert_id: str,
+    db: Session = Depends(get_db),
+    org_id: str = Depends(get_org_id)
+):
+    """Delete a single live alert by ID"""
+    alert = db.query(Notification).filter(
+        and_(
+            Notification.notification_id == alert_id,
+            Notification.organization_id == org_id
+        )
+    ).first()
+    
+    if not alert:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Alert not found"
+        )
+    
+    db.delete(alert)
+    db.commit()
+
+
+@router.delete("/live-alerts/previous", status_code=status.HTTP_204_NO_CONTENT)
+def delete_previous_alerts(
+    db: Session = Depends(get_db),
+    org_id: str = Depends(get_org_id)
+):
+    """Delete all alerts from before today"""
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    
+    alerts_to_delete = db.query(Notification).filter(
+        and_(
+            Notification.organization_id == org_id,
+            Notification.created_at < today_start
+        )
+    ).all()
+    
+    for alert in alerts_to_delete:
+        db.delete(alert)
+    
+    db.commit()
