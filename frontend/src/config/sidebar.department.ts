@@ -1,7 +1,7 @@
 import {
   Apartment,
   People,
-  CloudUpload,
+  // CloudUpload,
   HowToReg,
   Face,
   Rule,
@@ -27,11 +27,11 @@ export const departmentSidebar: SidebarItem[] = [
     icon: AssignmentInd,
     allowedRoles: ["HR_ADMIN"],
   },
-  {
-    label: "Bulk Upload",
-    path: "/admin/manage#bulk-upload",
-    icon: CloudUpload,
-  },
+  // {
+  //   label: "Bulk Upload",
+  //   path: "/admin/manage#bulk-upload",
+  //   icon: CloudUpload,
+  // },
   {
     label: "Registration Requests",
     path: "/admin/manage#requests",

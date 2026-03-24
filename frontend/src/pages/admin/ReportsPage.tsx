@@ -35,6 +35,31 @@ import type {
 } from "../../types/adminAnalytics.types";
 import { getAdminOverview, getKpiSummary } from "../../services/adminAnalyticsService";
 
+// --- Helper Functions ---
+
+const formatTimeToIST = (timeStr: string | null) => {
+    if (!timeStr || timeStr === "--:--" || timeStr === "-") return "--:--";
+    try {
+        const [hours, minutes, seconds] = timeStr.split(":");
+        const date = new Date();
+        date.setUTCHours(
+            parseInt(hours), 
+            parseInt(minutes), 
+            parseInt(seconds?.split(".")[0] || "0"), 
+            0
+        );
+
+        return date.toLocaleTimeString("en-IN", {
+            timeZone: "Asia/Kolkata",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: true,
+        });
+    } catch {
+        return "--:--";
+    }
+};
+
 const statusColor: Record<string, "success" | "error" | "warning" | "info"> = {
     present: "success",
     absent: "error",
@@ -97,8 +122,12 @@ const ReportsPage = () => {
         if (!detections.length) return;
         const header = "Name,Department,Status,Confidence,Time In,Time Out";
         const lines = detections.map((row) => [
-            row.full_name, row.department, toLabel(row.status),
-            (row.confidence_score ?? 0).toFixed(2), row.time_in ?? "-", row.time_out ?? "-"
+            row.full_name, 
+            row.department, 
+            toLabel(row.status),
+            (row.confidence_score ?? 0).toFixed(2), 
+            formatTimeToIST(row.time_in), 
+            formatTimeToIST(row.time_out)
         ].map(f => `"${String(f).replace(/"/g, '""')}"`).join(","));
         downloadBlob([header, ...lines].join("\n"), `detections-${Date.now()}.csv`, "text/csv");
     };
@@ -114,6 +143,7 @@ const ReportsPage = () => {
                 <Typography variant="body2" color="text.secondary">Real-time attendance analytics and operational tracking.</Typography>
             </Box>
 
+            {/* KPI Cards Grid */}
             <Grid container spacing={2.5}>
                 <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
                     <Card>
@@ -151,6 +181,7 @@ const ReportsPage = () => {
                 </Grid>
             </Grid>
 
+            {/* Charts Grid */}
             <Grid container spacing={2.5}>
                 <Grid size={{ xs: 12, lg: 8 }}>
                     <Card sx={{ height: '100%' }}>
@@ -199,6 +230,7 @@ const ReportsPage = () => {
                 </Grid>
             </Grid>
 
+            {/* Table Section */}
             <Card>
                 <CardContent>
                     <Typography variant="h6" sx={{ fontWeight: 700, mb: 2 }}>Recent Detections Snapshot</Typography>
@@ -220,8 +252,8 @@ const ReportsPage = () => {
                                         <TableCell>
                                             <Chip size="small" label={toLabel(row.status)} color={statusColor[row.status] || "default"} sx={{ fontWeight: 700, fontSize: '0.7rem' }} />
                                         </TableCell>
-                                        <TableCell sx={{ color: 'text.secondary' }}>{row.time_in || "--:--"}</TableCell>
-                                        <TableCell sx={{ color: 'text.secondary' }}>{row.time_out || "--:--"}</TableCell>
+                                        <TableCell sx={{ color: 'text.secondary' }}>{formatTimeToIST(row.time_in)}</TableCell>
+                                        <TableCell sx={{ color: 'text.secondary' }}>{formatTimeToIST(row.time_out)}</TableCell>
                                         <TableCell align="right">{(row.confidence_score ?? 0).toFixed(2)}</TableCell>
                                     </TableRow>
                                 ))}
@@ -231,6 +263,7 @@ const ReportsPage = () => {
                 </CardContent>
             </Card>
 
+            {/* Export Section */}
             <Card>
                 <CardContent>
                     <Grid container spacing={2} alignItems="center">

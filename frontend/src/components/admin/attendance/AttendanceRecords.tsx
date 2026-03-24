@@ -37,22 +37,48 @@ interface AttendanceRecord {
 // --- Helper Functions ---
 const formatDateForInput = (date: Date) => date.toISOString().split("T")[0];
 
+/**
+ * Converts UTC time string from backend to IST (Indian Standard Time)
+ */
 const formatTime = (timeStr: string | null) => {
   if (!timeStr) return "—";
-  const cleanTime = timeStr.split(".")[0]; // Removes microseconds
-  return new Date(`1970-01-01T${cleanTime}`).toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  
+  try {
+    // Backend gives "HH:mm:ss.ms". We append a dummy date and "Z" to force UTC parsing.
+    const [hours, minutes, seconds] = timeStr.split(":");
+    const date = new Date();
+    date.setUTCHours(parseInt(hours), parseInt(minutes), parseInt(seconds.split(".")[0]), 0);
+
+    return date.toLocaleTimeString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (err) {
+    return "—";
+  }
 };
 
+/**
+ * Calculates duration between two UTC time strings, returning difference in IST context
+ */
 function getWorkingHours(checkIn: string | null, checkOut: string | null) {
   if (!checkIn || !checkOut || checkIn === checkOut) return "—";
   try {
-    const start = new Date(`1970-01-01T${checkIn.split(".")[0]}`).getTime();
-    const end = new Date(`1970-01-01T${checkOut.split(".")[0]}`).getTime();
+    const parseUTC = (t: string) => {
+      const [h, m, s] = t.split(":");
+      const d = new Date(0); // Use epoch
+      d.setUTCHours(parseInt(h), parseInt(m), parseInt(s.split(".")[0]), 0);
+      return d.getTime();
+    };
+
+    const start = parseUTC(checkIn);
+    const end = parseUTC(checkOut);
+    
     const diffMs = end - start;
     if (diffMs <= 0) return "—";
+    
     const totalMinutes = Math.floor(diffMs / 60000);
     const h = Math.floor(totalMinutes / 60);
     const m = totalMinutes % 60;
@@ -72,7 +98,6 @@ const statusOptions = [
 
 // --- Main Component ---
 export default function AttendanceRecords() {
-  // 1. State Management
   const [startDate, setStartDate] = useState(
     formatDateForInput(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
   );
@@ -82,7 +107,6 @@ export default function AttendanceRecords() {
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 2. Fetch Data
   useEffect(() => {
     fetchAttendance();
   }, [startDate, endDate]);
@@ -119,7 +143,6 @@ export default function AttendanceRecords() {
       .finally(() => setLoading(false));
   };
 
-  // 3. Filter Logic
   const filteredRecords = records.filter((r) => {
     const matchesSearch =
       r.employeeName.toLowerCase().includes(search.toLowerCase()) ||
@@ -142,7 +165,6 @@ export default function AttendanceRecords() {
 
       <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #E0E0E0" }}>
         <CardContent sx={{ p: 3 }}>
-          {/* --- Filters Bar --- */}
           <Stack direction={{ xs: "column", md: "row" }} spacing={2} mb={4}>
             <TextField
               label="From"
@@ -168,7 +190,6 @@ export default function AttendanceRecords() {
               sx={{ flexGrow: 1 }}
             />
 
-            {/* Checklist Multi-Select */}
             <FormControl size="small" sx={{ width: 240 }}>
               <InputLabel id="status-checkbox-label">Filter Status</InputLabel>
               <Select
@@ -200,7 +221,6 @@ export default function AttendanceRecords() {
             </FormControl>
           </Stack>
 
-          {/* --- Data Table --- */}
           <Table>
             <TableHead>
               <TableRow sx={{ bgcolor: "#F1F3F5" }}>
