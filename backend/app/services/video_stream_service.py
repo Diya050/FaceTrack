@@ -1,15 +1,24 @@
 from datetime import datetime
 from sqlalchemy import desc
 
-from app.models.streams import VideoStream
+from app.models.streams import VideoStream, Camera
 
 
 def start_stream(db, camera_id):
+    camera = (
+        db.query(Camera)
+        .filter(Camera.camera_id == camera_id)
+        .first()
+    )
+
+    if not camera:
+        return None
 
     stream = VideoStream(
         camera_id=camera_id,
         stream_url=f"/api/v1/cameras/{camera_id}/stream",
-        processed_status="processing"
+        processed_status="processing",
+        organization_id=camera.organization_id,
     )
 
     db.add(stream)
