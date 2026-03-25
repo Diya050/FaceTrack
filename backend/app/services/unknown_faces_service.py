@@ -119,8 +119,8 @@ class UnknownFacesService:
             user_id=notification_target,
             organization_id=current_user.organization_id,
             message=msg_body,
-            level="INFO",
-            redirect_path="/admin/unknown-faces",
+            type="INFO",
+            redirect_path="/admin/monitoring#unknown-faces",
             entity_id=str(face.unknown_id),
             event_type="UNKNOWN_FACE_RESOLVED"
         )

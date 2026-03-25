@@ -30,9 +30,25 @@ class NotificationService:
         )
 
         db.add(notification)
+        db.flush()  # flush so the new one gets an ID and created_at
+
+        # Keep only the latest 10 notifications per user
+        # Delete any beyond the 10 most recent
+        subquery = (
+            db.query(Notification.notification_id)
+            .filter(Notification.user_id == user_id)
+            .order_by(Notification.created_at.desc())
+            .limit(10)
+            .subquery()
+        )
+
+        db.query(Notification).filter(
+            Notification.user_id == user_id,
+            Notification.notification_id.notin_(subquery)
+        ).delete(synchronize_session=False)
+
         db.commit()
         db.refresh(notification)
-
         return notification
 
     @staticmethod
