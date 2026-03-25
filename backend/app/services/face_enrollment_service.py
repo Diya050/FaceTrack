@@ -97,7 +97,7 @@ class FaceEnrollmentService:
                         db, hr.user_id, hr.organization_id,
                         f"{current_user.full_name} submitted face images for approval",
                         "INFO",
-                        redirect_path="/admin/face-enrollment/requests",
+                        redirect_path="/admin/manage#face-enrollment-requests",
                         event_type="FACE_ENROLLMENT_SUBMITTED"
                     )
 

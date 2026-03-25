@@ -129,7 +129,7 @@ class AdminFaceApprovalService:
             user.organization_id,
             "Face enrollment approved. Your biometric data has been generated.",
             "SUCCESS",
-            redirect_path="/dashboard",
+            redirect_path="/user/dashboard",
             event_type="FACE_ENROLLMENT_APPROVED"
         )
 
@@ -194,7 +194,7 @@ class AdminFaceApprovalService:
             organization_id=current_user.organization_id,
             message=f"Last enrollment rejected: {reason}. Please follow the new request to try again.",
             type="ERROR",
-            redirect_path="/face-enrollment",
+            redirect_path="/user/capture",
             event_type="FACE_ENROLLMENT_REJECTED"
         )
 
