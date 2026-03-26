@@ -36,17 +36,17 @@ const ReportsPage = () => {
       {/* 🔥 FULL WIDTH STACKED LAYOUT */}
 
       {/* 1️⃣ Recent Detections (FULL WIDTH, PRIMARY) */}
-      <Box sx={{ width: "100%", mb: 4 }}>
+      <Box id="live" sx={{ width: "100%", mb: 4 }}>
         <RecentDetectionsTable />
       </Box>
 
       {/* 2️⃣ Working Hours Chart (FULL WIDTH) */}
-      <Box sx={{ width: "100%", mb: 4 }}>
+      <Box id="hours" sx={{ width: "100%", mb: 4 }}>
         <WorkingHoursChart />
       </Box>
 
       {/* 3️⃣ Export Buttons (COMPACT, FULL WIDTH ALIGNMENT) */}
-      <Box sx={{ width: "100%" }}>
+      <Box id="exports" sx={{ width: "100%" }}>
         <ExportActionButtons />
       </Box>
     </Box>

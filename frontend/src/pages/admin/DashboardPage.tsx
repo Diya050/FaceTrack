@@ -69,6 +69,7 @@ const DashboardPage = () => {
 
         {/* ROW 3: Three Equal Sized Chart Cards (Forces expansion) */}
         <Box
+        id="analytics" 
           sx={{
             display: "grid",
             gridTemplateColumns: {
@@ -86,16 +87,17 @@ const DashboardPage = () => {
 
         {/* 🛠️ ROW 4: Conditionals applied here! */}
         <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: {
-              xs: "1fr",
-              md: "repeat(2, 1fr)", // Always force 2-columns on desktop now!
-            },
-            gap: 3,
-            width: "100%",
-          }}
-        >
+
+  sx={{
+    display: "grid",
+    gridTemplateColumns: {
+      xs: "1fr",
+      md: "repeat(2, 1fr)",
+    },
+    gap: 3,
+    width: "100%",
+  }}
+>
           {/* Everyone sees Absent Analytics */}
           <AbsentAnalytics />
 
@@ -106,8 +108,8 @@ const DashboardPage = () => {
              <Box>
   <Box >
     <Stack spacing={4}>
-      <SystemHealth />
-      <LiveAlerts />
+      <Box id = "system-health" ><SystemHealth /></Box>
+      <Box id = "live-alerts" ><LiveAlerts /></Box>
     </Stack>
   </Box>
 </Box>

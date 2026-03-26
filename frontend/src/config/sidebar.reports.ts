@@ -1,26 +1,20 @@
 import {
-  Assessment,
+  LiveHelpSharp,
   Timeline,
-  Sensors,
   FileDownload,
 } from "@mui/icons-material";
 import type { SidebarItem } from "../types/sidebar";
 
 export const reportsSidebar: SidebarItem[] = [
   {
-    label: "Summary",
-    path: "/admin/reports#summary",
-    icon: Assessment,
+    label: "Live Detection",
+    path: "/admin/reports#live",
+    icon: LiveHelpSharp,
   },
   {
-    label: "Trend Analysis",
-    path: "/admin/reports#trends",
+    label: "work hours",
+    path: "/admin/reports#hours",
     icon: Timeline,
-  },
-  {
-    label: "Detections",
-    path: "/admin/reports#detections",
-    icon: Sensors,
   },
   {
     label: "Exports",
