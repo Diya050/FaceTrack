@@ -1,76 +1,86 @@
 
-import type { ReactNode } from "react";
-
-export interface WeeklyAttendanceData {
-  labels: string[];
-  present: number[];
-  absent: number[];
-  late: number[];
-}
-
-export interface MonthlyTrendData {
-  labels: string[];
-  rate: number[];
-  trend_direction: "up" | "down" | "flat";
-  trend_value: string;
-}
-
-export interface DepartmentSummary {
-  department_id: string;
-  department: string;
+//kpisummery
+export interface KPIOverview {
   present: number;
+  absent: number;
+  late: number;
+  half_day: number;
   total: number;
-  percentage: number;
 }
 
-export interface OverviewStats {
-  active_staff: number;
-  on_premises: number;
-  avg_attendance_rate: number;
+//trend
+export interface TrendItem {
+  date: string;       // "25 Mar"
+  present: number;
+  absent: number;
+  late: number;
+  half_day: number;
 }
 
-export interface AdminOverviewResponse {
-  weekly_report: WeeklyAttendanceData;
-  monthly_trend: MonthlyTrendData;
-  department_summary: DepartmentSummary[];
-  stats: OverviewStats;
-}
+export type TrendResponse = TrendItem[];
 
-
-export type AttendanceStatus = "present" | "absent" | "late" | "early_leave";
-
-export interface KpiStats {
-  present_today: number;
-  absent_today: number;
-  late_today: number;
-  early_leave_today: number;
-  total_registered: number;
-  attendance_rate: number;
-  avg_confidence_score: number;
-}
-
-export interface AttendanceRecord {
-  attendance_id: string;
-  full_name: string;
+//department attendance
+export interface DepartmentAttendanceItem {
   department: string;
-  camera_name: string;
-  time_in: string | null;
-  time_out: string | null;
-  confidence_score: number | null;
-  status: AttendanceStatus;
+  attendance: number; // percentage
 }
 
-export interface KpiSummaryResponse {
-  stats: KpiStats;
-  recent_detections: AttendanceRecord[];
+export type DepartmentAttendanceResponse = DepartmentAttendanceItem[];
+
+
+//late analysis
+
+export interface LateTrendItem {
+  date: string; // "Mon", "Tue"
+  late_count: number;
 }
 
-// This matches the props needed by your KpiCard component
-export interface KpiCardData {
-  label: string;
-  value: number;
-  total: number;
-  color: string;
-  icon: ReactNode;
-  sub: string;
+export interface LateAnalyticsResponse {
+  today_late: number;
+  trend: LateTrendItem[];
+}
+
+
+//half days
+
+export interface HalfDayTrendItem {
+  date: string;
+  count: number;
+}
+
+export interface HalfDayAnalyticsResponse {
+  today_half_day: number;
+  trend: HalfDayTrendItem[];
+}
+
+
+//absent
+
+export interface AbsentTrendItem {
+  date: string;
+  count: number;
+}
+
+export interface AbsentAnalyticsResponse {
+  today_absent: number;
+  trend: AbsentTrendItem[];
+}
+
+// recognization
+
+export interface RecognitionTrendItem {
+  date: string;
+  unknown_count: number;
+}
+
+export interface RecognitionAnalyticsResponse {
+  recognition_rate: number; // %
+  today_unknown_faces: number;
+  trend: RecognitionTrendItem[];
+}
+
+export interface DeptCameraStatsResponse {
+  active_cameras_count: number;
+  avg_confidence_score: number;
+  total_department_scans_today: number;
 }

@@ -1,5 +1,5 @@
 import { Typography, Box } from "@mui/material";
-import { COLORS } from "../../../../../theme/dashboardTheme";
+import { COLORS } from "../../../theme/dashboardTheme";
 
 export default function SectionLabel({ children }: { children: React.ReactNode }) {
   return (

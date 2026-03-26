@@ -12,7 +12,7 @@ import {
   AlertTitle
 } from "@mui/material";
 import { Delete as DeleteIcon } from "@mui/icons-material";
-import SectionLabel from "./Kpisummery/shared/SectionLabel";
+import SectionLabel from "./SectionLable";
 import LiveAlertRow from "./livealerts/LiveAlertRow";
 import { 
   fetchLiveAlerts, 
