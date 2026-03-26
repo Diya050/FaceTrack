@@ -14,7 +14,10 @@ const CameraStream: React.FC<Props> = ({ cameraId }) => {
   const [offline, setOffline] = useState(false);
   const [retry, setRetry] = useState(0);
 
-  const streamUrl = `${API_BASE}/cameras/${cameraId}/stream`;
+  const token = localStorage.getItem("token");
+  const streamUrl = token
+    ? `${API_BASE}/cameras/${cameraId}/stream?token=${encodeURIComponent(token)}`
+    : `${API_BASE}/cameras/${cameraId}/stream`;
 
   /* Handle stream load */
 
