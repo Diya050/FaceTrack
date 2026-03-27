@@ -33,20 +33,13 @@ def create_ticket(
     data: SupportTicketCreate,
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
-) -> SupportTicketResponse:
+):
     """
     Create a new support ticket.
 
     Accessible to:
     - Any authenticated user.
-
-    Typical issues:
-    - Camera not detecting face
-    - Camera blurry
-    - Login issues
-    - Access problems
     """
-
     return SupportTicketService.create_ticket(db, current_user, data)
 
 
@@ -60,16 +53,15 @@ def list_tickets(
         description="Filter tickets by status",
     ),
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
-) -> List[SupportTicketResponse]:
+    
+    current_user=Depends(require_roles(["HR_ADMIN"])),
+):
     """
     Retrieve all support tickets for the organization.
 
     Accessible to:
-    - HR_ADMIN
-    - ADMIN
+    - HR_ADMIN Only
     """
-
     return SupportTicketService.list_tickets(db, current_user, status)
 
 
@@ -81,20 +73,14 @@ def update_ticket_status(
     ticket_id: UUID,
     data: SupportTicketUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
-) -> SupportTicketResponse:
+    current_user=Depends(require_roles(["HR_ADMIN"])),
+):
     """
     Update the status of a support ticket.
 
     Accessible to:
-    - HR_ADMIN
-    - ADMIN
-
-    Typical updates:
-    - Open → In Progress
-    - In Progress → Resolved
+    - HR_ADMIN Only
     """
-
     return SupportTicketService.update_ticket_status(
         db=db,
         current_user=current_user,
