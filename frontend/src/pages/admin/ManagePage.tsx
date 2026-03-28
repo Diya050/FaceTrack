@@ -11,6 +11,7 @@ import ViewOrganizationUsers from "./ViewOrganizationUsers";
 import AttendanceRules from "../../components/admin/manage/AttendanceRules";
 import RegistrationRequests from "../../components/admin/manage/RegistrationRequests";
 import AdminFaceEnrollmentRequests from "../../components/admin/manage/FaceEnrollmentRequests";
+import DepartmentUsers from "../../components/admin/manage/DepartmentUsers";
 
 
 const NAVBAR_HEIGHT = 64;
@@ -39,10 +40,15 @@ const ManagePage = () => {
   return (
     <Box sx={{ bgcolor: "#F8F9FA" }}>
       <Stack spacing={0}>
-        <Box id="departments">
+        {role === "HR_ADMIN" && (<Box id="departments">
           <Departments />
         </Box>
+        )}
 
+        {role === "ADMIN" && (<Box id="users">
+          <DepartmentUsers />
+        </Box>
+        )}
 
         {role === "HR_ADMIN" && (
           <Box id="organization-users">
@@ -56,17 +62,21 @@ const ManagePage = () => {
         </Box>
         )}
 
+        {role === "HR_ADMIN" && (
         <Box id="requests">
           <RegistrationRequests />
         </Box>
+        )}
 
+        {role === "HR_ADMIN" && (
         <Box id="face-enrollment-requests">
           <AdminFaceEnrollmentRequests />
         </Box>
-
+        )}
         <Box id="rules">
           <AttendanceRules />
         </Box>
+
       </Stack>
     </Box>
   );

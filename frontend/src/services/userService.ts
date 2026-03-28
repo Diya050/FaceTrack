@@ -39,3 +39,8 @@ export const listOrganizationUsers = async (
   });
   return res.data;
 };
+
+export const getDepartmentUsers = async (): Promise<OrganizationUser[]> => {
+  const res = await api.get<OrganizationUser[]>("/departments/department-users");
+  return res.data;
+};

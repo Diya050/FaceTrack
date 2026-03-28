@@ -141,7 +141,7 @@ def get_org_attendance(
     ),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(50, ge=1, le=200, description="Maximum number of records to return"),
-    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN"])),
     db: Session = Depends(get_db),
 ):
     """
@@ -171,51 +171,18 @@ def get_org_attendance(
 @router.get("/department/{department_id}", response_model=List[DepartmentAttendanceUserRecord])
 def get_department_attendance_endpoint(
     department_id: UUID,
-    target_date: Optional[date] = Query(
-        None,
-        description="Fetch attendance for a specific date (YYYY-MM-DD). "
-                    "Overrides start_date/end_date when provided.",
-        examples=["2026-03-10"],
-    ),
-    start_date: Optional[date] = Query(
-        None,
-        description="Filter attendance from this date (inclusive), format: YYYY-MM-DD",
-        examples=["2026-03-01"],
-    ),
-    end_date: Optional[date] = Query(
-        None,
-        description="Filter attendance up to this date (inclusive), format: YYYY-MM-DD",
-        examples=["2026-03-10"],
-    ),
-    status: Optional[str] = Query(
-        None,
-        description="Filter by attendance status: present, absent, half_day, on_leave, late",
-        examples=["present"],
-    ),
-    skip: int = Query(0, ge=0, description="Number of records to skip"),
-    limit: int = Query(50, ge=1, le=200, description="Maximum number of records to return"),
+    target_date: Optional[date] = None,
+    start_date: Optional[date] = None,
+    end_date: Optional[date] = None,
+    status: Optional[str] = None,
+    skip: int = 0,
+    limit: int = 50,
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN"])),
 ):
-    """
-    Retrieve attendance records for all members of a department.
-
-    **Role Behaviour:**
-    - **HR_ADMIN** – Can view attendance for any department within their organization.
-    - **ADMIN** – Can only view attendance for their own department.
-    """
     return get_department_attendance(
-        db=db,
-        current_user=current_user,
-        department_id=department_id,
-        target_date=target_date,
-        start_date=start_date,
-        end_date=end_date,
-        status=status,
-        skip=skip,
-        limit=limit,
+        db, current_user, department_id, target_date, start_date, end_date, status, skip, limit
     )
-
 # -------------------------------------------------------------------------
 # Get Monthly Attendance
 # -------------------------------------------------------------------------
@@ -239,7 +206,7 @@ def monthly_attendance(
     response_model=List[AttendanceRuleResponse],
 )
 def get_attendance_rules(
-    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    current_user: User = Depends(require_roles(["ADMIN", "HR_ADMIN"])),
     db: Session = Depends(get_db),
 ):
 
