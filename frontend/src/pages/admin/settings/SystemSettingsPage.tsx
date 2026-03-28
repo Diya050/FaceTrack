@@ -7,7 +7,6 @@ import AIModels from "../../../components/admin/settings/system/AIModels";
 import RecognitionThreshold from "../../../components/admin/settings/system/RecognitionThreshold";
 import NotificationConfig from "../../../components/admin/settings/system/NotificationConfig";
 import StorageBackup from "../../../components/admin/settings/system/StorageBackup";
-import CameraSetup from "../../../components/admin/settings/system/CameraSetup";
 import SystemStatus from "../../../components/admin/settings/system/SystemStatus";
 
 
@@ -50,10 +49,6 @@ const SystemSettingsPage = () => {
 
       <Box id="storage">
         <StorageBackup />
-      </Box>
-
-      <Box id="cameras">
-        <CameraSetup />
       </Box>
 
       <Box id="system-status">

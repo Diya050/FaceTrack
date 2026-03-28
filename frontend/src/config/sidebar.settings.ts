@@ -3,7 +3,6 @@ import {
   Tune,
   NotificationsActive,
   Storage,
-  Videocam,
   MonitorHeart,
   Gavel,
   Shield,
@@ -38,11 +37,6 @@ export const settingsSidebar: SidebarItem[] = [
         label: "Storage & Backup",
         path: "/admin/settings/system#storage",
         icon: Storage,
-      },
-      {
-        label: "Camera Setup",
-        path: "/admin/settings/system#cameras",
-        icon: Videocam,
       },
       {
         label: "System Status",

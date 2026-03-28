@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Box, Typography, Stack, alpha } from '@mui/material';
 import { Bar } from 'react-chartjs-2';
 import { COLORS } from '../../theme/dashboardTheme';
-import { getChartScales, getChartTooltip } from "../admin/dashboard/overview/shared/ChartConstants";
-import ChartWrapper from "../admin/dashboard/overview/shared/ChartWrapper";
+import { getChartScales, getChartTooltip } from "../admin/dashboard/ChartConstants";
+import ChartWrapper from "../admin/dashboard/ChartWrapper";
 import { getMonthlyAttendanceStats } from '../../services/userAnalyticsService';
 
 export default function MonthlyAttendanceChart() {

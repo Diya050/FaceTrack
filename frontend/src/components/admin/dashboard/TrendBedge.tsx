@@ -1,6 +1,6 @@
 import { Stack, Typography, alpha } from "@mui/material";
 import { TrendingUp, TrendingDown, Remove } from "@mui/icons-material";
-import { COLORS } from "../../../../../theme/dashboardTheme";
+import { COLORS } from "../../../theme/dashboardTheme";
 
 interface TrendBadgeProps {
   trend?: "up" | "down" | "flat";

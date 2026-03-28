@@ -14,201 +14,218 @@ import {
   MenuItem,
   Stack,
   Chip,
-  alpha,
+  CircularProgress,
+  Checkbox,
+  ListItemText,
+  FormControl,
+  InputLabel,
+  OutlinedInput,
 } from "@mui/material";
 import { COLORS } from "../../../theme/dashboardTheme";
 
+// --- Types & Interfaces ---
 interface AttendanceRecord {
   id: string;
   employeeName: string;
+  department: string;
   date: string;
   checkIn: string | null;
   checkOut: string | null;
-  confidence: number | null;
-  camera: string | null;
+  status: string;
 }
 
-const LATE_AFTER = "09:30";
-const EARLY_BEFORE = "17:00";
+// --- Helper Functions ---
+const formatDateForInput = (date: Date) => date.toISOString().split("T")[0];
 
-function isAfter(time: string, limit: string) {
-  return time.localeCompare(limit) === 1;
-}
+/**
+ * Converts UTC time string from backend to IST (Indian Standard Time)
+ */
+const formatTime = (timeStr: string | null) => {
+  if (!timeStr) return "—";
+  
+  try {
+    // Backend gives "HH:mm:ss.ms". We append a dummy date and "Z" to force UTC parsing.
+    const [hours, minutes, seconds] = timeStr.split(":");
+    const date = new Date();
+    date.setUTCHours(parseInt(hours), parseInt(minutes), parseInt(seconds.split(".")[0]), 0);
 
-function isBefore(time: string, limit: string) {
-  return time.localeCompare(limit) === -1;
-}
-
-function getWorkingHours(checkIn: string | null, checkOut: string | null) {
-  if (!checkIn || !checkOut) return null;
-
-  const [inH, inM] = checkIn.split(":").map(Number);
-  const [outH, outM] = checkOut.split(":").map(Number);
-
-  const start = inH * 60 + inM;
-  const end = outH * 60 + outM;
-
-  const diff = end - start;
-  if (diff <= 0) return null;
-
-  const hours = Math.floor(diff / 60);
-  const minutes = diff % 60;
-
-  return `${hours}h ${minutes}m`;
-}
-
-function deriveFlags(r: AttendanceRecord) {
-  if (!r.checkIn) {
-    return {
-      absent: true,
-      late: false,
-      earlyLeave: false,
-    };
+    return date.toLocaleTimeString("en-IN", {
+      timeZone: "Asia/Kolkata",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch (err) {
+    return "—";
   }
+};
 
-  return {
-    absent: false,
-    late: isAfter(r.checkIn, LATE_AFTER),
-    earlyLeave:
-      r.checkOut ? isBefore(r.checkOut, EARLY_BEFORE) : false,
-  };
+/**
+ * Calculates duration between two UTC time strings, returning difference in IST context
+ */
+function getWorkingHours(checkIn: string | null, checkOut: string | null) {
+  if (!checkIn || !checkOut || checkIn === checkOut) return "—";
+  try {
+    const parseUTC = (t: string) => {
+      const [h, m, s] = t.split(":");
+      const d = new Date(0); // Use epoch
+      d.setUTCHours(parseInt(h), parseInt(m), parseInt(s.split(".")[0]), 0);
+      return d.getTime();
+    };
+
+    const start = parseUTC(checkIn);
+    const end = parseUTC(checkOut);
+    
+    const diffMs = end - start;
+    if (diffMs <= 0) return "—";
+    
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}h ${m}m`;
+  } catch {
+    return "—";
+  }
 }
 
-export default function AttendanceRecords() {
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState("all");
-  const [confidence, setConfidence] = useState("all");
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+const statusOptions = [
+  { value: "present", label: "Present", color: "#4CAF50" },
+  { value: "absent", label: "Absent", color: "#F44336" },
+  { value: "late", label: "Late", color: "#FF9800" },
+  { value: "half_day", label: "Half Day", color: "#03A9F4" },
+  { value: "on_leave", label: "On Leave", color: "#9C27B0" },
+];
 
-  // ✅ FETCH FROM BACKEND
+// --- Main Component ---
+export default function AttendanceRecords() {
+  const [startDate, setStartDate] = useState(
+    formatDateForInput(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+  );
+  const [endDate, setEndDate] = useState(formatDateForInput(new Date()));
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+
   useEffect(() => {
     fetchAttendance();
-  }, []);
+  }, [startDate, endDate]);
 
   const fetchAttendance = () => {
-    fetch("http://localhost:8000/api/v1/attendance/organization", {
+    setLoading(true);
+    const params = new URLSearchParams({
+      start_date: startDate,
+      end_date: endDate,
+      limit: "100",
+    });
+
+    fetch(`http://127.0.0.1:8000/api/v1/attendance/organization?${params}`, {
       headers: {
         Authorization: `Bearer ${localStorage.getItem("token")}`,
       },
     })
       .then((res) => res.json())
       .then((data) => {
-        if (!Array.isArray(data)) {
-    console.error("Backend error:", data);
-    return;
-  }
-        const formatted = data.map((item: any) => ({
-          id: item.user_id + item.date,
-          employeeName: item.full_name || "User",
-          date: item.date,
-          checkIn: item.check_in,
-          checkOut: item.check_out,
-          confidence: item.confidence ?? null,
-          camera: item.camera_name || "N/A",
-        }));
-
-        setRecords(formatted);
+        if (Array.isArray(data)) {
+          const formatted = data.map((item: any) => ({
+            id: item.attendance_id,
+            employeeName: item.full_name || "Unknown",
+            department: item.department_name || "N/A",
+            date: item.attendance_date,
+            checkIn: item.first_check_in,
+            checkOut: item.last_check_out,
+            status: item.status,
+          }));
+          setRecords(formatted);
+        }
       })
-      .catch((err) => {
-        console.error("Error fetching attendance", err);
-      });
+      .catch((err) => console.error("API Error:", err))
+      .finally(() => setLoading(false));
   };
 
-  // ✅ FILTER LOGIC
   const filteredRecords = records.filter((r) => {
-    const flags = deriveFlags(r);
-
-    const matchesSearch = r.employeeName
-      .toLowerCase()
-      .includes(search.toLowerCase());
-
-    const derivedStatus =
-      flags.absent
-        ? "absent"
-        : flags.late
-        ? "late"
-        : flags.earlyLeave
-        ? "early_leave"
-        : "present";
-
+    const matchesSearch =
+      r.employeeName.toLowerCase().includes(search.toLowerCase()) ||
+      r.department.toLowerCase().includes(search.toLowerCase());
     const matchesStatus =
-      status === "all" || derivedStatus === status;
-
-    const matchesConfidence =
-      confidence === "all" ||
-      (confidence === "high" && r.confidence !== null && r.confidence >= 85) ||
-      (confidence === "medium" &&
-        r.confidence !== null &&
-        r.confidence >= 65 &&
-        r.confidence < 85) ||
-      (confidence === "low" &&
-        (r.confidence === null || r.confidence < 65));
-
-    return matchesSearch && matchesStatus && matchesConfidence;
+      statusFilter.length === 0 || statusFilter.includes(r.status);
+    return matchesSearch && matchesStatus;
   });
+
+  const handleStatusChange = (event: any) => {
+    const { value } = event.target;
+    setStatusFilter(typeof value === "string" ? value.split(",") : value);
+  };
 
   return (
     <Box sx={{ mt: 8, p: 4, bgcolor: "#F8F9FA", minHeight: "100vh" }}>
-      <Typography
-        variant="h5"
-        sx={{ fontWeight: 800, color: COLORS.navy, mb: 3 }}
-      >
-        Attendance Records
+      <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.navy, mb: 3 }}>
+        Organization Attendance
       </Typography>
 
-      <Card elevation={0} sx={{ borderRadius: 4 }}>
+      <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #E0E0E0" }}>
         <CardContent sx={{ p: 3 }}>
-          {/* FILTERS */}
-          <Stack direction="row" spacing={2} mb={3}>
+          <Stack direction={{ xs: "column", md: "row" }} spacing={2} mb={4}>
             <TextField
-              placeholder="Search employee"
+              label="From"
+              type="date"
+              size="small"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="To"
+              type="date"
+              size="small"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              placeholder="Search employee or department..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               size="small"
-              sx={{ width: 240 }}
+              sx={{ flexGrow: 1 }}
             />
 
-            <Select
-              value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              size="small"
-              sx={{ width: 180 }}
-            >
-              <MenuItem value="all">All Status</MenuItem>
-              <MenuItem value="present">Present</MenuItem>
-              <MenuItem value="late">Late</MenuItem>
-              <MenuItem value="early_leave">Early Leave</MenuItem>
-              <MenuItem value="absent">Absent</MenuItem>
-            </Select>
-
-            <Select
-              value={confidence}
-              onChange={(e) => setConfidence(e.target.value)}
-              size="small"
-              sx={{ width: 200 }}
-            >
-              <MenuItem value="all">All Confidence</MenuItem>
-              <MenuItem value="high">High (≥85%)</MenuItem>
-              <MenuItem value="medium">Medium (65–84%)</MenuItem>
-              <MenuItem value="low">Low (&lt;65%)</MenuItem>
-            </Select>
+            <FormControl size="small" sx={{ width: 240 }}>
+              <InputLabel id="status-checkbox-label">Filter Status</InputLabel>
+              <Select
+                labelId="status-checkbox-label"
+                multiple
+                value={statusFilter}
+                onChange={handleStatusChange}
+                input={<OutlinedInput label="Filter Status" />}
+                renderValue={(selected) => (
+                  <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                    {selected.map((val) => (
+                      <Chip
+                        key={val}
+                        label={val.replace("_", " ").toUpperCase()}
+                        size="small"
+                        sx={{ height: 20, fontSize: "0.65rem" }}
+                      />
+                    ))}
+                  </Box>
+                )}
+              >
+                {statusOptions.map((opt) => (
+                  <MenuItem key={opt.value} value={opt.value}>
+                    <Checkbox checked={statusFilter.indexOf(opt.value) > -1} />
+                    <ListItemText primary={opt.label} />
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
           </Stack>
 
-          {/* TABLE */}
           <Table>
             <TableHead>
-              <TableRow>
-                {[
-                  "Employee",
-                  "Date",
-                  "Check In",
-                  "Check Out",
-                  "Working Hours",
-                  "Status",
-                  "Confidence",
-                  "Camera",
-                ].map((h) => (
-                  <TableCell key={h} sx={{ fontWeight: 800 }}>
+              <TableRow sx={{ bgcolor: "#F1F3F5" }}>
+                {["Employee", "Dept", "Date", "In", "Out", "Duration", "Status"].map((h) => (
+                  <TableCell key={h} sx={{ fontWeight: 800, color: COLORS.navy }}>
                     {h}
                   </TableCell>
                 ))}
@@ -216,45 +233,48 @@ export default function AttendanceRecords() {
             </TableHead>
 
             <TableBody>
-              {filteredRecords.map((r) => {
-                const flags = deriveFlags(r);
-                const workingHours = getWorkingHours(
-                  r.checkIn,
-                  r.checkOut
-                );
-
-                return (
-                  <TableRow key={r.id}>
-                    <TableCell>{r.employeeName}</TableCell>
-                    <TableCell>{r.date}</TableCell>
-                    <TableCell>{r.checkIn ?? "—"}</TableCell>
-                    <TableCell>{r.checkOut ?? "—"}</TableCell>
-                    <TableCell>{workingHours ?? "—"}</TableCell>
-
-                    <TableCell>
-                      {flags.absent && <Chip label="ABSENT" />}
-                      {flags.late && <Chip label="LATE" />}
-                      {flags.earlyLeave && <Chip label="EARLY LEAVE" />}
-                      {!flags.absent && !flags.late && !flags.earlyLeave && (
-                        <Chip label="PRESENT" />
-                      )}
-                    </TableCell>
-
-                    <TableCell>
-                      {r.confidence ? `${r.confidence}%` : "—"}
-                    </TableCell>
-
-                    <TableCell>{r.camera ?? "—"}</TableCell>
-                  </TableRow>
-                );
-              })}
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
+                    <CircularProgress size={30} />
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredRecords.map((r) => {
+                  const statusInfo = statusOptions.find((o) => o.value === r.status);
+                  return (
+                    <TableRow key={r.id} hover>
+                      <TableCell sx={{ fontWeight: 600 }}>{r.employeeName}</TableCell>
+                      <TableCell>{r.department}</TableCell>
+                      <TableCell>{r.date}</TableCell>
+                      <TableCell>{formatTime(r.checkIn)}</TableCell>
+                      <TableCell>{formatTime(r.checkOut)}</TableCell>
+                      <TableCell>{getWorkingHours(r.checkIn, r.checkOut)}</TableCell>
+                      <TableCell>
+                        <Chip
+                          label={r.status.replace("_", " ").toUpperCase()}
+                          size="small"
+                          sx={{
+                            bgcolor: statusInfo?.color || "#9E9E9E",
+                            color: "white",
+                            fontWeight: "bold",
+                            fontSize: "0.7rem",
+                          }}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
             </TableBody>
           </Table>
 
-          {filteredRecords.length === 0 && (
-            <Typography sx={{ textAlign: "center", mt: 4 }}>
-              No records found
-            </Typography>
+          {!loading && filteredRecords.length === 0 && (
+            <Box sx={{ textAlign: "center", py: 10 }}>
+              <Typography variant="body1" color="text.secondary">
+                No attendance records found for this selection.
+              </Typography>
+            </Box>
           )}
         </CardContent>
       </Card>

@@ -260,7 +260,7 @@ def review_attendance_correction(
     if not correction:
         raise HTTPException(status_code=404, detail="Correction request not found")
 
-    # ✅ FIXED ENUM CHECK
+
     if correction.status != AttendanceCorrectionStatus.pending:
         raise HTTPException(status_code=400, detail="Correction already reviewed")
 
@@ -292,7 +292,6 @@ def review_attendance_correction(
             detail="Not authorized to review correction requests"
         )
 
-    # ✅ FIXED ENUM ASSIGNMENT
     correction.status = AttendanceCorrectionStatus(data.status)
     correction.reviewed_by = current_user.user_id
     correction.reviewed_at = datetime.now(timezone.utc)
@@ -340,7 +339,7 @@ def review_attendance_correction(
         current_user.organization_id,
         f"Your attendance correction has been {correction.status.value}",
         "INFO",
-        redirect_path="/attendance/corrections",
+        redirect_path="/admin/attendance/corrections",
         entity_id=correction.correction_id,
         event_type="ATTENDANCE_CORRECTION_REVIEWED"
     )

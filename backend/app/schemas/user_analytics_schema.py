@@ -43,6 +43,7 @@ class AttendanceStat(BaseModel):
 class AttendanceStatsResponse(BaseModel):
     month: int
     year: int
+    user_id: UUID | None = None
     organization_id: UUID | None = None
     stats: List[AttendanceStat]
 

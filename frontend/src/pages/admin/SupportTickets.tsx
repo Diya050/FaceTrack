@@ -17,6 +17,12 @@ import {
 
 import type { SupportTicket, TicketStatus } from "../../types/supportTicket";
 
+// ✅ IMPORT AUTH
+import { useAuth } from "../../context/AuthContext";
+
+// ✅ IMPORT CREATE TICKET COMPONENT
+import CreateTicket from "../../components/tickets/CreateTicketForm";
+
 const COLORS = {
   dark: "#2E3A59",
   darker: "#1F2A44",
@@ -25,13 +31,16 @@ const COLORS = {
 };
 
 export default function SupportTickets() {
+  const { role } = useAuth(); // ✅ get role
+
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
 
   const loadTickets = useCallback(async () => {
     try {
       const data = await getTickets();
-      // Safety check: ensure we are setting an array
-      const ticketArray = Array.isArray(data) ? data : (data as any)?.data || (data as any)?.tickets || [];
+      const ticketArray = Array.isArray(data)
+        ? data
+        : (data as any)?.data || (data as any)?.tickets || [];
       setTickets(ticketArray);
     } catch (error) {
       console.error("Failed to load tickets:", error);
@@ -39,18 +48,20 @@ export default function SupportTickets() {
   }, []);
 
   useEffect(() => {
+    // ✅ Only fetch tickets if HR_ADMIN
+    if (role !== "HR_ADMIN") return;
+
     let ignore = false;
 
     const fetchInitialData = async () => {
       try {
         const data = await getTickets();
-        
-        // DEBUGGING: Check your browser console to see exactly what the API returns!
-        console.log("API Response Data:", data); 
+        console.log("API Response Data:", data);
 
         if (!ignore) {
-          // Safety check: extract the array if the backend nested it inside an object
-          const ticketArray = Array.isArray(data) ? data : (data as any)?.data || (data as any)?.tickets || [];
+          const ticketArray = Array.isArray(data)
+            ? data
+            : (data as any)?.data || (data as any)?.tickets || [];
           setTickets(ticketArray);
         }
       } catch (error) {
@@ -61,9 +72,9 @@ export default function SupportTickets() {
     fetchInitialData();
 
     return () => {
-      ignore = true; 
+      ignore = true;
     };
-  }, []); 
+  }, [role]);
 
   const handleStatusChange = async (
     id: string,
@@ -71,7 +82,7 @@ export default function SupportTickets() {
   ) => {
     try {
       await updateTicketStatus(id, status);
-      await loadTickets(); 
+      await loadTickets();
     } catch (error) {
       console.error("Failed to update ticket status:", error);
     }
@@ -94,14 +105,14 @@ export default function SupportTickets() {
       flex: 1,
       renderCell: (params) => {
         const ticket = params.row as SupportTicket;
-        
+
         return (
           <Select
             size="small"
-            value={ticket.status || "Open"} // Added fallback
+            value={ticket.status || "Open"}
             onChange={(e) =>
               handleStatusChange(
-                ticket.ticket_id || (ticket as any).id, // Fallback ID
+                ticket.ticket_id || (ticket as any).id,
                 e.target.value as TicketStatus
               )
             }
@@ -116,8 +127,20 @@ export default function SupportTickets() {
     }
   ];
 
+  // ✅ ROLE-BASED RENDERING
+  if (role !== "HR_ADMIN") {
+    return (
+      <Box sx={{ backgroundColor: "#F8F9FA", minHeight: "100vh", pt: 12 }}>
+        <Container maxWidth="md">
+          <CreateTicket />
+        </Container>
+      </Box>
+    );
+  }
+
+  // ✅ HR_ADMIN VIEW (existing UI unchanged)
   return (
-    <Box sx={{ backgroundColor:  '#F8F9FA', minHeight: "100vh", pt: 12, pb: 6 }}>
+    <Box sx={{ backgroundColor: "#F8F9FA", minHeight: "100vh", pt: 12, pb: 6 }}>
       <Container maxWidth="lg">
         <Typography
           variant="h4"
@@ -138,8 +161,7 @@ export default function SupportTickets() {
               <DataGrid
                 rows={tickets}
                 columns={columns}
-                // SAFETY: Checks for both ticket_id and id to prevent DataGrid crashes
-                getRowId={(row) => row.ticket_id || row.id || row._id} 
+                getRowId={(row) => row.ticket_id || row.id || row._id}
                 pageSizeOptions={[5, 10, 20]}
                 disableRowSelectionOnClick
               />
