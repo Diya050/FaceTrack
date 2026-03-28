@@ -28,7 +28,7 @@ router = APIRouter(prefix="/analytics", tags=["Admin Analytics"])
 
 def build_scope(current_user):
     try:
-        role = current_user.role.role_name  # ✅ safe after joinedload
+        role = current_user.role.role_name
 
         if role == "ADMIN":
             if not current_user.department_id:
@@ -39,11 +39,15 @@ def build_scope(current_user):
 
             return {
                 "type": "department",
-                "department_id": current_user.department_id
+                "department_id": current_user.department_id,
+                "user_id": current_user.user_id  # ✅ Add this for self-visibility
             }
 
         elif role == "HR_ADMIN":
-            return {"type": "organization"}
+            return {
+                "type": "organization",
+                "user_id": current_user.user_id  # ✅ Add for consistency
+            }
 
         else:
             raise HTTPException(
@@ -471,15 +475,31 @@ def get_working_hours_analytics(
 
 @router.get("/recent-detections", response_model=RecentDetectionsResponse)
 def get_recent_detections(
+    limit: int = Query(10, ge=1, le=50, description="Number of recent detections to fetch"),
     db: Session = Depends(get_db),
-    organization_id: UUID = Depends(get_org_id),
-    current_user = Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user = Depends(get_current_user),
+    _: None = Depends(require_roles(["HR_ADMIN", "ADMIN"]))
 ):
-    scope = build_scope(current_user)
+    """
+    Fetch recent attendance detections for today.
+    
+    - **HR_ADMIN**: Gets all detections across the organization
+    - **ADMIN** (Department Admin): Gets detections only from their department
+    """
     try:
-        return AdminAnalyticsService.get_recent_detections(db, organization_id, scope)
+        return AdminAnalyticsService.get_recent_detections(
+            db=db,
+            current_user=current_user,
+            limit=limit
+        )
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to fetch detections feed.")
+        logger.exception(f"Failed to fetch recent detections: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to fetch recent detections"
+        )
 
 
 @router.get("/export-logs")

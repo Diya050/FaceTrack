@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from pydantic import BaseModel
+from pydantic import UUID4, BaseModel
 from typing import List, Optional
 
 class WorkingHoursDataPoint(BaseModel):
@@ -14,13 +14,13 @@ class WorkingHoursResponse(BaseModel):
     systemWideAvg: Optional[float] = None # Only populated for HR Admins
 
 
-class RecentDetection(BaseModel):
-    event_id: UUID
+class DetectionItem(BaseModel):
+    event_id: UUID4
     full_name: str
     department_name: str
     camera_name: str
-    time_ist: str # Handled as "HH:MM AM/PM"
+    time_ist: str
     confidence_score: float
 
 class RecentDetectionsResponse(BaseModel):
-    detections: List[RecentDetection]
+    detections: List[DetectionItem]
