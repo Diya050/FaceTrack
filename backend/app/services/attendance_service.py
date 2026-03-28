@@ -329,7 +329,6 @@ def review_attendance_correction(
 
         if attendance.first_check_in:
             attendance.status = determine_attendance_status(attendance.first_check_in)
-
     db.commit()
     db.refresh(correction)
     
@@ -348,7 +347,7 @@ def review_attendance_correction(
 
 def get_department_attendance(
     db: Session,
-    current_user,
+    current_user: User,
     department_id: UUID,
     target_date: Optional[date] = None,
     start_date: Optional[date] = None,
@@ -357,28 +356,22 @@ def get_department_attendance(
     skip: int = 0,
     limit: int = 50
 ):
-
     ensure_active_user(current_user)
-
     role_name = current_user.role.role_name if current_user.role else None
 
-    if role_name not in ["HR_ADMIN", "ADMIN"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to view department attendance"
-        )
-
-    if role_name == "ADMIN" and not current_user.department_id:
-        raise HTTPException(
-            status_code=400,
-            detail="Department not assigned to user"
-        )
-
-    if role_name == "ADMIN" and department_id != current_user.department_id:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to view attendance for this department"
-        )
+    # Logic: ADMIN can ONLY view their own department.
+    # We override the requested department_id with the admin's own ID to be safe.
+    if role_name == "ADMIN":
+        if not current_user.department_id:
+            raise HTTPException(status_code=400, detail="Department not assigned to admin")
+        
+        if department_id != current_user.department_id:
+             raise HTTPException(status_code=403, detail="Unauthorized: Admins can only view their own department")
+        
+        effective_dept_id = current_user.department_id
+    else:
+        # HR_ADMIN can view any department
+        effective_dept_id = department_id
 
     query = (
         select(
@@ -393,7 +386,7 @@ def get_department_attendance(
         .join(User, Attendance.user_id == User.user_id)
         .where(
             Attendance.organization_id == current_user.organization_id,
-            User.department_id == department_id,
+            User.department_id == effective_dept_id,
             User.status == "active",
             Attendance.is_deleted == False
         )
@@ -404,18 +397,13 @@ def get_department_attendance(
     else:
         if start_date:
             query = query.where(Attendance.attendance_date >= start_date)
-
         if end_date:
             query = query.where(Attendance.attendance_date <= end_date)
 
     if status:
         query = query.where(Attendance.status == status)
 
-    query = query.order_by(
-        Attendance.attendance_date.desc(),
-        User.full_name.asc(),
-    ).offset(skip).limit(limit)
-
+    query = query.order_by(Attendance.attendance_date.desc(), User.full_name.asc()).offset(skip).limit(limit)
     rows = db.execute(query).all()
 
     return [
@@ -430,7 +418,6 @@ def get_department_attendance(
         }
         for row in rows
     ]
-
 
 def get_organization_attendance(
     db: Session,
