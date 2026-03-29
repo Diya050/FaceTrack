@@ -10,36 +10,13 @@ import {
   MenuItem,
   Pagination,
   useMediaQuery,
+  CircularProgress,
+  Alert,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-
-interface RecognitionEvent {
-  id: number;
-  personName: string;
-  confidence: number;
-  camera: string;
-  location: string;
-  department: string;
-  timestamp: string;
-  status: "recognized" | "unknown" | "blacklisted";
-}
+import { getRecognitionEvents, type RecognitionEvent } from "../../../services/attendanceService";
 
 const PAGE_SIZE = 5;
-
-const STATUS_VALUES = ["recognized", "unknown", "blacklisted"] as const;
-
-const mockEvents: RecognitionEvent[] = Array.from({ length: 80 }).map(
-  (_, i) => ({
-    id: i,
-    personName: ["Diya", "Unknown", "John", "Alice"][i % 4],
-    confidence: Math.floor(70 + Math.random() * 30),
-    camera: `CAM-${(i % 6) + 1}`,
-    location: ["Gate A", "Gate B", "Lobby", "Corridor"][i % 4],
-    department: ["Admin", "IT", "HR", "Security"][i % 4],
-    timestamp: new Date(Date.now() - i * 60000).toLocaleString(),
-    status: STATUS_VALUES[i % 3],
-  })
-);
 
 const STATUS_COLORS: Record<RecognitionEvent["status"], "success" | "warning" | "error"> =
 {
@@ -52,6 +29,9 @@ export default function RecognitionEvents() {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+  const [events, setEvents] = useState<RecognitionEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<
     "all" | RecognitionEvent["status"]
@@ -59,15 +39,34 @@ export default function RecognitionEvents() {
   const [page, setPage] = useState(1);
   const [focusedIndex, setFocusedIndex] = useState(0);
 
+  // Fetch recognition events on mount
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getRecognitionEvents(100, 0);
+        setEvents(data);
+      } catch (err) {
+        setError("Failed to fetch recognition events");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchEvents();
+  }, []);
+
   const filtered = useMemo(() => {
-    return mockEvents
+    return events
       .filter((e) =>
-        e.personName.toLowerCase().includes(search.toLowerCase())
+        e.person_name.toLowerCase().includes(search.toLowerCase())
       )
       .filter((e) =>
         statusFilter === "all" ? true : e.status === statusFilter
       );
-  }, [search, statusFilter]);
+  }, [events, search, statusFilter]);
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
 
@@ -101,8 +100,18 @@ export default function RecognitionEvents() {
       <Typography variant="h5" fontWeight={700} mb={3}>
         Live Recognition Events
       </Typography>
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
 
-      {/* Filters */}
+      {loading ? (
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight={400}>
+          <CircularProgress />
+        </Box>
+      ) : (
+      <>      {/* Filters */}
       <Stack
         direction={isMobile ? "column" : "row"}
         spacing={1.5}
@@ -143,7 +152,7 @@ export default function RecognitionEvents() {
       <Stack spacing={1}>
         {pageData.map((e, idx) => (
           <Card
-            key={e.id}
+            key={e.event_id}
             onClick={() => setFocusedIndex(idx)}
             sx={{
               cursor: "pointer",
@@ -164,7 +173,7 @@ export default function RecognitionEvents() {
                 <Stack spacing={0.6}>
                   <Stack direction="row" justifyContent="space-between">
                     <Typography fontWeight={600} fontSize={20}>
-                      {e.personName}
+                      {e.person_name}
                     </Typography>
                     <Chip
                       label={e.status.toUpperCase()}
@@ -182,12 +191,12 @@ export default function RecognitionEvents() {
                   </Typography>
 
                   <Typography fontSize={15}>
-                    {e.camera} • {e.location}
+                    {e.camera_name} • {e.location}
                   </Typography>
 
 
                   <Typography fontSize={11} color="text.secondary">
-                    {e.timestamp}
+                    {new Date(e.timestamp).toLocaleString()}
                   </Typography>
                 </Stack>
               ) : (
@@ -202,10 +211,10 @@ export default function RecognitionEvents() {
                   }}
                 >
                   <Typography fontWeight={600}>
-                    {e.personName}
+                    {e.person_name}
                   </Typography>
                   <Typography>{e.confidence}%</Typography>
-                  <Typography>{e.camera}</Typography>
+                  <Typography>{e.camera_name}</Typography>
                   <Typography>{e.location}</Typography>
                   <Typography>{e.department}</Typography>
                   <Chip
@@ -231,6 +240,8 @@ export default function RecognitionEvents() {
             size={isMobile ? "small" : "medium"}
           />
         </Stack>
+      )}
+      </>
       )}
     </Box>
   );

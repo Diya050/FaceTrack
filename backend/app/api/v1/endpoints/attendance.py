@@ -4,9 +4,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import and_
 
 from app.db.session import get_db
-from app.models.core import User
+from app.models.core import User, Department
+from app.models.attendance import AttendanceEvent
+from app.models.streams import Camera, VideoStream, UnknownFace
 from app.core.security import get_current_user
 from app.core.permissions import require_roles
 from app.schemas.attendance_rule import (
@@ -32,8 +35,8 @@ from app.services.attendance_service import (
     get_department_attendance,
 )
 from app.services.daily_attendance_service import DailyAttendanceService
-
-
+from app.models.attendance import AttendanceEvent
+from app.models.streams import Camera
 
 from app.schemas.daily_attendance import (
     AttendanceGenerateResponse,
@@ -41,6 +44,7 @@ from app.schemas.daily_attendance import (
     OrgAttendanceRecord,
     DepartmentAttendanceUserRecord,
 )
+from app.schemas.attendance_event import RecognitionEventResponse
 
 
 router = APIRouter(
@@ -263,3 +267,60 @@ def delete_attendance_rule(
     )
 
     return {"message": "Rule deleted successfully"}
+
+# -------------------------------------------------------------------------
+# Get Recognition Events (Live Monitoring)
+# -------------------------------------------------------------------------
+
+@router.get("/recognition/events", response_model=List[RecognitionEventResponse])
+def get_recognition_events(
+    limit: int = Query(20, ge=1, le=100, description="Maximum number of events to return"),
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    db: Session = Depends(get_db),
+):
+    """
+    Retrieve recent recognition events (AttendanceEvents) for live monitoring.
+    
+    - HR_ADMIN: Returns all events in the organization
+    - ADMIN: Returns only events from their department
+    
+    Events are sorted by timestamp (newest first).
+    """
+    query = db.query(AttendanceEvent).filter(
+        AttendanceEvent.organization_id == current_user.organization_id
+    )
+    
+    # Filter by department if ADMIN
+    if hasattr(current_user, "role") and hasattr(current_user.role, "role_name"):
+        if current_user.role.role_name == "ADMIN" and current_user.department_id:
+            query = query.join(
+                User, AttendanceEvent.user_id == User.user_id
+            ).filter(User.department_id == current_user.department_id)
+    
+    events = query.order_by(
+        AttendanceEvent.scan_timestamp.desc()
+    ).offset(skip).limit(limit).all()
+    
+    result = []
+    for event in events:
+        user = db.query(User).filter(User.user_id == event.user_id).first()
+        camera = db.query(Camera).filter(Camera.camera_id == event.camera_id).first()
+        department = db.query(Department).filter(
+            Department.department_id == user.department_id
+        ).first() if user else None
+        
+        result.append({
+            "event_id": event.event_id,
+            "user_id": event.user_id,
+            "person_name": user.full_name if user else "Unknown",
+            "confidence": event.confidence_score or 0,
+            "camera_id": event.camera_id or "",
+            "camera_name": camera.camera_name if camera else "Unknown",
+            "location": camera.location if camera else None,
+            "department": department.name if department else "Unknown",
+            "timestamp": event.scan_timestamp,
+            "status": "recognized" if user else "unknown",
+        })
+    
+    return result
