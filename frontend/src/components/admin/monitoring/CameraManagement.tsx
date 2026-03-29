@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
     Box,
     Card,
@@ -14,6 +14,7 @@ import {
     Tooltip,
     Stack,
     useMediaQuery,
+    CircularProgress,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
@@ -23,62 +24,30 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
 import CameraAltIcon from "@mui/icons-material/CameraAlt";
+import { getCameras, type Camera as BackendCamera } from "../../../services/cameraService";
 
 /* TYPES */
-type CameraStatus = "live" | "lag" | "offline";
-type StreamType = "rtsp" | "webrtc" | "hls" | "rtmp";
+type CameraStatus = "online" | "offline";
 
-interface Camera {
-    id: number;
+interface Camera extends BackendCamera {
+    id: string;
     name: string;
     identifier: string;
-    location: string;
-    model: string;
-    streamType: StreamType;
-    streamUrl: string;
-    status: CameraStatus;
-    enabled: boolean;
 }
 
-/* MOCK DATA */
-const INITIAL_CAMERAS: Camera[] = [
-    {
-        id: 1,
-        name: "Lobby Gate",
-        identifier: "CAM-001",
-        location: "Main Entrance",
-        model: "Hikvision DS-2CD",
-        streamType: "rtsp",
-        streamUrl: "rtsp://10.0.0.10:554",
-        status: "live",
-        enabled: true,
-    },
-    {
-        id: 2,
-        name: "Parking",
-        identifier: "CAM-002",
-        location: "Basement",
-        model: "CP Plus Pro",
-        streamType: "rtsp",
-        streamUrl: "rtsp://10.0.0.12:554",
-        status: "offline",
-        enabled: true,
-    },
-];
-
 /* HELPERS */
-const statusColor = (s: CameraStatus) =>
-    s === "live" ? "success" : s === "lag" ? "warning" : "error";
+const statusColor = (s: CameraStatus) => (s === "online" ? "success" : "error");
 
 /* MAIN */
 const CameraManagement: React.FC = () => {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-    const [rows, setRows] = useState<Camera[]>(INITIAL_CAMERAS);
+    const [rows, setRows] = useState<Camera[]>([]);
     const [search, setSearch] = useState("");
-    const [statusFilter, setStatusFilter] =
-        useState<"all" | CameraStatus>("all");
+    const [statusFilter, setStatusFilter] = useState<"all" | CameraStatus>("all");
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
     const [paginationModel, setPaginationModel] = useState({
         page: 0,
@@ -91,12 +60,38 @@ const CameraManagement: React.FC = () => {
         severity: "success" as "success" | "error" | "info",
     });
 
-    const [testing, setTesting] = useState<Record<number, boolean>>({});
+    const [testing, setTesting] = useState<Record<string, boolean>>({});
+
+    // Fetch cameras on mount
+    useEffect(() => {
+        const fetchCameras = async () => {
+            try {
+                setLoading(true);
+                setError(null);
+                const cameras = await getCameras();
+                const transformedCameras = cameras.map((cam) => ({
+                    ...cam,
+                    id: cam.camera_id,
+                    name: cam.camera_name,
+                    identifier: cam.device_identifier,
+                    status: (cam.status.toLowerCase() as CameraStatus) || "offline",
+                }));
+                setRows(transformedCameras);
+            } catch (err) {
+                setError("Failed to fetch cameras");
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCameras();
+    }, []);
 
     const filtered = useMemo(() => {
         return rows
             .filter((r) =>
-                (r.name + r.identifier + r.location + r.model)
+                (r.name + r.identifier + (r.location || "") + (r.camera_type || ""))
                     .toLowerCase()
                     .includes(search.toLowerCase())
             )
@@ -110,14 +105,7 @@ const CameraManagement: React.FC = () => {
         { field: "name", headerName: "Camera", flex: 1, minWidth: 110 },
         { field: "identifier", headerName: "ID", width: 110 },
         { field: "location", headerName: "Location", flex: 1, minWidth: 110 },
-        { field: "model", headerName: "Model", flex: 1, minWidth: 140 },
-        // {
-        //     field: "streamType",
-        //     headerName: "Stream",
-        //     width: 110,
-        //     valueFormatter: (params: { value?: string }) =>
-        //         params.value ? params.value.toUpperCase() : "",
-        // },
+        { field: "camera_type", headerName: "Model", flex: 1, minWidth: 140 },
         {
             field: "status",
             headerName: "Status",
@@ -173,14 +161,14 @@ const CameraManagement: React.FC = () => {
     ];
 
     /* HANDLERS */
-    const handleTest = async (id: number) => {
+    const handleTest = async (id: string) => {
         setTesting((t) => ({ ...t, [id]: true }));
         await new Promise((res) => setTimeout(res, 1200));
         const ok = Math.random() > 0.3;
 
         setRows((r) =>
             r.map((x) =>
-                x.id === id ? { ...x, status: ok ? "live" : "offline" } : x
+                x.id === id ? { ...x, status: ok ? "online" : "offline" } : x
             )
         );
 
@@ -192,8 +180,22 @@ const CameraManagement: React.FC = () => {
         });
     };
 
+    if (loading) {
+        return (
+            <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: "#F8F9FA", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <CircularProgress />
+            </Box>
+        );
+    }
+
     return (
         <Box sx={{ p: { xs: 2, md: 4 }, bgcolor: "#F8F9FA", minHeight: "100vh" }}>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             {/* Header */}
             <Stack
                 direction={isMobile ? "column" : "row"}
@@ -228,8 +230,7 @@ const CameraManagement: React.FC = () => {
                         fullWidth={isMobile}
                     >
                         <MenuItem value="all">All Status</MenuItem>
-                        <MenuItem value="live">Live</MenuItem>
-                        <MenuItem value="lag">Lag</MenuItem>
+                        <MenuItem value="online">Online</MenuItem>
                         <MenuItem value="offline">Offline</MenuItem>
                     </TextField>
 
@@ -242,7 +243,7 @@ const CameraManagement: React.FC = () => {
             {/* Table */}
             <Card elevation={0}>
                 <CardContent sx={{ p: isMobile ? 1 : 2 }}>
-                    <Box sx={{ height: isMobile ? 520 : 560, gap: 0 }} >
+                    <Box sx={{ height: isMobile ? 520 : 560, gap: 0 }}>
                         <DataGrid
                             rows={filtered}
                             columns={columns}

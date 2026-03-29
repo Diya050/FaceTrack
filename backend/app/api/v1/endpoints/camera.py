@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from jose import jwt, JWTError
-from app.schemas.camera import CameraIdentify, CameraIdentifyResponse
+from app.schemas.camera import CameraIdentify, CameraIdentifyResponse, CameraResponse
 from app.services.camera_service import CameraService
 from app.db.session import get_db
 from app.core.dependencies import get_current_user
@@ -18,6 +18,19 @@ from app.models.streams import VideoStream, Camera
 
 
 router = APIRouter(prefix="/cameras", tags=["Cameras"])
+
+@router.get("", response_model=list[CameraResponse])
+def list_cameras(
+    db: Session = Depends(get_db),
+    user=Depends(get_current_user)
+):
+    """List all cameras for the organization"""
+    cameras = (
+        db.query(Camera)
+        .filter(Camera.organization_id == user.organization_id)
+        .all()
+    )
+    return cameras
 
 @router.post("/identify", response_model=CameraIdentifyResponse)
 def identify_camera(
