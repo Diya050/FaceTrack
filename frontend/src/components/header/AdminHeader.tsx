@@ -67,7 +67,6 @@ const adminNavItems = [
     hideOnDesktop: true,
     children: [
       { label: "Audit Logs", path: "/admin/settings/security#audit" },
-      { label: "Access Logs", path: "/admin/settings/security#access" },
       { label: "Consent Management", path: "/admin/settings/security#consent" },
       { label: "Data Retention", path: "/admin/settings/security#retention" },
     ],
