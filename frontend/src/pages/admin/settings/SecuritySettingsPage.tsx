@@ -4,7 +4,6 @@ import { useLocation } from "react-router-dom";
 
 // Settings - Security
 import AuditLogs from "../../../components/admin/settings/security/AuditLogs";
-import AccessLogs from "../../../components/admin/settings/security/AccessLogs";
 import ConsentManagement from "../../../components/admin/settings/security/ConsentManagement";
 import DataRetention from "../../../components/admin/settings/security/DataRetention";
 
@@ -35,10 +34,6 @@ const SecuritySettingsPage = () => {
     <Stack spacing={6} sx={{ pt: 8, px: 4, pb: 6, mt:5 }}>
       <Box id="audit-logs">
         <AuditLogs />
-      </Box>
-
-      <Box id="access-logs">
-        <AccessLogs />
       </Box>
 
       <Box id="consents">

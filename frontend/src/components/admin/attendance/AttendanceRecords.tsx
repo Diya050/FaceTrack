@@ -1,29 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react"; // Added useMemo
 import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  TextField,
-  Select,
-  MenuItem,
-  Stack,
-  Chip,
-  CircularProgress,
-  Checkbox,
-  ListItemText,
-  FormControl,
-  InputLabel,
-  OutlinedInput,
+  Box, Card, CardContent, Typography, Table, TableHead, TableRow, TableCell,
+  TableBody, TextField, Select, MenuItem, Stack, Chip, CircularProgress,
+  Checkbox, ListItemText, FormControl, InputLabel, OutlinedInput,
+  TablePagination, Divider // Added TablePagination and Divider
 } from "@mui/material";
 import { COLORS } from "../../../theme/dashboardTheme";
+import { jwtDecode } from "jwt-decode";
 
-// --- Types & Interfaces ---
+// --- Interfaces ---
 interface AttendanceRecord {
   id: string;
   employeeName: string;
@@ -34,58 +19,38 @@ interface AttendanceRecord {
   status: string;
 }
 
-// --- Helper Functions ---
+interface DecodedToken {
+  role: string;
+  department_id?: string;
+  organization_id: string;
+}
+
+// --- Helpers ---
 const formatDateForInput = (date: Date) => date.toISOString().split("T")[0];
 
-/**
- * Converts UTC time string from backend to IST (Indian Standard Time)
- */
 const formatTime = (timeStr: string | null) => {
   if (!timeStr) return "—";
-  
   try {
-    // Backend gives "HH:mm:ss.ms". We append a dummy date and "Z" to force UTC parsing.
     const [hours, minutes, seconds] = timeStr.split(":");
     const date = new Date();
     date.setUTCHours(parseInt(hours), parseInt(minutes), parseInt(seconds.split(".")[0]), 0);
-
-    return date.toLocaleTimeString("en-IN", {
-      timeZone: "Asia/Kolkata",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  } catch (err) {
-    return "—";
-  }
+    return date.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
+  } catch { return "—"; }
 };
 
-/**
- * Calculates duration between two UTC time strings, returning difference in IST context
- */
 function getWorkingHours(checkIn: string | null, checkOut: string | null) {
   if (!checkIn || !checkOut || checkIn === checkOut) return "—";
   try {
     const parseUTC = (t: string) => {
       const [h, m, s] = t.split(":");
-      const d = new Date(0); // Use epoch
+      const d = new Date(0);
       d.setUTCHours(parseInt(h), parseInt(m), parseInt(s.split(".")[0]), 0);
       return d.getTime();
     };
-
-    const start = parseUTC(checkIn);
-    const end = parseUTC(checkOut);
-    
-    const diffMs = end - start;
-    if (diffMs <= 0) return "—";
-    
-    const totalMinutes = Math.floor(diffMs / 60000);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    return `${h}h ${m}m`;
-  } catch {
-    return "—";
-  }
+    const totalMinutes = Math.floor((parseUTC(checkOut) - parseUTC(checkIn)) / 60000);
+    if (totalMinutes <= 0) return "—";
+    return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+  } catch { return "—"; }
 }
 
 const statusOptions = [
@@ -96,117 +61,131 @@ const statusOptions = [
   { value: "on_leave", label: "On Leave", color: "#9C27B0" },
 ];
 
-// --- Main Component ---
 export default function AttendanceRecords() {
-  const [startDate, setStartDate] = useState(
-    formatDateForInput(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-  );
+  const [startDate, setStartDate] = useState(formatDateForInput(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)));
   const [endDate, setEndDate] = useState(formatDateForInput(new Date()));
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  
+  const [statusFilter, setStatusFilter] = useState<string[]>(
+    statusOptions
+      .map((opt) => opt.value)
+      .filter((val) => val !== "absent")
+  );
+
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  // --- Pagination States ---
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const fetchAttendance = useCallback(async () => {
+    setLoading(true);
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    try {
+      const decoded: DecodedToken = jwtDecode(token);
+      setUserRole(decoded.role);
+
+      const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate,
+        limit: "200", // Increased limit since we now have pagination
+      });
+
+      let url = `http://127.0.0.1:8000/api/v1/attendance/organization?${params}`;
+      
+      if (decoded.role === "ADMIN" && decoded.department_id) {
+        url = `http://127.0.0.1:8000/api/v1/attendance/department/${decoded.department_id}?${params}`;
+      }
+
+      const response = await fetch(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await response.json();
+
+      if (Array.isArray(data)) {
+        setRecords(data.map((item: any) => ({
+          id: item.attendance_id,
+          employeeName: item.full_name || "Unknown",
+          department: item.department_name || "N/A",
+          date: item.attendance_date,
+          checkIn: item.first_check_in,
+          checkOut: item.last_check_out,
+          status: item.status,
+        })));
+      }
+    } catch (err) {
+      console.error("Fetch Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [startDate, endDate]);
 
   useEffect(() => {
     fetchAttendance();
-  }, [startDate, endDate]);
+  }, [fetchAttendance]);
 
-  const fetchAttendance = () => {
-    setLoading(true);
-    const params = new URLSearchParams({
-      start_date: startDate,
-      end_date: endDate,
-      limit: "100",
+  // --- Filter Logic ---
+  const filteredRecords = useMemo(() => {
+    return records.filter((r) => {
+      const matchesSearch = 
+        r.employeeName.toLowerCase().includes(search.toLowerCase()) || 
+        r.department.toLowerCase().includes(search.toLowerCase());
+      const matchesStatus = statusFilter.length === 0 || statusFilter.includes(r.status);
+      return matchesSearch && matchesStatus;
     });
+  }, [records, search, statusFilter]);
 
-    fetch(`http://127.0.0.1:8000/api/v1/attendance/organization?${params}`, {
-      headers: {
-        Authorization: `Bearer ${localStorage.getItem("token")}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (Array.isArray(data)) {
-          const formatted = data.map((item: any) => ({
-            id: item.attendance_id,
-            employeeName: item.full_name || "Unknown",
-            department: item.department_name || "N/A",
-            date: item.attendance_date,
-            checkIn: item.first_check_in,
-            checkOut: item.last_check_out,
-            status: item.status,
-          }));
-          setRecords(formatted);
-        }
-      })
-      .catch((err) => console.error("API Error:", err))
-      .finally(() => setLoading(false));
+  // --- Pagination Logic: Slicing the data ---
+  const paginatedRecords = useMemo(() => {
+    const startIndex = page * rowsPerPage;
+    return filteredRecords.slice(startIndex, startIndex + rowsPerPage);
+  }, [filteredRecords, page, rowsPerPage]);
+
+  // Reset page to 0 when filters change to avoid "empty page" bugs
+  useEffect(() => {
+    setPage(0);
+  }, [search, statusFilter, startDate, endDate]);
+
+  const handleChangePage = (_: unknown, newPage: number) => {
+    setPage(newPage);
   };
 
-  const filteredRecords = records.filter((r) => {
-    const matchesSearch =
-      r.employeeName.toLowerCase().includes(search.toLowerCase()) ||
-      r.department.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus =
-      statusFilter.length === 0 || statusFilter.includes(r.status);
-    return matchesSearch && matchesStatus;
-  });
-
-  const handleStatusChange = (event: any) => {
-    const { value } = event.target;
-    setStatusFilter(typeof value === "string" ? value.split(",") : value);
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   return (
     <Box sx={{ mt: 8, p: 4, bgcolor: "#F8F9FA", minHeight: "100vh" }}>
-      <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.navy, mb: 3 }}>
-        Organization Attendance
+      <Typography variant="h5" sx={{ fontWeight: 800, color: COLORS.navy, mb: 1 }}>
+        {userRole === "HR_ADMIN" ? "Organization Attendance" : "Department Attendance"}
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        {userRole === "ADMIN" ? "Viewing records for your assigned department only." : "Viewing records for the entire organization."}
       </Typography>
 
-      <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #E0E0E0" }}>
+      <Card elevation={0} sx={{ borderRadius: 4, border: "1px solid #E0E0E0", overflow: "hidden" }}>
         <CardContent sx={{ p: 3 }}>
           <Stack direction={{ xs: "column", md: "row" }} spacing={2} mb={4}>
-            <TextField
-              label="From"
-              type="date"
-              size="small"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              label="To"
-              type="date"
-              size="small"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              InputLabelProps={{ shrink: true }}
-            />
-            <TextField
-              placeholder="Search employee or department..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              size="small"
-              sx={{ flexGrow: 1 }}
-            />
-
+            <TextField label="From" type="date" size="small" value={startDate} onChange={(e) => setStartDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+            <TextField label="To" type="date" size="small" value={endDate} onChange={(e) => setEndDate(e.target.value)} InputLabelProps={{ shrink: true }} />
+            <TextField placeholder="Search employee..." value={search} onChange={(e) => setSearch(e.target.value)} size="small" sx={{ flexGrow: 1 }} />
+            
             <FormControl size="small" sx={{ width: 240 }}>
-              <InputLabel id="status-checkbox-label">Filter Status</InputLabel>
+              <InputLabel>Filter Status</InputLabel>
               <Select
-                labelId="status-checkbox-label"
                 multiple
                 value={statusFilter}
-                onChange={handleStatusChange}
+                onChange={(e) => setStatusFilter(typeof e.target.value === "string" ? e.target.value.split(",") : e.target.value)}
                 input={<OutlinedInput label="Filter Status" />}
                 renderValue={(selected) => (
                   <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
                     {selected.map((val) => (
-                      <Chip
-                        key={val}
-                        label={val.replace("_", " ").toUpperCase()}
-                        size="small"
-                        sx={{ height: 20, fontSize: "0.65rem" }}
-                      />
+                      <Chip key={val} label={val.replace("_", " ").toUpperCase()} size="small" sx={{ height: 20, fontSize: "0.65rem" }} />
                     ))}
                   </Box>
                 )}
@@ -225,58 +204,54 @@ export default function AttendanceRecords() {
             <TableHead>
               <TableRow sx={{ bgcolor: "#F1F3F5" }}>
                 {["Employee", "Dept", "Date", "In", "Out", "Duration", "Status"].map((h) => (
-                  <TableCell key={h} sx={{ fontWeight: 800, color: COLORS.navy }}>
-                    {h}
-                  </TableCell>
+                  <TableCell key={h} sx={{ fontWeight: 800, color: COLORS.navy }}>{h}</TableCell>
                 ))}
               </TableRow>
             </TableHead>
-
             <TableBody>
               {loading ? (
-                <TableRow>
-                  <TableCell colSpan={7} align="center" sx={{ py: 5 }}>
-                    <CircularProgress size={30} />
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} align="center" sx={{ py: 5 }}><CircularProgress size={30} /></TableCell></TableRow>
+              ) : paginatedRecords.length === 0 ? (
+                <TableRow><TableCell colSpan={7} align="center" sx={{ py: 5 }}>No records found.</TableCell></TableRow>
               ) : (
-                filteredRecords.map((r) => {
-                  const statusInfo = statusOptions.find((o) => o.value === r.status);
-                  return (
-                    <TableRow key={r.id} hover>
-                      <TableCell sx={{ fontWeight: 600 }}>{r.employeeName}</TableCell>
-                      <TableCell>{r.department}</TableCell>
-                      <TableCell>{r.date}</TableCell>
-                      <TableCell>{formatTime(r.checkIn)}</TableCell>
-                      <TableCell>{formatTime(r.checkOut)}</TableCell>
-                      <TableCell>{getWorkingHours(r.checkIn, r.checkOut)}</TableCell>
-                      <TableCell>
-                        <Chip
-                          label={r.status.replace("_", " ").toUpperCase()}
-                          size="small"
-                          sx={{
-                            bgcolor: statusInfo?.color || "#9E9E9E",
-                            color: "white",
-                            fontWeight: "bold",
-                            fontSize: "0.7rem",
-                          }}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                paginatedRecords.map((r) => (
+                  <TableRow key={r.id} hover>
+                    <TableCell sx={{ fontWeight: 600 }}>{r.employeeName}</TableCell>
+                    <TableCell>{r.department}</TableCell>
+                    <TableCell>{r.date}</TableCell>
+                    <TableCell>{formatTime(r.checkIn)}</TableCell>
+                    <TableCell>{formatTime(r.checkOut)}</TableCell>
+                    <TableCell>{getWorkingHours(r.checkIn, r.checkOut)}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={r.status.replace("_", " ").toUpperCase()}
+                        size="small"
+                        sx={{
+                          bgcolor: statusOptions.find(o => o.value === r.status)?.color || "#9E9E9E",
+                          color: "white", fontWeight: "bold", fontSize: "0.7rem",
+                        }}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>
-
-          {!loading && filteredRecords.length === 0 && (
-            <Box sx={{ textAlign: "center", py: 10 }}>
-              <Typography variant="body1" color="text.secondary">
-                No attendance records found for this selection.
-              </Typography>
-            </Box>
-          )}
         </CardContent>
+        
+        <Divider />
+        
+        {/* Pagination Component */}
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          component="div"
+          count={filteredRecords.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+          sx={{ borderTop: "1px solid #E0E0E0" }}
+        />
       </Card>
     </Box>
   );

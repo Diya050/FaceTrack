@@ -1,4 +1,4 @@
-import { Stack, Container, Box } from "@mui/material";
+import { Stack, Container, Box, Typography } from "@mui/material";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
@@ -60,9 +60,29 @@ const DashboardPage = () => {
       }}
     >
       <Stack spacing={4} sx={{ width: "100%" }}>
-        
-        {/* ROW 1: Massive KPI Cards across the screen */}
-        <KPISummary />
+
+  {/* 🔹 NEW: Section Heading */}
+  <Box>
+    <Typography
+      variant="h4"
+      fontWeight={700}
+      sx={{
+        letterSpacing: 0.5,
+      }}
+    >
+      Today’s Insights
+    </Typography>
+    <Typography
+      variant="body2"
+      color="text.secondary"
+      sx={{ mt: 0.5 }}
+    >
+      Real-time overview of attendance, performance, and system activity
+    </Typography>
+  </Box>
+
+  {/* ROW 1: Massive KPI Cards across the screen */}
+  <KPISummary />
 
         {/* ROW 2: Primary Trend Graph */}
         <AttendanceTrend />

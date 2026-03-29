@@ -5,7 +5,8 @@ export const UnknownFaceAction = {
   SECURITY_ALERT: "SECURITY_ALERT"
 } as const;
 
-export type UnknownFaceAction = typeof UnknownFaceAction[keyof typeof UnknownFaceAction];
+export type UnknownFaceAction =
+  typeof UnknownFaceAction[keyof typeof UnknownFaceAction];
 
 export interface UnknownFace {
   unknown_id: string;
@@ -25,12 +26,22 @@ export interface ResolveUnknownFaceRequest {
 
 export const unknownFacesService = {
   getUnknownFaces: async () => {
-    const response = await api.get<UnknownFace[]>("/unknown-faces");
-    return response.data;
+    const res = await api.get<UnknownFace[]>("/unknown-faces");
+    return res.data;
   },
 
   resolveFace: async (data: ResolveUnknownFaceRequest) => {
-    const response = await api.post("/unknown-faces/resolve", data);
-    return response.data;
+    const res = await api.post("/unknown-faces/resolve", data);
+    return res.data;
+  },
+
+  deleteFace: async (unknown_id: string) => {
+    const res = await api.delete(`/unknown-faces/${unknown_id}`);
+    return res.data;
+  },
+
+  getEmployees: async (search: string) => {
+    const res = await api.get(`/unknown-faces/employees?search=${search}`);
+    return res.data;
   }
 };

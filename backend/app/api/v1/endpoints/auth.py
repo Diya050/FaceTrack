@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from sqlalchemy.orm import Session
@@ -41,13 +41,16 @@ def platform_login_route(
 @router.post("/org-login", response_model=TokenResponse)
 def org_login_route(
     data: OrgLoginRequest,
+    request: Request,
     db=Depends(get_db)
 ):
+    client_ip = request.client.host if request.client else None
     user, token = AuthService.org_login(
         db,
         data.email,
         data.password,
-        data.organization_name
+        data.organization_name,
+        ip_address=client_ip
     )
     return {
         "access_token": token,

@@ -5,7 +5,10 @@ from app.services.department_service import DepartmentService
 from app.db.session import get_db
 from app.core.permissions import require_roles
 from sqlalchemy import select
-from app.models.core import Department, Organization
+from app.models.core import Department, Organization, User
+from sqlalchemy.orm import Session
+from app.schemas.profile import ProfileResponse
+from app.schemas.department import DepartmentResponse, DepartmentUpdate
 
 router = APIRouter(prefix="/departments", tags=["Departments"])
 
@@ -14,18 +17,17 @@ router = APIRouter(prefix="/departments", tags=["Departments"])
 def create_department(
     data: DepartmentCreate,
     db=Depends(get_db),
-    user=Depends(require_roles([ "ADMIN", "HR_ADMIN"]))
+    user=Depends(require_roles([ "HR_ADMIN"]))
 ):
     return DepartmentService.create_department(db, data, user)
 
 
 @router.get("", response_model=list[DepartmentResponse])
 def list_departments(
-    organization_id: UUID | None = Query(default=None),
     db=Depends(get_db),
     user=Depends(require_roles([ "ADMIN", "HR_ADMIN"]))
 ):
-    return DepartmentService.list_departments(db, user, organization_id)
+    return DepartmentService.list_departments(db, user)
 
 
 @router.get("/public/{organization_id}", response_model=list[DepartmentResponse])
@@ -65,5 +67,37 @@ def list_departments_by_org_name(
     return result.scalars().all()
 
 
+@router.get("/department-users", response_model=list[ProfileResponse])
+def get_department_users(
+    db: Session = Depends(get_db),
+    user=Depends(require_roles(["ADMIN"])) 
+):
+    return DepartmentService.get_department_users(db, user)
 
 
+@router.put("/{department_id}", response_model=DepartmentResponse)
+def edit_department(
+    department_id: UUID,
+    payload: DepartmentUpdate, # Ensure you have a schema with optional name/desc
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["HR_ADMIN"]))
+):
+    return DepartmentService.update_department(
+        db=db,
+        department_id=department_id,
+        organization_id=current_user.organization_id,
+        data=payload.dict(exclude_unset=True)
+    )
+
+@router.delete("/{department_id}")
+def remove_department(
+    department_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(["HR_ADMIN"]))
+):
+    DepartmentService.delete_department(
+        db=db,
+        department_id=department_id,
+        organization_id=current_user.organization_id
+    )
+    return {"message": "Department successfully removed"}

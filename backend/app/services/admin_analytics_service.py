@@ -8,14 +8,15 @@ from http.client import HTTPException
 import logging
 import traceback
 from datetime import timedelta,date
-from typing import Dict, List
+from typing import Any, Dict, List
 from uuid import UUID
 import csv
+from app.schemas import role
 from xhtml2pdf import pisa
 import io
 
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import or_, select, func
 from sqlalchemy.exc import NoResultFound,SQLAlchemyError,DataError,OperationalError
 
 from app.models.core import User, Organization, Department
@@ -955,12 +956,43 @@ class AdminAnalyticsService:
 
 
     @staticmethod
-    def get_recent_detections(db: Session, organization_id: UUID, scope: dict, limit: int = 10):
+    def get_recent_detections(
+        db: Session,
+        current_user,
+        limit: int = 10
+    ) -> Dict[str, Any]:
+        """
+        Fetch recent attendance detections for today.
+        
+        Filtering logic:
+        - HR_ADMIN: All detections in the organization
+        - ADMIN (Dept Admin): Only detections from their department
+        
+        Args:
+            db: Database session
+            current_user: Current authenticated user object
+            limit: Maximum number of detections to return
+            
+        Returns:
+            Dictionary with 'detections' list
+        """
         try:
+            # Get user's role
+            role = current_user.role.role_name
+            organization_id = current_user.organization_id
+            
+            # Validate organization
+            if not organization_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="User must belong to an organization"
+                )
+            
+            # Get today's UTC time bounds
             today = today_ist()
             start_utc, end_utc = ist_day_bounds_utc(today)
-
-            # Base query pulling Today's scans
+            
+            # Build base query
             query = (
                 select(
                     AttendanceEvent.event_id,
@@ -968,46 +1000,109 @@ class AdminAnalyticsService:
                     Department.name.label("department_name"),
                     Camera.camera_name,
                     AttendanceEvent.scan_timestamp,
-                    AttendanceEvent.confidence_score
+                    AttendanceEvent.confidence_score,
+                    User.user_id  # Include for debugging
                 )
                 .join(User, User.user_id == AttendanceEvent.user_id)
-                .join(Department, Department.department_id == User.department_id)
+                .outerjoin(Department, Department.department_id == User.department_id)  # LEFT JOIN
                 .outerjoin(Camera, Camera.camera_id == AttendanceEvent.camera_id)
                 .where(
                     AttendanceEvent.organization_id == organization_id,
                     AttendanceEvent.scan_timestamp >= start_utc,
-                    AttendanceEvent.scan_timestamp < end_utc
+                    AttendanceEvent.scan_timestamp < end_utc,
+                    User.is_deleted == False  # Exclude deleted users
                 )
             )
-
-            # 🏢 Apply Department filtering if scope is limited
-            if scope["type"] == "department":
-                query = query.where(User.department_id == scope["department_id"])
-
-            # Order by newest events first
+            
+            # Apply role-based filtering
+            # After the role check, add:
+            if role == "ADMIN":
+                    # Debug: Check current user's department
+                    debug_user = db.query(User).filter(User.user_id == current_user.user_id).first()
+                    logger.error(f"DEBUG - Current user department_id: {debug_user.department_id}")
+                    logger.error(f"DEBUG - Current user organization_id: {debug_user.organization_id}")
+                    
+                    # Debug: Check if there are ANY events for this user today IN THIS ORG
+                    debug_events = db.execute(
+                        select(AttendanceEvent)
+                        .where(
+                            AttendanceEvent.user_id == current_user.user_id,
+                            AttendanceEvent.organization_id == organization_id,  # ✅ ADD THIS
+                            AttendanceEvent.scan_timestamp >= start_utc,
+                            AttendanceEvent.scan_timestamp < end_utc
+                        )
+                    ).all()
+                    logger.error(f"DEBUG - Found {len(debug_events)} events for current user today in org {organization_id}")
+                    
+                    # Additional debug: Check the main query results before department filter
+                    debug_all_events = db.execute(
+                        select(AttendanceEvent.event_id, User.full_name, User.department_id)
+                        .join(User, User.user_id == AttendanceEvent.user_id)
+                        .where(
+                            AttendanceEvent.organization_id == organization_id,
+                            AttendanceEvent.scan_timestamp >= start_utc,
+                            AttendanceEvent.scan_timestamp < end_utc,
+                            User.is_deleted == False
+                        )
+                    ).all()
+                    logger.error(f"DEBUG - Total events in org today (before dept filter): {len(debug_all_events)}")
+                    
+                    # Debug: Check events specifically in current user's department
+                    debug_dept_events = db.execute(
+                        select(AttendanceEvent.event_id, User.full_name, User.user_id)
+                        .join(User, User.user_id == AttendanceEvent.user_id)
+                        .where(
+                            AttendanceEvent.organization_id == organization_id,
+                            AttendanceEvent.scan_timestamp >= start_utc,
+                            AttendanceEvent.scan_timestamp < end_utc,
+                            User.department_id == current_user.department_id,
+                            User.is_deleted == False
+                        )
+                    ).all()
+                    logger.error(f"DEBUG - Events in department {current_user.department_id}: {len(debug_dept_events)}")
+                    logger.error(f"DEBUG - Current user in dept events: {any(e.user_id == current_user.user_id for e in debug_dept_events)}")
+            else:
+                        raise HTTPException(
+                                    status_code=403,
+                                    detail=f"Role '{role}' not authorized for this endpoint"
+                                )
+            
+            # Order by newest first and apply limit
             query = query.order_by(AttendanceEvent.scan_timestamp.desc()).limit(limit)
+            
+            # Execute query
             rows = db.execute(query).all()
-
+            
+            logger.info(
+                f"Found {len(rows)} detections for {role} "
+                f"user {current_user.user_id} (limit={limit})"
+            )
+            
+            # Format response
             detections = []
             for row in rows:
-                # Convert scan (UTC) to localized display string using your custom utility
+                # Convert UTC timestamp to IST time string
                 ist_time_obj = utc_to_ist_time(row.scan_timestamp)
                 
                 detections.append({
-                    "event_id": row.event_id,
+                    "event_id": str(row.event_id),
                     "full_name": row.full_name,
-                    "department_name": row.department_name,
+                    "department_name": row.department_name or "No Department",
                     "camera_name": row.camera_name or "Unknown Camera",
-                    "time_ist": ist_time_obj.strftime("%I:%M %p"), # "02:30 PM"
+                    "time_ist": ist_time_obj.strftime("%I:%M %p"),  # e.g., "02:30 PM"
                     "confidence_score": round(row.confidence_score or 0.0, 2)
                 })
-
+            
             return {"detections": detections}
-
-        except Exception as e:
-            logger.exception(f"[DETECTIONS] API fetch failed: {str(e)}")
+        
+        except HTTPException:
             raise
-
+        except Exception as e:
+            logger.exception(f"Error in get_recent_detections: {str(e)}")
+            raise HTTPException(
+                status_code=500,
+                detail="An error occurred while fetching detections"
+            )
     
     @staticmethod
     def _get_export_data(db: Session, organization_id: UUID, scope: dict, target_date: date):

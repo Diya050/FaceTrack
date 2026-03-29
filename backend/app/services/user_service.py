@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from app.models.core import User, UserStatusEnum
 from app.models.biometrics import FaceEnrollmentSession
 from app.models.core import Department, Role, Organization
+from app.services.audit_log_service import AuditLogService
 
 
 class UserService:
@@ -101,6 +102,18 @@ class UserService:
         db.commit()
         db.refresh(user)
 
+        # Log the user approval action
+        try:
+            AuditLogService.log_action(
+                db=db,
+                user_id=current_user.user_id,
+                action="UPDATE_USER",
+                organization_id=current_user.organization_id,
+                ip_address=None
+            )
+        except Exception as e:
+            print(f"Warning: Failed to log user approval: {e}")
+
         return {
             "message": "User approved successfully",
             "user_id": user.user_id
@@ -125,6 +138,18 @@ class UserService:
         user.approved_at = datetime.utcnow()
 
         db.commit()
+
+        # Log the user rejection action
+        try:
+            AuditLogService.log_action(
+                db=db,
+                user_id=current_user.user_id,
+                action="UPDATE_USER",
+                organization_id=current_user.organization_id,
+                ip_address=None
+            )
+        except Exception as e:
+            print(f"Warning: Failed to log user rejection: {e}")
 
         return {"message": "User rejected"}
     

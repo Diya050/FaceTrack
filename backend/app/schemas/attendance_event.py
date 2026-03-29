@@ -25,3 +25,20 @@ class AttendanceEventResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class RecognitionEventResponse(BaseModel):
+    """Enriched recognition event with user and camera details for live monitoring"""
+    event_id: UUID
+    user_id: UUID
+    person_name: str
+    confidence: float
+    camera_id: UUID
+    camera_name: str
+    location: str | None
+    department: str
+    timestamp: datetime
+    status: str  # "recognized", "unknown", "blacklisted"
+
+    class Config:
+        from_attributes = True

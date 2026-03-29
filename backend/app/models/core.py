@@ -110,7 +110,7 @@ class Department(Base, TenantMixin):
     department_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name = Column(String(255), nullable=False)
     description = Column(String)
-    
+    is_deleted = Column(Boolean, default=False, nullable=False)
     organization = relationship("Organization", back_populates="departments")
     users = relationship("User", back_populates="department")
     

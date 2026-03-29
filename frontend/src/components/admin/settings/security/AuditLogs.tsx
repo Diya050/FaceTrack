@@ -1,10 +1,10 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Box, Typography, Stack, Paper, Chip, Divider,
   TextField, Select, MenuItem, FormControl, InputLabel,
   Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, TablePagination, Tooltip, IconButton, Button,
-  InputAdornment, Alert, Collapse,
+  InputAdornment, Alert, Collapse, CircularProgress,
 } from "@mui/material";
 import AssignmentOutlinedIcon      from "@mui/icons-material/AssignmentOutlined";
 import SearchOutlinedIcon           from "@mui/icons-material/SearchOutlined";
@@ -23,134 +23,18 @@ import ExpandLessOutlinedIcon       from "@mui/icons-material/ExpandLessOutlined
 import InfoOutlinedIcon             from "@mui/icons-material/InfoOutlined";
 import ShieldOutlinedIcon           from "@mui/icons-material/ShieldOutlined";
 
+import { auditLogService, type AuditLog } from "../../../../services/auditLogService";
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type AuditCategory = "auth" | "user" | "config" | "data" | "system";
 type AuditSeverity = "info" | "warning" | "critical";
 
-interface AuditLogEntry {
-  id: string;
-  timestamp: string;
-  actor: string;
-  actorRole: string;
-  email: string;
-  action: string;
-  category: AuditCategory;
-  severity: AuditSeverity;
-  resource: string;
-  resourceId: string;
-  ip: string;
-  details: string;
+interface AuditLogEntry extends AuditLog {
   changes?: { field: string; from: string; to: string }[];
 }
 
 // ─── Mock Data ────────────────────────────────────────────────────────────────
-
-const MOCK_LOGS: AuditLogEntry[] = [
-  {
-    id: "al1",
-    timestamp: "2026-03-08T09:22:10Z",
-    actor: "Prachi Sharma", actorRole: "Super Admin", email: "prachi@facetrack.io",
-    action: "UPDATE_SETTINGS", category: "config", severity: "warning",
-    resource: "RecognitionThreshold", resourceId: "cfg-001",
-    ip: "192.168.1.10", details: "Recognition confidence threshold updated.",
-    changes: [{ field: "threshold", from: "0.75", to: "0.82" }],
-  },
-  {
-    id: "al2",
-    timestamp: "2026-03-08T09:10:05Z",
-    actor: "Rohan Mehta", actorRole: "Admin", email: "rohan@facetrack.io",
-    action: "CREATE_USER", category: "user", severity: "info",
-    resource: "UserProfile", resourceId: "usr-042",
-    ip: "10.0.0.45", details: "New user profile created for employee onboarding.",
-    changes: [{ field: "email", from: "—", to: "newuser@facetrack.io" }, { field: "role", from: "—", to: "Employee" }],
-  },
-  {
-    id: "al3",
-    timestamp: "2026-03-08T08:58:33Z",
-    actor: "Prachi Sharma", actorRole: "Super Admin", email: "prachi@facetrack.io",
-    action: "DELETE_PROFILE", category: "data", severity: "critical",
-    resource: "BiometricProfile", resourceId: "bio-007",
-    ip: "192.168.1.10", details: "Biometric face profile permanently deleted.",
-  },
-  {
-    id: "al4",
-    timestamp: "2026-03-08T08:44:18Z",
-    actor: "Sneha Joshi", actorRole: "Admin", email: "sneha@facetrack.io",
-    action: "EXPORT_REPORT", category: "data", severity: "warning",
-    resource: "AttendanceReport", resourceId: "rpt-march-2026",
-    ip: "192.168.1.55", details: "Monthly attendance report exported as CSV.",
-  },
-  {
-    id: "al5",
-    timestamp: "2026-03-08T08:30:00Z",
-    actor: "System", actorRole: "Automated", email: "system@facetrack.io",
-    action: "BACKUP_CREATED", category: "system", severity: "info",
-    resource: "Database", resourceId: "db-main",
-    ip: "127.0.0.1", details: "Scheduled daily database backup completed successfully.",
-  },
-  {
-    id: "al6",
-    timestamp: "2026-03-08T08:15:45Z",
-    actor: "Karan Singh", actorRole: "Admin", email: "karan@facetrack.io",
-    action: "UPDATE_PERMISSIONS", category: "user", severity: "critical",
-    resource: "Role", resourceId: "role-dept-head",
-    ip: "10.10.10.10", details: "Role permissions modified for Department Head.",
-    changes: [{ field: "can_export_data", from: "false", to: "true" }, { field: "can_view_biometrics", from: "false", to: "true" }],
-  },
-  {
-    id: "al7",
-    timestamp: "2026-03-08T08:02:11Z",
-    actor: "Prachi Sharma", actorRole: "Super Admin", email: "prachi@facetrack.io",
-    action: "LOGIN", category: "auth", severity: "info",
-    resource: "Session", resourceId: "sess-9821",
-    ip: "192.168.1.10", details: "Administrator login via SSO.",
-  },
-  {
-    id: "al8",
-    timestamp: "2026-03-07T23:50:00Z",
-    actor: "System", actorRole: "Automated", email: "system@facetrack.io",
-    action: "PURGE_LOGS", category: "system", severity: "warning",
-    resource: "AuditLog", resourceId: "log-archive-feb",
-    ip: "127.0.0.1", details: "Automated retention policy: logs older than 90 days purged.",
-  },
-  {
-    id: "al9",
-    timestamp: "2026-03-07T22:34:07Z",
-    actor: "Neha Gupta", actorRole: "Admin", email: "neha@facetrack.io",
-    action: "VIEW_BIOMETRICS", category: "data", severity: "warning",
-    resource: "BiometricProfile", resourceId: "bio-055",
-    ip: "172.16.0.3", details: "Biometric embedding data accessed for verification audit.",
-  },
-  {
-    id: "al10",
-    timestamp: "2026-03-07T21:15:30Z",
-    actor: "Amit Patel", actorRole: "Admin", email: "amit@facetrack.io",
-    action: "CREATE_CAMERA", category: "config", severity: "info",
-    resource: "CameraStream", resourceId: "cam-014",
-    ip: "192.168.2.22", details: "New camera stream registered for Floor 3 entrance.",
-    changes: [{ field: "location", from: "—", to: "Floor 3 - Main Entrance" }, { field: "status", from: "—", to: "active" }],
-  },
-  {
-    id: "al11",
-    timestamp: "2026-03-07T20:00:00Z",
-    actor: "Prachi Sharma", actorRole: "Super Admin", email: "prachi@facetrack.io",
-    action: "UPDATE_RETENTION", category: "config", severity: "warning",
-    resource: "DataRetentionPolicy", resourceId: "cfg-002",
-    ip: "192.168.1.10", details: "Data retention policy updated.",
-    changes: [{ field: "unrecognized_face_days", from: "30", to: "14" }],
-  },
-  {
-    id: "al12",
-    timestamp: "2026-03-07T18:45:22Z",
-    actor: "Deepika Nair", actorRole: "Admin", email: "deepika@facetrack.io",
-    action: "DELETE_CAMERA", category: "config", severity: "critical",
-    resource: "CameraStream", resourceId: "cam-003",
-    ip: "172.16.5.8", details: "Decommissioned camera stream deleted (legacy hardware).",
-  },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmtTs = (iso: string) => {
   const d = new Date(iso);
@@ -264,7 +148,7 @@ const ChangeRow = ({ entry }: { entry: AuditLogEntry }) => {
           <Typography variant="subtitle2" fontSize="0.8rem" fontWeight={600} lineHeight={1.2}>
             {entry.actor}
           </Typography>
-          <Typography variant="caption" color="text.secondary">{entry.actorRole}</Typography>
+          <Typography variant="caption" color="text.secondary">{entry.actor_role}</Typography>
         </TableCell>
         <TableCell>
           <Stack direction="row" alignItems="center" spacing={0.5}>
@@ -296,7 +180,7 @@ const ChangeRow = ({ entry }: { entry: AuditLogEntry }) => {
             {entry.resource}
           </Typography>
           <Typography variant="caption" color="text.secondary" sx={{ fontFamily: "monospace" }}>
-            {entry.resourceId}
+            {entry.resource_id}
           </Typography>
         </TableCell>
         <TableCell sx={{ fontSize: "0.74rem", fontFamily: "monospace" }}>{entry.ip}</TableCell>
@@ -347,6 +231,9 @@ const ChangeRow = ({ entry }: { entry: AuditLogEntry }) => {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 const AuditLogs = () => {
+  const [logs, setLogs]               = useState<AuditLogEntry[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
   const [search, setSearch]           = useState("");
   const [severityFilter, setSeverity] = useState<"all" | AuditSeverity>("all");
   const [categoryFilter, setCategory] = useState<"all" | AuditCategory>("all");
@@ -354,9 +241,28 @@ const AuditLogs = () => {
   const [rowsPerPage, setRows]        = useState(10);
   const [refreshKey, setRefreshKey]   = useState(0);
 
+  // Fetch audit logs on component mount and when refreshed
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await auditLogService.getAuditLogs(100, 0);
+        setLogs(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to fetch audit logs");
+        console.error("Error fetching audit logs:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchLogs();
+  }, [refreshKey]);
+
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return MOCK_LOGS.filter((log) => {
+    return logs.filter((log) => {
       if (severityFilter !== "all" && log.severity !== severityFilter) return false;
       if (categoryFilter !== "all" && log.category !== categoryFilter) return false;
       if (
@@ -368,21 +274,21 @@ const AuditLogs = () => {
       ) return false;
       return true;
     });
-  }, [search, severityFilter, categoryFilter, refreshKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [logs, search, severityFilter, categoryFilter]);
 
   const paginated = filtered.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   const counts = useMemo(() => ({
-    total:    MOCK_LOGS.length,
-    critical: MOCK_LOGS.filter((l) => l.severity === "critical").length,
-    warning:  MOCK_LOGS.filter((l) => l.severity === "warning").length,
-    info:     MOCK_LOGS.filter((l) => l.severity === "info").length,
-  }), []);
+    total:    logs.length,
+    critical: logs.filter((l) => l.severity === "critical").length,
+    warning:  logs.filter((l) => l.severity === "warning").length,
+    info:     logs.filter((l) => l.severity === "info").length,
+  }), [logs]);
 
   const handleExport = () => {
     const header = ["Timestamp", "Actor", "Role", "Action", "Category", "Severity", "Resource", "Resource ID", "IP", "Details"].join(",");
     const rows = filtered.map((l) =>
-      [fmtTs(l.timestamp), l.actor, l.actorRole, l.action, l.category, l.severity, l.resource, l.resourceId, l.ip, l.details]
+      [fmtTs(l.timestamp), l.actor, l.actor_role, l.action, l.category, l.severity, l.resource, l.resource_id, l.ip, l.details]
         .map((v) => `"${v}"`)
         .join(",")
     );
@@ -459,6 +365,17 @@ const AuditLogs = () => {
       </Stack>
 
       {/* ── Critical notice ─────────────────────────────── */}
+      {error && (
+        <Alert severity="error" sx={{ borderRadius: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      {loading && (
+        <Paper sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 4, borderRadius: 2 }}>
+          <CircularProgress />
+        </Paper>
+      )}
       {counts.critical > 0 && (
         <Alert severity="error" icon={<ShieldOutlinedIcon />} sx={{ borderRadius: 2 }}>
           <strong>{counts.critical} critical audit event{counts.critical > 1 ? "s" : ""}</strong> recorded.
@@ -467,6 +384,7 @@ const AuditLogs = () => {
       )}
 
       {/* ── Log table ───────────────────────────────────── */}
+      {!loading && (
       <SectionCard
         icon={<AssignmentOutlinedIcon sx={{ fontSize: 18, color: "#fff" }} />}
         title="Event Log"
@@ -572,6 +490,7 @@ const AuditLogs = () => {
           sx={{ mt: 1, "& .MuiTablePagination-toolbar": { minHeight: 44 } }}
         />
       </SectionCard>
+      )}
     </Stack>
   );
 };

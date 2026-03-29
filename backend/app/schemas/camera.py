@@ -14,3 +14,15 @@ class CameraIdentifyResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class CameraResponse(BaseModel):
+    camera_id: UUID
+    camera_name: str
+    camera_type: str | None
+    location: str | None
+    ip_address: str | None
+    device_identifier: str
+    status: str
+
+    class Config:
+        from_attributes = True

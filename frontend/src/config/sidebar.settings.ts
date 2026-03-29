@@ -55,11 +55,6 @@ export const settingsSidebar: SidebarItem[] = [
         icon: Gavel,
       },
       {
-        label: "Access Logs",
-        path: "/admin/settings/security#access-logs",
-        icon: Shield,
-      },
-      {
         label: "Consent Management",
         path: "/admin/settings/security#consents",
         icon: VerifiedUser,

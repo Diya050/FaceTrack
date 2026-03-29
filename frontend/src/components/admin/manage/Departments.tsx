@@ -1,465 +1,265 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { isAxiosError } from "axios";
+import React, { useEffect, useMemo, useState } from "react";
 import { jwtDecode } from "jwt-decode";
 import {
-  Alert,
-  Box,
-  Button,
-  Card,
-  CardContent,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Grid,
-  MenuItem,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TablePagination,
-  TableRow,
-  Paper,
-  TextField,
-  Typography,
-  useMediaQuery,
-  useTheme,
+  Alert, Box, Button, CircularProgress, Dialog, DialogActions,
+  DialogContent, DialogTitle, Stack, Table, TableBody, TableCell,
+  TableContainer, TableHead, TablePagination, TableRow,
+  TextField, Typography, IconButton, Tooltip, Card
 } from "@mui/material";
-
-import { Add, Groups } from "@mui/icons-material";
-
-import {
-  createDepartment,
-  listDepartments,
-  type Department,
+import { Add, EditOutlined, DeleteOutline, WarningAmber } from "@mui/icons-material";
+import { COLORS } from "../../../theme/dashboardTheme";
+import { 
+  createDepartment, 
+  listDepartments, 
+  updateDepartment, 
+  deleteDepartment 
 } from "../../../services/departmentService";
-import {
-  getOrganizations,
-  type Organization,
-} from "../../../services/orgService";
 
 interface AccessTokenPayload {
-  exp: number;
-  org_id?: string;
   role?: string;
-  sub: string;
 }
-
-const getApiErrorMessage = (error: unknown, fallback: string) => {
-  if (isAxiosError(error)) {
-    const detail = error.response?.data?.detail;
-
-    if (typeof detail === "string" && detail.trim()) {
-      return detail;
-    }
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return fallback;
-};
-
-const normalizeOrganizationId = (organizationId?: string) => {
-  if (!organizationId || organizationId === "None") {
-    return "";
-  }
-
-  return organizationId;
-};
-
-interface DepartmentModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: { name: string; description: string }) => Promise<void>;
-  submitting: boolean;
-  fullScreen: boolean;
-}
-
-/*  Main Component  */
 
 const Departments: React.FC = () => {
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [organizations, setOrganizations] = useState<Organization[]>([]);
-  const [organizationLoading, setOrganizationLoading] = useState(false);
+  const [role, setRole] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [authReady, setAuthReady] = useState(false);
-  const [currentRole, setCurrentRole] = useState<string | null>(null);
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-
+  
+  // Modal States
+  const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+  const [selectedDept, setSelectedDept] = useState<any>(null);
   const [openModal, setOpenModal] = useState(false);
+  const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
 
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-  const requiresOrganizationSelection = currentRole === "SUPER_ADMIN";
+  const fetchDepartments = async () => {
+    setLoading(true);
+    try {
+      const data = await listDepartments();
+      setDepartments(data);
+    } catch { setError("Failed to load departments"); }
+    finally { setLoading(false); }
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-
-    if (!token) {
-      setError("Authentication token not found.");
-      setAuthReady(true);
-      return;
-    }
-
-    try {
-      const decoded = jwtDecode<AccessTokenPayload>(token);
-      setCurrentRole(decoded.role ?? null);
-      setSelectedOrganizationId(normalizeOrganizationId(decoded.org_id));
-    } catch {
-      setError("Unable to read authentication token.");
-    } finally {
-      setAuthReady(true);
+    if (token) {
+      try {
+        const decoded = jwtDecode<AccessTokenPayload>(token);
+        setRole(decoded.role ?? null);
+      } catch { setError("Invalid session."); }
     }
   }, []);
 
   useEffect(() => {
-    if (!authReady || currentRole !== "SUPER_ADMIN") {
-      return;
-    }
+    if (role === "HR_ADMIN") fetchDepartments();
+  }, [role]);
 
-    const fetchOrganizations = async () => {
-      setOrganizationLoading(true);
+  // --- Action Handlers ---
 
-      try {
-        const data = await getOrganizations();
-        setOrganizations(data);
-      } catch (organizationError: unknown) {
-        setError(
-          getApiErrorMessage(
-            organizationError,
-            "Failed to load organizations."
-          )
-        );
-      } finally {
-        setOrganizationLoading(false);
-      }
-    };
+  const handleOpenCreate = () => {
+    setModalMode("create");
+    setSelectedDept(null);
+    setOpenModal(true);
+  };
 
-    void fetchOrganizations();
-  }, [authReady, currentRole]);
+  const handleOpenEdit = (dept: any) => {
+    setModalMode("edit");
+    setSelectedDept(dept);
+    setOpenModal(true);
+  };
 
-  const fetchDepartments = useCallback(async (organizationId?: string) => {
-    if (requiresOrganizationSelection && !organizationId) {
-      setDepartments([]);
-      setLoading(false);
-      return;
-    }
+  const handleOpenDelete = (dept: any) => {
+    setSelectedDept(dept);
+    setOpenDeleteDialog(true);
+  };
 
-    setLoading(true);
-
+  const handleModalSubmit = async (data: any) => {
     try {
-      const data = await listDepartments(organizationId);
-      setDepartments(data);
-      setError(null);
-    } catch (fetchError: unknown) {
-      setError(getApiErrorMessage(fetchError, "Failed to load departments."));
-    } finally {
-      setLoading(false);
-    }
-  }, [requiresOrganizationSelection]);
-
-  useEffect(() => {
-    if (!authReady) {
-      return;
-    }
-
-    if (requiresOrganizationSelection && !selectedOrganizationId) {
-      setDepartments([]);
-      return;
-    }
-
-    void fetchDepartments(selectedOrganizationId || undefined);
-  }, [authReady, fetchDepartments, requiresOrganizationSelection, selectedOrganizationId]);
-
-  const handleCreateDepartment = useCallback(
-    async (data: { name: string; description: string }) => {
-      if (requiresOrganizationSelection && !selectedOrganizationId) {
-        setError("Select an organization before creating a department.");
-        return;
+      if (modalMode === "create") {
+        await createDepartment(data);
+      } else {
+        await updateDepartment(selectedDept.department_id, data);
       }
+      setOpenModal(false);
+      fetchDepartments();
+    } catch {
+      setError(`Failed to ${modalMode} department`);
+    }
+  };
 
-      setSubmitting(true);
+  const handleDeleteConfirm = async () => {
+    try {
+      await deleteDepartment(selectedDept.department_id);
+      setOpenDeleteDialog(false);
+      fetchDepartments();
+    } catch {
+      setError("Failed to delete department");
+    }
+  };
 
-      try {
-        await createDepartment({
-          name: data.name,
-          description: data.description || undefined,
-          organization_id: requiresOrganizationSelection
-            ? selectedOrganizationId
-            : undefined,
-        });
-        setSuccess(`Department \"${data.name}\" created successfully.`);
-        setOpenModal(false);
-        await fetchDepartments(selectedOrganizationId || undefined);
-      } catch (createError: unknown) {
-        setError(getApiErrorMessage(createError, "Failed to create department."));
-      } finally {
-        setSubmitting(false);
-      }
-    },
-    [fetchDepartments, requiresOrganizationSelection, selectedOrganizationId]
-  );
-
-  const paginatedDepartments = useMemo(() => {
+  const paginated = useMemo(() => {
     const start = page * rowsPerPage;
     return departments.slice(start, start + rowsPerPage);
   }, [departments, page, rowsPerPage]);
 
-  return (
-    <Box sx={{ mt: { xs: 6, md: 8 }, p: { xs: 2, sm: 3, md: 4 }, bgcolor: "#F8F9FA", minHeight: "100vh" }}>
-      
-      {/* Header */}
-      <Box display="flex" flexDirection={{ xs: "column", sm: "row" }} justifyContent="space-between" gap={2} mb={3} mt={3}>
-        <Typography variant="h5" fontWeight={600}>
-          Manage Departments
-        </Typography>
+  if (role && role !== "HR_ADMIN") {
+    return (
+      <Box p={4} display="flex" justifyContent="center">
+        <Alert severity="warning">Access Denied: HR Admin only.</Alert>
+      </Box>
+    );
+  }
 
+  return (
+    <Box sx={{ p: { xs: 2, md: 4 }, mt: 8, bgcolor: "#F4F7FA", minHeight: "90vh" }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb={4}>
+        <Box>
+          <Typography variant="h4" sx={{ fontWeight: 800, color: COLORS.navy }}>Departments</Typography>
+          <Typography variant="body2" color="text.secondary">Manage organizational structure</Typography>
+        </Box>
         <Button
           startIcon={<Add />}
           variant="contained"
-          onClick={() => setOpenModal(true)}
-          fullWidth={isMobile}
-          disabled={requiresOrganizationSelection && !selectedOrganizationId}
+          onClick={handleOpenCreate}
+          sx={{ bgcolor: COLORS.navy, borderRadius: 2, textTransform: "none", px: 3 }}
         >
-          Add Department
+          New Department
         </Button>
-      </Box>
+      </Stack>
 
-      {requiresOrganizationSelection && (
-        <Card elevation={0} sx={{ mb: 3 }}>
-          <CardContent>
-            <Stack spacing={2}>
-              <Typography fontWeight={600}>Organization</Typography>
-              <TextField
-                select
-                label="Select Organization"
-                value={selectedOrganizationId}
-                onChange={(event) => {
-                  setSelectedOrganizationId(event.target.value);
-                  setPage(0);
-                  setSuccess(null);
-                }}
-                disabled={organizationLoading}
-                fullWidth
-              >
-                {organizations.map((organization) => (
-                  <MenuItem
-                    key={organization.organization_id}
-                    value={organization.organization_id}
-                  >
-                    {organization.name}
-                  </MenuItem>
-                ))}
-              </TextField>
-              {!selectedOrganizationId && (
-                <Alert severity="info">
-                  Select an organization to view or create departments.
-                </Alert>
-              )}
-            </Stack>
-          </CardContent>
-        </Card>
-      )}
+      {error && <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>{error}</Alert>}
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
-          {error}
-        </Alert>
-      )}
-
-      {success && (
-        <Alert
-          severity="success"
-          sx={{ mb: 2 }}
-          onClose={() => setSuccess(null)}
-        >
-          {success}
-        </Alert>
-      )}
-
-      {/* Analytics */}
-      <Grid container spacing={2} mb={3}>
-        <StatCard
-          title="Total Departments"
-          value={departments.length}
-          icon={<Groups />}
-        />
-      </Grid>
-
-      {/* Table */}
-      <Card elevation={0}>
-        <CardContent>
-          <Typography fontWeight={600} mb={2}>
-            Organization Hierarchy
-          </Typography>
-
-          <TableContainer component={Paper} elevation={0} sx={{ overflowX: "auto" }}>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Department</TableCell>
-                  <TableCell>Description</TableCell>
+      <Card elevation={0} sx={{ borderRadius: 3, border: "1px solid #E0E4E8" }}>
+        <TableContainer>
+          <Table>
+            <TableHead sx={{ bgcolor: "#F8F9FB" }}>
+              <TableRow>
+                <TableCell sx={{ fontWeight: 700, color: COLORS.navy }}>NAME</TableCell>
+                <TableCell sx={{ fontWeight: 700, color: COLORS.navy }}>DESCRIPTION</TableCell>
+                <TableCell align="right" sx={{ fontWeight: 700, color: COLORS.navy }}>ACTIONS</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow><TableCell colSpan={3} align="center" sx={{ py: 5 }}><CircularProgress size={30} /></TableCell></TableRow>
+              ) : paginated.map((d) => (
+                <TableRow key={d.department_id} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>{d.name}</TableCell>
+                  <TableCell color="text.secondary">{d.description || "-"}</TableCell>
+                  <TableCell align="right">
+                    <Tooltip title="Edit">
+                      <IconButton size="small" onClick={() => handleOpenEdit(d)} sx={{ color: COLORS.navy }}>
+                        <EditOutlined fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Delete">
+                      <IconButton size="small" onClick={() => handleOpenDelete(d)} sx={{ color: "#E53E3E", ml: 1 }}>
+                        <DeleteOutline fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </TableCell>
                 </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {loading ? (
-                  <TableRow>
-                    <TableCell colSpan={2} align="center">
-                      <CircularProgress size={24} />
-                    </TableCell>
-                  </TableRow>
-                ) : paginatedDepartments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={2} align="center">
-                      {requiresOrganizationSelection && !selectedOrganizationId
-                        ? "Select an organization to view departments."
-                        : "No departments found."}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedDepartments.map((department) => (
-                    <TableRow key={department.department_id} hover>
-                      <TableCell>{department.name}</TableCell>
-                      <TableCell>{department.description || "-"}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
-          <TablePagination
-            component="div"
-            count={departments.length}
-            page={page}
-            onPageChange={(_, p) => setPage(p)}
-            rowsPerPage={rowsPerPage}
-            onRowsPerPageChange={(e) => {
-              setRowsPerPage(parseInt(e.target.value, 10));
-              setPage(0);
-            }}
-            rowsPerPageOptions={[5, 10, 25]}
-          />
-        </CardContent>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          component="div"
+          count={departments.length}
+          page={page}
+          onPageChange={(_, p) => setPage(p)}
+          rowsPerPage={rowsPerPage}
+          onRowsPerPageChange={(e) => setRowsPerPage(parseInt(e.target.value, 10))}
+        />
       </Card>
 
+      {/* Dynamic Create/Edit Modal */}
       <DepartmentModal
         open={openModal}
+        mode={modalMode}
+        initialData={selectedDept}
         onClose={() => setOpenModal(false)}
-        onSubmit={handleCreateDepartment}
-        submitting={submitting}
-        fullScreen={isMobile}
+        onSubmit={handleModalSubmit}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={openDeleteDialog} onClose={() => setOpenDeleteDialog(false)}>
+        <Box sx={{ p: 2, textAlign: "center" }}>
+          <WarningAmber sx={{ color: "#FF9800", fontSize: 50, mb: 1 }} />
+          <DialogTitle>Delete Department?</DialogTitle>
+          <DialogContent>
+            <Typography variant="body2" color="text.secondary">
+              Are you sure you want to delete <strong>{selectedDept?.name}</strong>? 
+              This action might affect assigned employees.
+            </Typography>
+          </DialogContent>
+          <DialogActions sx={{ justifyContent: "center", pb: 2 }}>
+            <Button onClick={() => setOpenDeleteDialog(false)} sx={{ color: "#718096" }}>Cancel</Button>
+            <Button onClick={handleDeleteConfirm} variant="contained" sx={{ bgcolor: "#E53E3E", "&:hover": { bgcolor: "#C53030" } }}>
+              Confirm Delete
+            </Button>
+          </DialogActions>
+        </Box>
+      </Dialog>
     </Box>
   );
 };
 
-export default Departments;
-
-/*  Components  */
-
-const StatCard = ({ title, value, icon }: any) => (
-  <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-    <Card elevation={0}>
-      <CardContent sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <Box>
-          <Typography variant="body2" color="text.secondary">{title}</Typography>
-          <Typography variant="h6" fontWeight={600}>{value}</Typography>
-        </Box>
-        <Box sx={{ color: "primary.main" }}>{icon}</Box>
-      </CardContent>
-    </Card>
-  </Grid>
-);
-
-/*  Modal  */
-
-const DepartmentModal: React.FC<DepartmentModalProps> = ({
-  open,
-  onClose,
-  onSubmit,
-  submitting,
-  fullScreen,
-}) => {
+// --- Modal Component (Updated for Edit Mode) ---
+const DepartmentModal = ({ open, onClose, onSubmit, mode, initialData }: any) => {
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [validationError, setValidationError] = useState<string | null>(null);
+  const [desc, setDesc] = useState("");
 
+  // Populate fields when editing
   useEffect(() => {
-    if (open) {
+    if (initialData && mode === "edit") {
+      setName(initialData.name);
+      setDesc(initialData.description || "");
+    } else {
       setName("");
-      setDescription("");
-      setValidationError(null);
+      setDesc("");
     }
-  }, [open]);
+  }, [initialData, mode, open]);
 
-  const handleSave = async () => {
-    const trimmedName = name.trim();
-
-    if (!trimmedName) {
-      setValidationError("Department name is required.");
-      return;
-    }
-
-    setValidationError(null);
-    await onSubmit({
-      name: trimmedName,
-      description: description.trim(),
-    });
+  const handleSave = () => {
+    if (!name.trim()) return;
+    onSubmit({ name, description: desc });
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      maxWidth="sm"
-      fullWidth
-      fullScreen={fullScreen}
-    >
-      <DialogTitle>Create Department</DialogTitle>
-
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs" PaperProps={{ sx: { borderRadius: 3 } }}>
+      <DialogTitle sx={{ fontWeight: 800, color: COLORS.navy }}>
+        {mode === "create" ? "Create New Department" : "Edit Department"}
+      </DialogTitle>
       <DialogContent>
-        <Stack spacing={2} mt={1}>
-          {validationError && <Alert severity="error">{validationError}</Alert>}
+        <Stack spacing={2.5} mt={1}>
           <TextField
-            label="Department Name"
             fullWidth
+            label="Department Name"
             value={name}
-            onChange={(event) => setName(event.target.value)}
-            required
+            onChange={(e) => setName(e.target.value)}
           />
           <TextField
-            label="Description"
             fullWidth
             multiline
-            minRows={3}
-            value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            rows={3}
+            label="Description"
+            value={desc}
+            onChange={(e) => setDesc(e.target.value)}
           />
         </Stack>
       </DialogContent>
-
-      <DialogActions>
-        <Button onClick={onClose} disabled={submitting}>
-          Cancel
-        </Button>
-        <Button variant="contained" onClick={() => void handleSave()} disabled={submitting}>
-          {submitting ? <CircularProgress size={20} /> : "Save"}
+      <DialogActions sx={{ px: 3, pb: 2 }}>
+        <Button onClick={onClose} sx={{ color: "#718096" }}>Cancel</Button>
+        <Button variant="contained" onClick={handleSave} disabled={!name.trim()} sx={{ bgcolor: COLORS.navy }}>
+          {mode === "create" ? "Create" : "Save Changes"}
         </Button>
       </DialogActions>
     </Dialog>
   );
 };
+
+export default Departments;

@@ -91,3 +91,27 @@ export const rejectCorrection = async (id: string) => {
   const res = await api.put(`/attendance-correction/${id}/reject`);
   return res.data;
 };
+
+// Recognition Events for Live Monitoring
+export interface RecognitionEvent {
+  event_id: string;
+  user_id: string;
+  person_name: string;
+  confidence: number;
+  camera_id: string;
+  camera_name: string;
+  location: string | null;
+  department: string;
+  timestamp: string;
+  status: "recognized" | "unknown" | "blacklisted";
+}
+
+export const getRecognitionEvents = async (
+  limit: number = 20,
+  skip: number = 0
+): Promise<RecognitionEvent[]> => {
+  const res = await api.get("/attendance/recognition/events", {
+    params: { limit, skip },
+  });
+  return res.data;
+};
