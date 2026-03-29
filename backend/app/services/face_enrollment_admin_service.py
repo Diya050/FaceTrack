@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from app.models.biometrics import FaceEnrollmentSession
 from app.models.core import User, UserStatusEnum
 from app.services.notification_service import NotificationService
+from app.services.audit_log_service import AuditLogService
 
 
 class FaceEnrollmentAdminService:
@@ -58,6 +59,18 @@ class FaceEnrollmentAdminService:
             redirect_path="/user/capture",
             event_type="FACE_ENROLLMENT_REQUESTED"
         )
+
+        # Log the face enrollment request action
+        try:
+            AuditLogService.log_action(
+                db=db,
+                user_id=current_user.user_id,
+                action="FACE_ENROLLMENT",
+                organization_id=current_user.organization_id,
+                ip_address=None
+            )
+        except Exception as e:
+            print(f"Warning: Failed to log face enrollment request: {e}")
 
         return {
             "message": "Face enrollment requested",

@@ -8,6 +8,7 @@ from app.core.security import (
     create_access_token
 )
 from app.services.email_service import EmailService
+from app.services.audit_log_service import AuditLogService
 from app.models.system import PasswordResetToken
 from datetime import timedelta
 import datetime
@@ -192,7 +193,7 @@ class AuthService:
     
     # Separate login method for organization users (requires org name)
     @staticmethod
-    def org_login(db, email: str, password: str, organization_name: str):
+    def org_login(db, email: str, password: str, organization_name: str, ip_address: str = None):
 
         org_result = db.execute(
             select(Organization).where(
@@ -228,6 +229,18 @@ class AuthService:
 
         user.last_login = datetime.now(timezone.utc)
         db.commit()
+
+        # Log the login action
+        try:
+            AuditLogService.log_action(
+                db=db,
+                user_id=user.user_id,
+                action="LOGIN",
+                organization_id=organization.organization_id,
+                ip_address=ip_address
+            )
+        except Exception as e:
+            print(f"Warning: Failed to log login action: {e}")
 
         token = create_access_token(
             subject=user.user_id,

@@ -11,6 +11,7 @@ from app.api.v1.endpoints import user_analytics
 
 from app.api.v1.endpoints import system_health
 from app.api.v1.endpoints import live_alerts
+from app.api.v1.endpoints import audit
 
 api_router = APIRouter()
 
@@ -44,3 +45,4 @@ api_router.include_router(admin_analytics.router)
 
 api_router.include_router(system_health.router)
 api_router.include_router(live_alerts.router)
+api_router.include_router(audit.router)
