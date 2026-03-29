@@ -6,8 +6,6 @@ from app.services.role_service import RoleService
 from app.core.security import get_current_user
 from app.db.session import get_db
 
-router = APIRouter()
-
 router = APIRouter(
     prefix="/roles",
     tags=["Role Management"]
