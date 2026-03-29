@@ -3,10 +3,10 @@ from fastapi import HTTPException
 from app.models.core import Organization, Role, Department, OrganizationRole
 from sqlalchemy.exc import IntegrityError
 from app.models.core import OrganizationStatusEnum  # wherever your enum lives
+from app.services.magic_link_service import MagicLinkService
 
 
-
-def create_organization(db, data):
+def create_organization(db, data, created_by=None):
 
     # Check unique name (ignore soft-deleted)
     result = db.execute(
@@ -48,8 +48,9 @@ def create_organization(db, data):
     )
 
     db.add(new_org)
-    db.flush()  # Get organization_id for departments/roles
+    db.flush()
 
+    # Create HR department (unchanged)
     hr_department = Department(
         name="HR",
         organization_id=new_org.organization_id,
@@ -57,22 +58,19 @@ def create_organization(db, data):
     )
     db.add(hr_department)
 
-    # Auto-create default roles
+    # Attach default roles (unchanged)
     roles = db.execute(
         select(Role).where(
-            Role.role_name.in_(["USER", "ADMIN", "HR_ADMIN"])
+            Role.role_name.in_(["USER", "ADMIN", "HR_ADMIN", "ORG_ADMIN"])
         )
     ).scalars().all()
 
     for role in roles:
-        org_role = OrganizationRole(
+        db.add(OrganizationRole(
             organization_id=new_org.organization_id,
             role_id=role.role_id
-        )
-        db.add(org_role)
+        ))
 
-
-    # Commit everything together
     try:
         db.commit()
     except IntegrityError:
@@ -80,5 +78,14 @@ def create_organization(db, data):
         raise HTTPException(400, "Failed to create organization")
 
     db.refresh(new_org)
+
+    # Send ORG_ADMIN invite
+    MagicLinkService.create_invite(
+        db=db,
+        email=data.org_admin_email,
+        role="ORG_ADMIN",
+        organization_id=new_org.organization_id,
+        invited_by=created_by  # SUPER_ADMIN
+    )
 
     return new_org

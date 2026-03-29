@@ -25,6 +25,7 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
 import PendingFaceApproval from "../pages/auth/PendingFaceApproval";
+import Invite from "../pages/auth/Invite";
 
 /* ---------------- PUBLIC PAGES ---------------- */
 import MeetOurTeam from "../pages/MeetOurTeam";
@@ -123,6 +124,7 @@ export default function AppRoutes() {
     { path: "/register", element: <Register /> },
     { path: "/forgot-password", element: <ForgotPassword /> },
     { path: "/reset-password/:token", element: <ResetPassword /> },
+    { path: "/invite/:token", element: <Invite /> },
 
     /*  FALLBACK */
     {

@@ -140,6 +140,9 @@ class AdminFaceApprovalService:
         user = db.execute(
             select(User).where(User.user_id == user_id, User.is_deleted == False)
         ).scalars().first()
+
+        if user.status != UserStatusEnum.APPROVED:
+            raise HTTPException(400, "User must be approved before requesting enrollment")
         
         # Logic to create session...
         session = FaceEnrollmentSession(

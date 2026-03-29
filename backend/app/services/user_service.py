@@ -85,12 +85,27 @@ class UserService:
             raise HTTPException(404, "User not found")
 
         # ADMIN restriction (department scoped)
-        if current_user.role.role_name == "ADMIN":
+        role = current_user.role.role_name
+
+        # ORG_ADMIN → can approve anyone in org
+        if role == "ORG_ADMIN":
+            pass
+
+        # HR_ADMIN → cannot approve ORG_ADMIN or HR_ADMIN
+        elif role == "HR_ADMIN":
+            if user.role.role_name in ["ORG_ADMIN", "HR_ADMIN"]:
+                raise HTTPException(403, "Cannot approve this role")
+
+        # ADMIN → only within department & only USER
+        elif role == "ADMIN":
+            if user.role.role_name != "USER":
+                raise HTTPException(403, "Admins can only approve users")
+
             if user.department_id != current_user.department_id:
-                raise HTTPException(
-                    403,
-                    "Cannot approve users outside your department"
-                )
+                raise HTTPException(403, "Cannot approve outside your department")
+
+        else:
+            raise HTTPException(403, "Unauthorized")
 
         if user.status != UserStatusEnum.PENDING:
             raise HTTPException(400, "User is not pending approval")
@@ -128,6 +143,29 @@ class UserService:
             raise HTTPException(404, "User not found")
 
         if user.organization_id != current_user.organization_id:
+            raise HTTPException(403, "Unauthorized")
+        
+        # ADMIN restriction (department scoped)
+        role = current_user.role.role_name
+
+        # ORG_ADMIN → can approve anyone in org
+        if role == "ORG_ADMIN":
+            pass
+
+        # HR_ADMIN → cannot approve ORG_ADMIN or HR_ADMIN
+        elif role == "HR_ADMIN":
+            if user.role.role_name in ["ORG_ADMIN", "HR_ADMIN"]:
+                raise HTTPException(403, "Cannot approve this role")
+
+        # ADMIN → only within department & only USER
+        elif role == "ADMIN":
+            if user.role.role_name != "USER":
+                raise HTTPException(403, "Admins can only approve users")
+
+            if user.department_id != current_user.department_id:
+                raise HTTPException(403, "Cannot approve outside your department")
+
+        else:
             raise HTTPException(403, "Unauthorized")
 
         if user.status != UserStatusEnum.PENDING:

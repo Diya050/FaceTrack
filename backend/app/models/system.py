@@ -74,3 +74,31 @@ class PasswordResetToken(TenantMixin, Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())    
     
     user = relationship("User", back_populates="password_reset_tokens")
+
+
+class MagicInviteToken(TenantMixin, Base):
+    __tablename__ = "magic_invite_tokens"
+
+    token_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+
+    email = Column(String, nullable=False)
+    role = Column(String, nullable=False)  # ORG_ADMIN, HR_ADMIN, ADMIN, USER
+
+    invited_by = Column(
+        UUID(as_uuid=True),
+        ForeignKey("users.user_id", ondelete="SET NULL"),
+        nullable=True
+    )
+    department_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("departments.department_id", ondelete="SET NULL"),
+        nullable=True,
+        index=True
+    )
+
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    is_used = Column(Boolean, nullable=False, default=False)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    inviter = relationship("User")

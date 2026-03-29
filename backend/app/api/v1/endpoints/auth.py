@@ -5,6 +5,8 @@ from sqlalchemy.orm import Session
 from app.schemas.auth import RegisterRequest, PlatformLoginRequest, OrgLoginRequest, TokenResponse, ResetPasswordRequest, ForgotPasswordRequest
 from app.services.auth_service import AuthService
 from fastapi.security import OAuth2PasswordRequestForm
+from app.schemas.auth import InviteRegisterRequest
+from app.services.magic_link_service import MagicLinkService
 
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -80,3 +82,21 @@ def reset_password(
         data.token_id,
         data.new_password
     )
+
+@router.get("/invite/{token_id}")
+def verify_invite(token_id: str, db=Depends(get_db)):
+    token = MagicLinkService.verify_token(db, token_id)
+
+    return {
+        "email": token.email,
+        "role": token.role
+    }
+
+
+@router.post("/invite/register")
+def register_via_invite(
+    token_id: str,
+    request: InviteRegisterRequest,
+    db=Depends(get_db)
+):
+    return AuthService.register_via_invite(db, token_id, request)

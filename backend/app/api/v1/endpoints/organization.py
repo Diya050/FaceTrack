@@ -19,7 +19,7 @@ def create_org(
     db: Session = Depends(get_db),
     user=Depends(require_roles(["SUPER_ADMIN"]))
 ):
-    return create_organization(db, data)
+    return create_organization(db, data, created_by=user.user_id)
 
 @router.get("", response_model=list[OrganizationResponse])
 def list_orgs(

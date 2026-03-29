@@ -17,6 +17,7 @@ export default function CreateOrganizationPage() {
         email: "",
         contact_number: "",
         address: "",
+        org_admin_email: "",
     });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
@@ -25,18 +26,28 @@ export default function CreateOrganizationPage() {
         setForm((prev) => ({ ...prev, [key]: value }));
     };
     const handleSubmit = async () => {
-        try {
-        setLoading(true);
-        setError("");
+      if (
+        !form.name ||
+        !form.email ||
+        !form.contact_number ||
+        !form.address ||
+        !form.org_admin_email
+      ) {
+        setError("All fields are required.");
+        return;
+      }
+      try {
+      setLoading(true);
+      setError("");
 
-        await createOrganization(form);
+      await createOrganization(form);
 
-        navigate("/super-admin/organizations");
-        } catch (err: any) {
-        setError(err?.response?.data?.detail || "Failed to create organization");
-        } finally {
-        setLoading(false);
-        }
+      navigate("/super-admin/organizations");
+      } catch (err: any) {
+      setError(err?.response?.data?.detail || "Failed to create organization");
+      } finally {
+      setLoading(false);
+      }
     }
   return (
     <Paper sx={{ p: 4, borderRadius: 3 }}>
@@ -58,6 +69,12 @@ export default function CreateOrganizationPage() {
           fullWidth
           value={form.email}
           onChange={(e) => handleChange("email", e.target.value)}
+        />
+        <TextField
+          label="Organization Admin Email"
+          fullWidth
+          value={form.org_admin_email}
+          onChange={(e) => handleChange("org_admin_email", e.target.value)}
         />
         <TextField
           label="Contact Number"
