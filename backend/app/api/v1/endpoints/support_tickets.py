@@ -87,3 +87,20 @@ def update_ticket_status(
         ticket_id=ticket_id,
         status_data=data,
     )
+
+@router.post("/{ticket_id}/respond")
+def respond_to_ticket(
+    ticket_id: UUID,
+    action_key: str = Query(..., description="The predefined response key (e.g., 'resolved', 'wait')"),
+    db: Session = Depends(get_db),
+    current_user = Depends(require_roles(["HR_ADMIN"]))
+):
+    """
+    HR_ADMIN sends a predefined response to a user and triggers a notification.
+    """
+    return SupportTicketService.resolve_with_message(
+        db=db, 
+        ticket_id=ticket_id, 
+        current_user=current_user, 
+        action_key=action_key
+    )
