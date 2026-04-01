@@ -110,8 +110,18 @@ export default function FaceEnrollment() {
     const pose = getPose(lastDetectionRef.current.landmarks);
     if (pose === "UNKNOWN") return;
 
+    // Check individual pose limit AND global limit
     const currentCount = countsRef.current[pose as keyof typeof POSE_REQUIREMENTS];
-    if (currentCount >= POSE_REQUIREMENTS[pose as keyof typeof POSE_REQUIREMENTS]) return;
+    const totalCaptured = images.length;
+
+    if (currentCount >= POSE_REQUIREMENTS[pose as keyof typeof POSE_REQUIREMENTS] || totalCaptured >= MAX_IMAGES) {
+      return;
+    }
+
+    // CRITICAL: Increment Ref IMMEDIATELY to prevent race condition before state updates
+    const nextCounts = { ...countsRef.current, [pose]: currentCount + 1 };
+    countsRef.current = nextCounts;
+    setCapturedCounts(nextCounts); // Sync UI state
 
     const canvas = canvasRef.current;
     canvas.width = videoRef.current.videoWidth;
@@ -122,13 +132,10 @@ export default function FaceEnrollment() {
       if (blob) {
         const file = new File([blob], `face-${pose}-${Date.now()}.jpg`, { type: "image/jpeg" });
         setImages(prev => [...prev, file]);
-        const next = { ...countsRef.current, [pose]: countsRef.current[pose as keyof typeof POSE_REQUIREMENTS] + 1 };
-        countsRef.current = next;
-        setCapturedCounts(next);
         lastCaptureTimeRef.current = Date.now();
       }
     }, "image/jpeg", 0.95);
-  }, []);
+  }, [images.length]); // Track images length to respect global limit
 
   const runDetection = () => {
     const video = videoRef.current;
@@ -159,8 +166,12 @@ export default function FaceEnrollment() {
       setCurrentPose(pose);
 
       const isLargeEnough = resized.detection.box.width > 120;
-      const stillNeedsPose = countsRef.current[pose as keyof typeof POSE_REQUIREMENTS] < POSE_REQUIREMENTS[pose as keyof typeof POSE_REQUIREMENTS];
-      const isValid = isLargeEnough && stillNeedsPose;
+      
+      // Check if specific pose is done OR global limit is reached
+      const poseStillNeeded = countsRef.current[pose as keyof typeof POSE_REQUIREMENTS] < POSE_REQUIREMENTS[pose as keyof typeof POSE_REQUIREMENTS];
+      const globalSpaceAvailable = countsRef.current.CENTER + countsRef.current.LEFT + countsRef.current.RIGHT < MAX_IMAGES;
+      
+      const isValid = isLargeEnough && poseStillNeeded && globalSpaceAvailable;
       
       setFaceValid(isValid);
 
@@ -168,10 +179,19 @@ export default function FaceEnrollment() {
         captureImage();
       }
 
-      setStatusMessage(!isLargeEnough ? "Move closer" : !stillNeedsPose ? `${pose} done. Turn head.` : `Perfect! ${autoCaptureRef.current ? 'Capturing...' : ''}`);
+      // Update Message based on global and pose state
+      if (!globalSpaceAvailable) {
+        setStatusMessage("Enrollment complete. Ready to submit.");
+      } else if (!isLargeEnough) {
+        setStatusMessage("Move closer to the camera");
+      } else if (!poseStillNeeded) {
+        setStatusMessage(`${pose} view complete. Turn your head.`);
+      } else {
+        setStatusMessage(`Perfect! Hold still for ${pose} pose.`);
+      }
 
       if (ctx) {
-        ctx.strokeStyle = isValid ? "#4CAF50" : "#F44336";
+        ctx.strokeStyle = isValid ? "#4CAF50" : globalSpaceAvailable ? "#F44336" : "#4CAF50";
         ctx.lineWidth = 3;
         const { x, y, width, height } = resized.detection.box;
         ctx.strokeRect(x, y, width, height);
@@ -223,7 +243,6 @@ export default function FaceEnrollment() {
         </Alert>
       </Collapse>
 
-      {/* HEADER WITH STATUS BADGE */}
       <Stack direction="row" justifyContent="space-between" alignItems="flex-end" sx={{ mb: 4, borderBottom: "1px solid #eee", pb: 2, pl:4, pr:4, mt: 3 }}>
         <Box>
           <Typography variant="h4" fontWeight={800}>Biometric Enrollment</Typography>
@@ -238,10 +257,8 @@ export default function FaceEnrollment() {
       </Stack>
 
       <Grid container spacing={4}>
-        <Grid size={{ xs: 12, md: 7 }}>
+        <Grid size={{ xs:12, md:7 }}>
           <Box sx={{ bgcolor: "#F8F9FB", borderRadius: "24px", p: 3, border: '1px solid #E0E4EC' }}>
-            
-            {/* TOOLBAR WITH TOGGLES AND STOP BUTTON */}
             <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
               <FormControlLabel
                 control={<Switch checked={isAutoCapture} onChange={(e) => setIsAutoCapture(e.target.checked)} color="primary" />}
@@ -279,7 +296,7 @@ export default function FaceEnrollment() {
 
             <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
               <Button fullWidth variant="contained" disabled={!faceValid || isAutoCapture || images.length >= MAX_IMAGES} onClick={captureImage} sx={{ bgcolor: THEME_NAVY, py: 1.5, fontWeight: 800 }}>
-                {isAutoCapture ? "Auto-Capture Active" : `Capture ${currentPose !== "UNKNOWN" ? currentPose : ""} Pose`}
+                {isAutoCapture ? "Auto-Capture Active" : images.length >= MAX_IMAGES ? "Requirements Met" : `Capture ${currentPose !== "UNKNOWN" ? currentPose : ""} Pose`}
               </Button>
               <Tooltip title="Reset All Images">
                 <Button variant="outlined" onClick={handleReset} sx={{ minWidth: "56px" }}><Replay /></Button>
@@ -288,7 +305,7 @@ export default function FaceEnrollment() {
           </Box>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 5 }}>
+        <Grid size={{ xs:12, md:5 }}>
           <Box sx={{ bgcolor: "white", p: 3, borderRadius: "24px", border: "1px solid #eee", height: "100%" }}>
             <Typography variant="h6" fontWeight={800} mb={2}>Enrollment Requirements</Typography>
             <Stack spacing={2} mb={4}>
@@ -298,7 +315,7 @@ export default function FaceEnrollment() {
             </Stack>
             <Grid container spacing={1}>
               {Array.from({ length: MAX_IMAGES }).map((_, i) => (
-                <Grid size={{ xs: 4 }} key={i}>
+                <Grid size={{ xs:4 }} key={i}>
                   <Box sx={{ aspectRatio: "1/1", borderRadius: 2, bgcolor: "#F0F2F5", border: "2px dashed #ccc", overflow: "hidden" }}>
                     {images[i] && <img src={URL.createObjectURL(images[i])} style={{ width: "100%", height: "100%", objectFit: "cover" }} alt="face" />}
                   </Box>
@@ -320,8 +337,8 @@ const PoseProgress = ({ label, current, total }: { label: string, current: numbe
   <Box>
     <Stack direction="row" justifyContent="space-between" mb={0.5}>
       <Typography variant="caption" fontWeight={700}>{label}</Typography>
-      <Typography variant="caption" fontWeight={700}>{current}/{total}</Typography>
+      <Typography variant="caption" fontWeight={700}>{Math.min(current, total)}/{total}</Typography>
     </Stack>
-    <LinearProgress variant="determinate" value={(current / total) * 100} sx={{ height: 8, borderRadius: 4 }} color={current === total ? "success" : "primary"} />
+    <LinearProgress variant="determinate" value={Math.min((current / total) * 100, 100)} sx={{ height: 8, borderRadius: 4 }} color={current >= total ? "success" : "primary"} />
   </Box>
 );
