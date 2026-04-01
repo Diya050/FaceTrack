@@ -8,6 +8,7 @@ import warnings
 from app.api.v1.api import api_router
 from app.workers.scheduler import start_scheduler, stop_scheduler
 from app.services.face_embedding_service import get_face_app
+from app.services.retention_scheduler import init_scheduler, shutdown_scheduler
 
 warnings.filterwarnings("ignore")
 
@@ -37,6 +38,8 @@ def startup_event():
     start_scheduler()
     get_face_app()
     print("InsightFace model loaded successfully")
+    init_scheduler()
+    print("Data retention scheduler started")
 
 
 # --- SHUTDOWN  ---
@@ -44,6 +47,7 @@ def startup_event():
 def shutdown_event():
     print("Shutting down FaceTrack services...")
     stop_scheduler()
+    shutdown_scheduler()
 
 
 # --- ROOT ---

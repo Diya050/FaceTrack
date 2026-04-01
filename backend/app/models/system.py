@@ -1,21 +1,11 @@
 import uuid
-from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, String, Boolean, DateTime, Text, ForeignKey, Integer, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.db.session import Base
 from app.models.core import TenantMixin
 
-class Consent(TenantMixin, Base):
-    __tablename__ = "consents"
-    consent_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.user_id", ondelete="CASCADE"), nullable=False, index=True)
-    consent_type = Column(String, nullable=False) 
-    is_granted = Column(Boolean, nullable=False, default=False)
-    timestamp = Column(DateTime(timezone=True), server_default=func.now())
-    
-    user = relationship("User", back_populates="consents")
-    
 class Notification(TenantMixin, Base):
     __tablename__ = "notifications"
     notification_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
@@ -74,3 +64,32 @@ class PasswordResetToken(TenantMixin, Base):
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())    
     
     user = relationship("User", back_populates="password_reset_tokens")
+
+
+class RetentionPolicy(TenantMixin, Base):
+    __tablename__ = "retention_policies"
+    policy_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    category = Column(String, nullable=False, index=True)
+    retention_days = Column(Integer, nullable=False, default=365)
+    auto_delete = Column(Boolean, nullable=False, default=True)
+    archive_before_delete = Column(Boolean, nullable=False, default=False)
+    last_run_at = Column(DateTime(timezone=True), nullable=True)
+    next_run_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+
+
+class PurgeJob(TenantMixin, Base):
+    __tablename__ = "purge_jobs"
+    job_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    policy_id = Column(UUID(as_uuid=True), ForeignKey("retention_policies.policy_id", ondelete="CASCADE"), nullable=False, index=True)
+    category = Column(String, nullable=False)
+    status = Column(String, nullable=False, default="scheduled")
+    started_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    records_deleted = Column(Integer, nullable=False, default=0)
+    size_mb = Column(Float, nullable=False, default=0.0)
+    triggered_by = Column(String, nullable=False, default="Scheduler")
+    error_message = Column(Text, nullable=True)
+    
+    policy = relationship("RetentionPolicy")

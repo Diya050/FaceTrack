@@ -32,3 +32,11 @@ export const updateTicketStatus = async (
 
   return response.data;
 };
+
+
+export const respondToTicket = async (ticketId: string, actionKey: string) => {
+  const response = await api.post(`/support-tickets/${ticketId}/respond`, null, {
+    params: { action_key: actionKey }
+  });
+  return response.data;
+};

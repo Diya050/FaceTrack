@@ -103,20 +103,26 @@ def run_daily_attendance_job(target_date: Optional[date] = None) -> dict:
     """
     Generate attendance for ALL active organisations for `target_date`.
 
-    target_date defaults to yesterday in IST (today_ist() − OFFSET days).
-    Uses today_ist() — never date.today() — to stay consistent with the IST
-    calendar dates stored in the Attendance table.
+    FIX: Uses short-lived DB sessions (one per org) to avoid
+    exhausting Supabase connection limits.
     """
+
     if target_date is None:
         target_date = today_ist() - timedelta(days=settings.ATTENDANCE_DEFAULT_OFFSET_DAYS)
 
     logger.info("=== Daily attendance job started | date=%s ===", target_date)
 
     total_orgs = success_orgs = failed_orgs = 0
-    aggregate = {"processed_users_count": 0, "present_count": 0,
-                 "absent_count": 0, "half_day_count": 0, "late_count": 0}
+    aggregate = {
+        "processed_users_count": 0,
+        "present_count": 0,
+        "absent_count": 0,
+        "half_day_count": 0,
+        "late_count": 0,
+    }
 
     try:
+        # ✅ Step 1: Fetch orgs using ONE short-lived session
         with _db_session() as db:
             orgs = db.execute(
                 select(Organization).where(
@@ -125,43 +131,60 @@ def run_daily_attendance_job(target_date: Optional[date] = None) -> dict:
                 )
             ).scalars().all()
 
-            total_orgs = len(orgs)
+        total_orgs = len(orgs)
 
-            if not orgs:
-                logger.warning("No active organisations — nothing to process.")
-                return {"status": "ok", "total_orgs": 0}
+        if not orgs:
+            logger.warning("No active organisations — nothing to process.")
+            return {"status": "ok", "total_orgs": 0}
 
-            for org in orgs:
-                result = _process_org(db, org.organization_id, target_date)
-                if result is not None:
-                    success_orgs += 1
-                    for key in aggregate:
-                        aggregate[key] += result.get(key, 0)
-                else:
-                    failed_orgs += 1
+        # ✅ Step 2: Process each org with its OWN session
+        for org in orgs:
+            try:
+                with _db_session() as db:
+                    result = _process_org(db, org.organization_id, target_date)
 
-            db.commit()   # commit all savepoints at once
+                    if result is not None:
+                        success_orgs += 1
+                        for key in aggregate:
+                            aggregate[key] += result.get(key, 0)
+                    else:
+                        failed_orgs += 1
+
+                    db.commit()  # ✅ commit per org
+
+            except Exception:
+                logger.exception(
+                    "Fatal error processing org=%s date=%s",
+                    org.organization_id,
+                    target_date,
+                )
+                failed_orgs += 1
+
+        logger.info(
+            "=== Daily job done | date=%s | orgs %d/%d ok | "
+            "users=%d present=%d late=%d half_day=%d absent=%d ===",
+            target_date,
+            success_orgs,
+            total_orgs,
+            aggregate["processed_users_count"],
+            aggregate["present_count"],
+            aggregate["late_count"],
+            aggregate["half_day_count"],
+            aggregate["absent_count"],
+        )
+
+        return {
+            "status": "ok",
+            "target_date": str(target_date),
+            "total_orgs": total_orgs,
+            "success_orgs": success_orgs,
+            "failed_orgs": failed_orgs,
+            **aggregate,
+        }
 
     except Exception:
         logger.exception("Fatal error in daily attendance job | date=%s", target_date)
         return {"status": "failed", "target_date": str(target_date)}
-
-    logger.info(
-        "=== Daily job done | date=%s | orgs %d/%d ok | "
-        "users=%d present=%d late=%d half_day=%d absent=%d ===",
-        target_date, success_orgs, total_orgs,
-        aggregate["processed_users_count"], aggregate["present_count"],
-        aggregate["late_count"], aggregate["half_day_count"], aggregate["absent_count"],
-    )
-
-    return {
-        "status": "ok",
-        "target_date": str(target_date),
-        "total_orgs": total_orgs,
-        "success_orgs": success_orgs,
-        "failed_orgs": failed_orgs,
-        **aggregate,
-    }
 
 
 # ---------------------------------------------------------------------------
@@ -169,24 +192,23 @@ def run_daily_attendance_job(target_date: Optional[date] = None) -> dict:
 # ---------------------------------------------------------------------------
 def run_catchup_jobs() -> None:
     """
-    For each of the last ATTENDANCE_CATCHUP_DAYS IST calendar days, check
-    whether attendance has been generated for each (org, date) pair.
-    Only missing combinations are regenerated.
-
-    Key fix: checks per (organization_id, attendance_date) — the original
-    checked only by date, silently skipping all orgs if any one had a row.
+    FIX: Uses short-lived DB sessions per (org, date)
+    to avoid exhausting Supabase connection limits.
     """
+
     today = today_ist()
     start_date = today - timedelta(days=settings.ATTENDANCE_CATCHUP_DAYS)
 
     logger.info(
         "=== Catch-up job started | range=%s → %s ===",
-        start_date, today - timedelta(days=1),
+        start_date,
+        today - timedelta(days=1),
     )
 
     generated = skipped = 0
 
     try:
+        # ✅ Step 1: fetch orgs once
         with _db_session() as db:
             orgs = db.execute(
                 select(Organization).where(
@@ -195,38 +217,58 @@ def run_catchup_jobs() -> None:
                 )
             ).scalars().all()
 
-            if not orgs:
-                logger.info("Catch-up: no active organisations.")
-                return
+        if not orgs:
+            logger.info("Catch-up: no active organisations.")
+            return
 
-            current_date = start_date
-            while current_date < today:
-                for org in orgs:
-                    # Per (org_id, date) check — not just by date
-                    exists = db.execute(
-                        select(Attendance).where(
-                            Attendance.organization_id == org.organization_id,
-                            Attendance.attendance_date == current_date,
-                        ).limit(1)
-                    ).scalars().first()
+        current_date = start_date
 
-                    if exists:
-                        skipped += 1
-                        logger.debug(
-                            "Catch-up skip org=%s date=%s", org.organization_id, current_date
+        # ✅ Step 2: iterate dates
+        while current_date < today:
+
+            for org in orgs:
+                try:
+                    # ✅ NEW session per (org, date)
+                    with _db_session() as db:
+
+                        # check existence
+                        exists = db.execute(
+                            select(Attendance).where(
+                                Attendance.organization_id == org.organization_id,
+                                Attendance.attendance_date == current_date,
+                            ).limit(1)
+                        ).scalars().first()
+
+                        if exists:
+                            skipped += 1
+                            logger.debug(
+                                "Catch-up skip org=%s date=%s",
+                                org.organization_id,
+                                current_date,
+                            )
+                            continue
+
+                        logger.info(
+                            "Catch-up generating org=%s date=%s",
+                            org.organization_id,
+                            current_date,
                         )
-                        continue
 
-                    logger.info(
-                        "Catch-up generating org=%s date=%s", org.organization_id, current_date
+                        result = _process_org(db, org.organization_id, current_date)
+
+                        if result is not None:
+                            generated += 1
+
+                        db.commit()  # ✅ commit per org-date
+
+                except Exception:
+                    logger.exception(
+                        "Catch-up failed org=%s date=%s",
+                        org.organization_id,
+                        current_date,
                     )
-                    result = _process_org(db, org.organization_id, current_date)
-                    if result is not None:
-                        generated += 1
 
-                # Commit after each date — keeps lock window small
-                db.commit()
-                current_date += timedelta(days=1)
+            current_date += timedelta(days=1)
 
     except Exception:
         logger.exception("Catch-up job encountered a fatal error.")

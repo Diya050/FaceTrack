@@ -182,7 +182,6 @@ class User(Base, TenantMixin):
     attendance_events = relationship("AttendanceEvent", back_populates="user")
     attendance_corrections = relationship("AttendanceCorrection", foreign_keys="AttendanceCorrection.user_id", back_populates="user")
     face_enrollment_sessions = relationship("FaceEnrollmentSession",back_populates="user",cascade="all, delete-orphan")
-    consents = relationship("Consent", back_populates="user", cascade="all, delete-orphan")
     notifications = relationship("Notification", back_populates="user", cascade="all, delete-orphan")
     support_tickets = relationship("SupportTicket", back_populates="user", cascade="all, delete-orphan")
     audit_logs = relationship("AuditLog", back_populates="user", cascade="all, delete-orphan")

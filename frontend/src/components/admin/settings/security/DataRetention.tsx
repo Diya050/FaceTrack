@@ -1,22 +1,27 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Box, Typography, Stack, Paper, Chip, Divider,
   Table, TableBody, TableCell, TableContainer, TableHead,
   TableRow, TablePagination, Tooltip, IconButton, Button,
   Alert, Slider, Switch, Dialog, DialogTitle,
   DialogContent, DialogContentText, DialogActions,
-  LinearProgress, FormControlLabel,
+  LinearProgress, FormControlLabel, CircularProgress, Snackbar,
 } from "@mui/material";
+// Import with type-only imports to satisfy TypeScript config
+import { 
+  dataRetentionApi, 
+  type RetentionPolicyResponse as PolicyResponse, 
+  type PurgeJobResponse as JobResponse 
+} from "../../../../api/security.api";
 import StorageOutlinedIcon          from "@mui/icons-material/StorageOutlined";
 import DeleteOutlineOutlinedIcon    from "@mui/icons-material/DeleteOutlineOutlined";
 import ScheduleOutlinedIcon         from "@mui/icons-material/ScheduleOutlined";
 import CheckCircleOutlineIcon       from "@mui/icons-material/CheckCircleOutline";
 import WarningAmberOutlinedIcon     from "@mui/icons-material/WarningAmberOutlined";
 import DownloadOutlinedIcon         from "@mui/icons-material/DownloadOutlined";
-import RefreshOutlinedIcon          from "@mui/icons-material/RefreshOutlined";
+import RefreshOutlined             from "@mui/icons-material/RefreshOutlined";
 import FingerprintOutlinedIcon      from "@mui/icons-material/FingerprintOutlined";
 import EventNoteOutlinedIcon        from "@mui/icons-material/EventNoteOutlined";
-import LockOutlinedIcon             from "@mui/icons-material/LockOutlined";
 import ManageSearchOutlinedIcon     from "@mui/icons-material/ManageSearchOutlined";
 import VerifiedUserOutlinedIcon     from "@mui/icons-material/VerifiedUserOutlined";
 import VideoLibraryOutlinedIcon     from "@mui/icons-material/VideoLibraryOutlined";
@@ -28,7 +33,6 @@ type DataCategory =
   | "biometric_embeddings"
   | "attendance_records"
   | "audit_logs"
-  | "access_logs"
   | "consent_records"
   | "camera_snapshots";
 
@@ -41,7 +45,7 @@ interface RetentionPolicy {
   autoDelete: boolean;
   archiveBeforeDelete: boolean;
   lastRunAt: string | null;
-  nextRunAt: string;
+  nextRunAt: string | null;
   recordsAffected: number;
   sizeMB: number;
 }
@@ -55,29 +59,34 @@ interface PurgeJob {
   recordsDeleted: number;
   sizeMB: number;
   triggeredBy: string;
+  errorMessage: string | null;
 }
 
-// ─── Mock Data ────────────────────────────────────────────────────────────────
+// ─── Transform functions ──────────────────────────────────────────────────────
 
-const INITIAL_POLICIES: RetentionPolicy[] = [
-  { id: "rp1", category: "biometric_embeddings", retentionDays: 365, autoDelete: true,  archiveBeforeDelete: true,  lastRunAt: "2026-03-01T02:00:00Z", nextRunAt: "2026-04-01T02:00:00Z", recordsAffected: 142,  sizeMB: 320  },
-  { id: "rp2", category: "attendance_records",   retentionDays: 730, autoDelete: true,  archiveBeforeDelete: true,  lastRunAt: "2026-03-01T02:10:00Z", nextRunAt: "2026-04-01T02:10:00Z", recordsAffected: 8640, sizeMB: 185  },
-  { id: "rp3", category: "audit_logs",           retentionDays: 180, autoDelete: true,  archiveBeforeDelete: false, lastRunAt: "2026-03-01T02:20:00Z", nextRunAt: "2026-04-01T02:20:00Z", recordsAffected: 3200, sizeMB: 92   },
-  { id: "rp4", category: "access_logs",          retentionDays: 90,  autoDelete: true,  archiveBeforeDelete: false, lastRunAt: "2026-03-01T02:30:00Z", nextRunAt: "2026-04-01T02:30:00Z", recordsAffected: 5800, sizeMB: 74   },
-  { id: "rp5", category: "consent_records",      retentionDays: 1095,autoDelete: false, archiveBeforeDelete: true,  lastRunAt: null,                   nextRunAt: "2026-04-01T02:40:00Z", recordsAffected: 210,  sizeMB: 4    },
-  { id: "rp6", category: "camera_snapshots",     retentionDays: 30,  autoDelete: true,  archiveBeforeDelete: false, lastRunAt: "2026-03-01T03:00:00Z", nextRunAt: "2026-04-01T03:00:00Z", recordsAffected: 9800, sizeMB: 1240 },
-];
+const transformPolicy = (p: PolicyResponse): RetentionPolicy => ({
+  id: p.id,
+  category: p.category as DataCategory,
+  retentionDays: p.retention_days,
+  autoDelete: p.auto_delete,
+  archiveBeforeDelete: p.archive_before_delete,
+  lastRunAt: p.last_run_at,
+  nextRunAt: p.next_run_at,
+  recordsAffected: p.records_affected,
+  sizeMB: p.size_mb,
+});
 
-const MOCK_JOBS: PurgeJob[] = [
-  { id: "j1", category: "camera_snapshots",     status: "completed", startedAt: "2026-03-01T03:00:00Z", completedAt: "2026-03-01T03:04:12Z", recordsDeleted: 9800,  sizeMB: 1240, triggeredBy: "Scheduler"   },
-  { id: "j2", category: "access_logs",          status: "completed", startedAt: "2026-03-01T02:30:00Z", completedAt: "2026-03-01T02:31:05Z", recordsDeleted: 5800,  sizeMB: 74,   triggeredBy: "Scheduler"   },
-  { id: "j3", category: "audit_logs",           status: "completed", startedAt: "2026-03-01T02:20:00Z", completedAt: "2026-03-01T02:21:38Z", recordsDeleted: 3200,  sizeMB: 92,   triggeredBy: "Scheduler"   },
-  { id: "j4", category: "attendance_records",   status: "completed", startedAt: "2026-03-01T02:10:00Z", completedAt: "2026-03-01T02:13:20Z", recordsDeleted: 8640,  sizeMB: 185,  triggeredBy: "Scheduler"   },
-  { id: "j5", category: "biometric_embeddings", status: "failed",    startedAt: "2026-02-15T02:00:00Z", completedAt: "2026-02-15T02:00:42Z", recordsDeleted: 0,     sizeMB: 0,    triggeredBy: "Scheduler"   },
-  { id: "j6", category: "access_logs",          status: "completed", startedAt: "2026-02-01T02:30:00Z", completedAt: "2026-02-01T02:31:55Z", recordsDeleted: 4100,  sizeMB: 58,   triggeredBy: "admin@facetrack.io" },
-  { id: "j7", category: "camera_snapshots",     status: "scheduled", startedAt: "2026-04-01T03:00:00Z", completedAt: null,                   recordsDeleted: 0,     sizeMB: 0,    triggeredBy: "Scheduler"   },
-  { id: "j8", category: "audit_logs",           status: "scheduled", startedAt: "2026-04-01T02:20:00Z", completedAt: null,                   recordsDeleted: 0,     sizeMB: 0,    triggeredBy: "Scheduler"   },
-];
+const transformJob = (j: JobResponse): PurgeJob => ({
+  id: j.id,
+  category: j.category as DataCategory,
+  status: j.status as JobStatus,
+  startedAt: j.started_at,
+  completedAt: j.completed_at,
+  recordsDeleted: j.records_deleted,
+  sizeMB: j.size_mb,
+  triggeredBy: j.triggered_by,
+  errorMessage: j.error_message,
+});
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -92,14 +101,17 @@ const fmtTs = (iso: string | null) => {
 const fmtSize = (mb: number) =>
   mb >= 1024 ? `${(mb / 1024).toFixed(1)} GB` : `${mb} MB`;
 
-const CATEGORY_META: Record<DataCategory, { label: string; description: string; icon: React.ReactNode; color: string }> = {
+const CATEGORY_META: Record<string, { label: string; description: string; icon: React.ReactNode; color: string }> = {
   biometric_embeddings: { label: "Biometric Embeddings", description: "Face encoding vectors per user",       icon: <FingerprintOutlinedIcon   sx={{ fontSize: 16 }} />, color: "#7C5CBF" },
   attendance_records:   { label: "Attendance Records",   description: "Daily check-in/check-out logs",        icon: <EventNoteOutlinedIcon     sx={{ fontSize: 16 }} />, color: "#2196F3" },
   audit_logs:           { label: "Audit Logs",           description: "Admin action event trail",             icon: <ManageSearchOutlinedIcon  sx={{ fontSize: 16 }} />, color: "#FF9800" },
-  access_logs:          { label: "Access Logs",          description: "Authentication and access events",     icon: <LockOutlinedIcon          sx={{ fontSize: 16 }} />, color: "#F44336" },
   consent_records:      { label: "Consent Records",      description: "User privacy consent history",         icon: <VerifiedUserOutlinedIcon  sx={{ fontSize: 16 }} />, color: "#4CAF50" },
   camera_snapshots:     { label: "Camera Snapshots",     description: "Recognition event frame captures",     icon: <VideoLibraryOutlinedIcon  sx={{ fontSize: 16 }} />, color: "#00BCD4" },
 };
+
+const DEFAULT_CATEGORY_META = { label: "Unknown", description: "Unknown category", icon: <StorageOutlinedIcon sx={{ fontSize: 16 }} />, color: "#9E9E9E" };
+
+const getCategoryMeta = (category: string) => CATEGORY_META[category] || DEFAULT_CATEGORY_META;
 
 const JOB_STATUS_META: Record<JobStatus, { label: string; color: "success" | "error" | "warning" | "info" }> = {
   completed: { label: "Completed", color: "success" },
@@ -174,7 +186,10 @@ const SummaryCard = ({
 // ─── Main component ───────────────────────────────────────────────────────────
 
 const DataRetention = () => {
-  const [policies, setPolicies]         = useState<RetentionPolicy[]>(INITIAL_POLICIES);
+  const [policies, setPolicies]         = useState<RetentionPolicy[]>([]);
+  const [jobs, setJobs]                 = useState<PurgeJob[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [saving, setSaving]             = useState(false);
   const [page, setPage]                 = useState(0);
   const [rowsPerPage, setRows]          = useState(10);
   const [editTarget, setEditTarget]     = useState<RetentionPolicy | null>(null);
@@ -182,8 +197,35 @@ const DataRetention = () => {
   const [draftDays, setDraftDays]       = useState(90);
   const [draftAuto, setDraftAuto]       = useState(true);
   const [draftArchive, setDraftArchive] = useState(false);
+  const [snackbar, setSnackbar]         = useState<{ open: boolean; message: string; severity: "success" | "error" }>({ open: false, message: "", severity: "success" });
 
-  const jobs = MOCK_JOBS;
+  const fetchData = useCallback(async (autoInit = false) => {
+    try {
+      setLoading(true);
+      let [policiesRes, jobsRes] = await Promise.all([
+        dataRetentionApi.listPolicies(),
+        dataRetentionApi.listPurgeJobs(),
+      ]);
+      
+      // If no policies exist and autoInit is enabled, initialize defaults
+      if (policiesRes.length === 0 && autoInit) {
+        await dataRetentionApi.initializePolicies();
+        policiesRes = await dataRetentionApi.listPolicies();
+      }
+      
+      setPolicies(policiesRes.map(transformPolicy));
+      setJobs(jobsRes.map(transformJob));
+    } catch (error) {
+      console.error("Failed to fetch data retention data:", error);
+      setSnackbar({ open: true, message: "Failed to load data retention policies", severity: "error" });
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData(true); // Auto-initialize on first load
+  }, [fetchData]);
 
   const totals = useMemo(() => ({
     totalMB:    policies.reduce((s, p) => s + p.sizeMB, 0),
@@ -201,26 +243,50 @@ const DataRetention = () => {
     setEditTarget(p);
   };
 
-  const confirmEdit = () => {
+  const confirmEdit = async () => {
     if (!editTarget) return;
-    setPolicies((prev) =>
-      prev.map((p) =>
-        p.id === editTarget.id
-          ? { ...p, retentionDays: draftDays, autoDelete: draftAuto, archiveBeforeDelete: draftArchive }
-          : p
-      )
-    );
-    setEditTarget(null);
+    try {
+      setSaving(true);
+      const updated = await dataRetentionApi.updatePolicy(editTarget.id, {
+        retention_days: draftDays,
+        auto_delete: draftAuto,
+        archive_before_delete: draftArchive,
+      });
+      setPolicies((prev) =>
+        prev.map((p) => (p.id === editTarget.id ? transformPolicy(updated) : p))
+      );
+      setSnackbar({ open: true, message: "Policy updated successfully", severity: "success" });
+      setEditTarget(null);
+    } catch (error) {
+      console.error("Failed to update policy:", error);
+      setSnackbar({ open: true, message: "Failed to update policy", severity: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const confirmPurge = () => {
-    setPurgeTarget(null);
+  const confirmPurge = async () => {
+    if (!purgeTarget) return;
+    try {
+      setSaving(true);
+      await dataRetentionApi.triggerPurge(purgeTarget.id);
+      setSnackbar({ open: true, message: `Purge job scheduled for ${getCategoryMeta(purgeTarget.category).label}`, severity: "success" });
+      setPurgeTarget(null);
+      // Refresh jobs list
+      const jobsRes = await dataRetentionApi.listPurgeJobs();
+      setJobs(jobsRes.map(transformJob));
+    } catch (error) {
+      console.error("Failed to trigger purge:", error);
+      setSnackbar({ open: true, message: "Failed to trigger purge job", severity: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleExport = () => {
     const headers = ["Category", "Retention (days)", "Auto-Delete", "Archive First", "Last Run", "Next Run", "Records", "Size"];
     const rows = policies.map((p) => [
-      CATEGORY_META[p.category].label,
+      getCategoryMeta(p.category).label,
       p.retentionDays,
       p.autoDelete ? "Yes" : "No",
       p.archiveBeforeDelete ? "Yes" : "No",
@@ -237,6 +303,14 @@ const DataRetention = () => {
     a.click();
   };
 
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={300}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
   return (
     <Stack spacing={3}>
       {/* ── Heading ─────────────────────────────────────── */}
@@ -251,8 +325,8 @@ const DataRetention = () => {
         </Box>
         <Stack direction="row" spacing={1}>
           <Tooltip title="Refresh">
-            <IconButton size="small" sx={{ color: "text.secondary" }}>
-              <RefreshOutlinedIcon fontSize="small" />
+            <IconButton size="small" sx={{ color: "text.secondary" }} onClick={() => fetchData(false)} disabled={loading}>
+              <RefreshOutlined fontSize="small" />
             </IconButton>
           </Tooltip>
           <Button
@@ -261,6 +335,7 @@ const DataRetention = () => {
             startIcon={<DownloadOutlinedIcon />}
             onClick={handleExport}
             sx={{ fontSize: "0.75rem" }}
+            disabled={policies.length === 0}
           >
             Export CSV
           </Button>
@@ -315,7 +390,7 @@ const DataRetention = () => {
             .sort((a, b) => b.sizeMB - a.sizeMB)
             .map((p) => {
               const pct = Math.min((p.sizeMB / TOTAL_STORAGE_MB) * 100, 100);
-              const meta = CATEGORY_META[p.category];
+              const meta = getCategoryMeta(p.category);
               return (
                 <Box key={p.id}>
                   <Stack direction="row" justifyContent="space-between" alignItems="center" mb={0.5}>
@@ -365,7 +440,7 @@ const DataRetention = () => {
             </TableHead>
             <TableBody>
               {policies.map((p) => {
-                const meta = CATEGORY_META[p.category];
+                const meta = getCategoryMeta(p.category);
                 return (
                   <TableRow key={p.id} hover sx={{ "&:last-child td": { borderBottom: 0 } }}>
                     {/* Category */}
@@ -484,8 +559,8 @@ const DataRetention = () => {
             </TableHead>
             <TableBody>
               {paginatedJobs.map((j) => {
-                const { label: sLabel, color: sColor } = JOB_STATUS_META[j.status];
-                const meta = CATEGORY_META[j.category];
+                const statusMeta = JOB_STATUS_META[j.status] || { label: j.status, color: "info" as const };
+                const meta = getCategoryMeta(j.category);
                 return (
                   <TableRow key={j.id} hover sx={{ "&:last-child td": { borderBottom: 0 } }}>
                     <TableCell>
@@ -496,9 +571,9 @@ const DataRetention = () => {
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={sLabel}
+                        label={statusMeta.label}
                         size="small"
-                        color={sColor}
+                        color={statusMeta.color}
                         variant="outlined"
                         sx={{ fontSize: "0.7rem", height: 22 }}
                       />
@@ -531,9 +606,12 @@ const DataRetention = () => {
           component="div"
           count={jobs.length}
           page={page}
-          onPageChange={(_, p) => setPage(p)}
+          onPageChange={(_, newPage: number) => setPage(newPage)}
           rowsPerPage={rowsPerPage}
-          onRowsPerPageChange={(e) => { setRows(parseInt(e.target.value, 10)); setPage(0); }}
+          onRowsPerPageChange={(event: React.ChangeEvent<HTMLInputElement>) => { 
+            setRows(parseInt(event.target.value, 10)); 
+            setPage(0); 
+          }}
           rowsPerPageOptions={[5, 10, 25]}
           sx={{ mt: 1, "& .MuiTablePagination-toolbar": { minHeight: 44 } }}
         />
@@ -542,7 +620,7 @@ const DataRetention = () => {
       {/* ── Edit policy dialog ───────────────────────────── */}
       <Dialog open={!!editTarget} onClose={() => setEditTarget(null)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 700 }}>
-          Configure — {editTarget ? CATEGORY_META[editTarget.category].label : ""}
+          Configure — {editTarget ? getCategoryMeta(editTarget.category).label : ""}
         </DialogTitle>
         <DialogContent>
           <Stack spacing={3} mt={1}>
@@ -576,7 +654,7 @@ const DataRetention = () => {
             <Divider />
 
             <FormControlLabel
-              control={<Switch checked={draftAuto} onChange={(e) => setDraftAuto(e.target.checked)} />}
+              control={<Switch checked={draftAuto} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraftAuto(event.target.checked)} />}
               label={
                 <Box>
                   <Typography variant="body2" fontWeight={600}>Auto-Delete</Typography>
@@ -588,7 +666,7 @@ const DataRetention = () => {
             />
 
             <FormControlLabel
-              control={<Switch checked={draftArchive} onChange={(e) => setDraftArchive(e.target.checked)} />}
+              control={<Switch checked={draftArchive} onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraftArchive(event.target.checked)} />}
               label={
                 <Box>
                   <Typography variant="body2" fontWeight={600}>Archive Before Deleting</Typography>
@@ -601,8 +679,10 @@ const DataRetention = () => {
           </Stack>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setEditTarget(null)} size="small">Cancel</Button>
-          <Button onClick={confirmEdit} size="small" variant="contained">Save Policy</Button>
+          <Button onClick={() => setEditTarget(null)} size="small" disabled={saving}>Cancel</Button>
+          <Button onClick={confirmEdit} size="small" variant="contained" disabled={saving}>
+            {saving ? <CircularProgress size={16} /> : "Save Policy"}
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -611,18 +691,34 @@ const DataRetention = () => {
         <DialogTitle sx={{ fontWeight: 700, color: "error.main" }}>Run Purge Now</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            This will immediately delete all <strong>{purgeTarget ? CATEGORY_META[purgeTarget.category].label : ""}</strong> records
+            This will immediately delete all <strong>{purgeTarget ? getCategoryMeta(purgeTarget.category).label : ""}</strong> records
             older than <strong>{purgeTarget?.retentionDays} days</strong> ({purgeTarget ? fmtSize(purgeTarget.sizeMB) : ""} estimated).
             This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={() => setPurgeTarget(null)} size="small">Cancel</Button>
-          <Button onClick={confirmPurge} size="small" color="error" variant="contained">
-            Purge Now
+          <Button onClick={() => setPurgeTarget(null)} size="small" disabled={saving}>Cancel</Button>
+          <Button onClick={confirmPurge} size="small" color="error" variant="contained" disabled={saving}>
+            {saving ? <CircularProgress size={16} /> : "Purge Now"}
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ── Snackbar for notifications ───────────────────── */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Stack>
   );
 };
