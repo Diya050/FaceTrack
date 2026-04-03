@@ -34,12 +34,6 @@ def create_ticket(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
-    """
-    Create a new support ticket.
-
-    Accessible to:
-    - Any authenticated user.
-    """
     return SupportTicketService.create_ticket(db, current_user, data)
 
 
@@ -48,20 +42,10 @@ def create_ticket(
     response_model=List[SupportTicketResponse],
 )
 def list_tickets(
-    status: Optional[TicketStatus] = Query(
-        None,
-        description="Filter tickets by status",
-    ),
+    status: Optional[TicketStatus] = Query(None),
     db: Session = Depends(get_db),
-    
     current_user=Depends(require_roles(["HR_ADMIN"])),
 ):
-    """
-    Retrieve all support tickets for the organization.
-
-    Accessible to:
-    - HR_ADMIN Only
-    """
     return SupportTicketService.list_tickets(db, current_user, status)
 
 
@@ -75,15 +59,24 @@ def update_ticket_status(
     db: Session = Depends(get_db),
     current_user=Depends(require_roles(["HR_ADMIN"])),
 ):
-    """
-    Update the status of a support ticket.
-
-    Accessible to:
-    - HR_ADMIN Only
-    """
     return SupportTicketService.update_ticket_status(
         db=db,
         current_user=current_user,
         ticket_id=ticket_id,
         status_data=data,
+    )
+
+
+@router.post("/{ticket_id}/respond")
+def respond_to_ticket(
+    ticket_id: UUID,
+    action_key: str = Query(...),
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles(["HR_ADMIN"]))
+):
+    return SupportTicketService.resolve_with_message(
+        db=db,
+        ticket_id=ticket_id,
+        current_user=current_user,
+        action_key=action_key
     )

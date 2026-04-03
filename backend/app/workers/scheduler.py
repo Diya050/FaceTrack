@@ -1,28 +1,19 @@
 """
-APScheduler setup
-==================
-Manages the lifecycle of the background attendance scheduler.
+APScheduler Setup - HARD THROTTLED (Supabase Safe)
+=================================================
 
-Startup sequence
-----------------
-1. start_scheduler() is called from app lifespan (FastAPI startup event).
-2. If ENABLE_CATCHUP_ON_STARTUP is True, catch-up runs in a daemon thread.
-3. If RUN_JOB_ON_STARTUP is True, yesterday's job runs in a daemon thread.
-   A short delay is added so catch-up gets a head start.
-4. The daily cron job is registered to fire at the configured IST time.
-
-Thread safety
--------------
-Both startup threads are daemon threads — they die when the process exits and
-never block a clean shutdown.
-Only one instance of any job can run at a time (max_instances=1, coalesce=True).
+Key improvements:
+✅ Strict sequential execution (NO concurrency)
+✅ Global execution lock (prevents overlapping runs)
+✅ Increased delays to prevent connection spikes
+✅ Per-org delay safety for catch-up
+✅ Safe startup (no DB flood)
 """
 
 import logging
+import time
 import threading
-import time as _time
 from zoneinfo import ZoneInfo
-from app.core.config import settings
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -37,11 +28,19 @@ logger = logging.getLogger(__name__)
 
 IST = ZoneInfo(settings.SCHEDULER_TIMEZONE)
 
+# 🔥 GLOBAL THROTTLE SETTINGS (SUPABASE SAFE)
+JOB_START_DELAY = 5
+BETWEEN_JOB_DELAY = 10
+CATCHUP_COOLDOWN = 10
+
+# 🚨 GLOBAL LOCK (VERY IMPORTANT)
+job_lock = threading.Lock()
+
 scheduler = BackgroundScheduler(
     job_defaults={
         "misfire_grace_time": settings.SCHEDULER_MISFIRE_GRACE_SECONDS,
-        "coalesce": True,          # collapse multiple missed runs into one
-        "max_instances": 1,        # never run the same job twice concurrently
+        "coalesce": True,
+        "max_instances": 1,  # 🚨 APScheduler-level safety
     },
     timezone=IST,
 )
@@ -50,56 +49,80 @@ _DAILY_JOB_ID = settings.SCHEDULER_JOB_ID
 
 
 # ---------------------------------------------------------------------------
-# Internal helpers
+# THROTTLED JOB WRAPPER
 # ---------------------------------------------------------------------------
-def _run_catchup_bg() -> None:
-    """Daemon thread target: catch-up job with error boundary."""
-    try:
-        run_catchup_jobs()
-    except Exception:
-        logger.exception("Catch-up background thread raised an unhandled exception.")
-
-
-def _run_daily_bg() -> None:
+def _throttled_daily_job():
     """
-    Daemon thread target: yesterday's job, delayed slightly so catch-up
-    gets a head start and they don't race for the same rows.
+    Fully safe wrapper:
+    - Prevents overlapping execution
+    - Adds delay before and after execution
     """
-    _time.sleep(settings.STARTUP_DAILY_JOB_DELAY_SECONDS)   # default: 5 s
-    try:
-        run_daily_attendance_job()
-    except Exception:
-        logger.exception("Startup daily-job background thread raised an unhandled exception.")
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-def start_scheduler() -> None:
-    """
-    Register the daily cron job and optionally fire startup background tasks.
-    Call once from the FastAPI lifespan startup handler.
-    """
-    if scheduler.running:
-        logger.warning("Scheduler already running — start_scheduler() called twice?")
+    # 🚨 Prevent parallel execution manually
+    if not job_lock.acquire(blocking=False):
+        logger.warning("⚠️ Job already running, skipping this run")
         return
 
     try:
-        # ── Optional startup tasks (non-blocking daemon threads) ───────────
+        logger.info("⏳ Throttling before daily job...")
+        time.sleep(JOB_START_DELAY)
+
+        logger.info("🚀 Running daily attendance job...")
+        result = run_daily_attendance_job()
+
+        logger.info("✅ Daily job finished: %s", result)
+
+    except Exception as exc:
+        logger.exception("❌ Daily job failed: %s", exc)
+
+    finally:
+        logger.info("⏳ Cooling down after job...")
+        time.sleep(BETWEEN_JOB_DELAY)
+
+        job_lock.release()
+
+
+# ---------------------------------------------------------------------------
+# START SCHEDULER
+# ---------------------------------------------------------------------------
+def start_scheduler() -> None:
+    """
+    Safe startup sequence:
+    1. Run catch-up SYNCHRONOUSLY (with delays)
+    2. Register daily job
+    3. Start scheduler
+    """
+
+    if scheduler.running:
+        logger.warning("Scheduler already running")
+        return
+
+    try:
+        # 🔥 STEP 1: SAFE CATCH-UP
         if settings.ENABLE_CATCHUP_ON_STARTUP:
-            threading.Thread(target=_run_catchup_bg, daemon=True, name="catchup-job").start()
-            logger.info("Catch-up job dispatched in background thread.")
+            logger.info("⏳ Starting catch-up with throttling...")
 
-        if settings.RUN_JOB_ON_STARTUP:
-            threading.Thread(target=_run_daily_bg, daemon=True, name="daily-startup-job").start()
-            logger.info(
-                "Daily startup job dispatched (delayed %ds).",
-                settings.STARTUP_DAILY_JOB_DELAY_SECONDS,
-            )
+            time.sleep(3)  # initial delay
 
-        # ── Recurring cron job ──────────────────────────────────────────────
+            # 🚨 LOCK even for catch-up
+            if job_lock.acquire(blocking=False):
+                try:
+                    run_catchup_jobs()
+                    logger.info("✅ Catch-up completed")
+
+                except Exception as exc:
+                    logger.exception("❌ Catch-up failed (continuing): %s", exc)
+
+                finally:
+                    logger.info("⏳ Cooling down after catch-up...")
+                    time.sleep(CATCHUP_COOLDOWN)
+                    job_lock.release()
+            else:
+                logger.warning("⚠️ Skipping catch-up (another job running)")
+
+        # 🔥 STEP 2: REGISTER DAILY JOB
         scheduler.add_job(
-            run_daily_attendance_job,
+            _throttled_daily_job,
             trigger=CronTrigger(
                 hour=settings.SCHEDULER_DAILY_HOUR,
                 minute=settings.SCHEDULER_DAILY_MINUTE,
@@ -109,30 +132,49 @@ def start_scheduler() -> None:
             replace_existing=True,
         )
 
+        # 🔥 STEP 3: START
         scheduler.start()
 
         logger.info(
-            "APScheduler started. Daily attendance job at %02d:%02d IST.",
+            "✅ Scheduler started (SAFE MODE). Daily job at %02d:%02d IST",
             settings.SCHEDULER_DAILY_HOUR,
             settings.SCHEDULER_DAILY_MINUTE,
         )
 
-    except Exception:
-        logger.exception("Failed to start APScheduler.")
+    except Exception as exc:
+        logger.exception("❌ Failed to start scheduler: %s", exc)
         raise
 
 
+# ---------------------------------------------------------------------------
+# STOP SCHEDULER
+# ---------------------------------------------------------------------------
 def stop_scheduler() -> None:
-    """
-    Gracefully stop the scheduler.
-    Call from the FastAPI lifespan shutdown handler.
-    """
     if not scheduler.running:
-        logger.warning("Scheduler is not running — stop_scheduler() called unnecessarily.")
+        logger.warning("Scheduler not running")
         return
 
     try:
         scheduler.shutdown(wait=True)
-        logger.info("APScheduler stopped gracefully.")
-    except Exception:
-        logger.exception("Error while stopping APScheduler.")
+        logger.info("✅ Scheduler stopped")
+
+    except Exception as exc:
+        logger.exception("❌ Error stopping scheduler: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# MANUAL TRIGGER (SAFE)
+# ---------------------------------------------------------------------------
+def trigger_daily_job_now() -> dict:
+    """
+    Manual trigger with full safety
+    """
+    logger.info("⚡ Manual trigger requested")
+
+    try:
+        _throttled_daily_job()
+        return {"status": "success"}
+
+    except Exception as exc:
+        logger.exception("❌ Manual trigger failed: %s", exc)
+        return {"status": "failed", "error": str(exc)}

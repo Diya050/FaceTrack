@@ -55,11 +55,6 @@ export const settingsSidebar: SidebarItem[] = [
         icon: Gavel,
       },
       {
-        label: "Consent Management",
-        path: "/admin/settings/security#consents",
-        icon: VerifiedUser,
-      },
-      {
         label: "Data Retention",
         path: "/admin/settings/security#data-retention",
         icon: Policy,
