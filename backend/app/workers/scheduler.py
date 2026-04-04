@@ -1,15 +1,3 @@
-"""
-APScheduler Setup - HARD THROTTLED (Supabase Safe)
-=================================================
-
-Key improvements:
-✅ Strict sequential execution (NO concurrency)
-✅ Global execution lock (prevents overlapping runs)
-✅ Increased delays to prevent connection spikes
-✅ Per-org delay safety for catch-up
-✅ Safe startup (no DB flood)
-"""
-
 import logging
 import time
 import threading
@@ -26,21 +14,23 @@ from app.workers.generate_daily_attendance import (
 
 logger = logging.getLogger(__name__)
 
+# Timezone configuration
 IST = ZoneInfo(settings.SCHEDULER_TIMEZONE)
 
-# 🔥 GLOBAL THROTTLE SETTINGS (SUPABASE SAFE)
-JOB_START_DELAY = 5
-BETWEEN_JOB_DELAY = 10
-CATCHUP_COOLDOWN = 10
+# Throttling controls to avoid database pressure
+JOB_START_DELAY = 3          # Delay before executing daily job
+BETWEEN_JOB_DELAY = 5        # Cooldown after daily job
+CATCHUP_COOLDOWN = 5         # Cooldown after catch-up job
 
-# 🚨 GLOBAL LOCK (VERY IMPORTANT)
+# Global lock to prevent concurrent job execution
 job_lock = threading.Lock()
 
+# APScheduler configuration
 scheduler = BackgroundScheduler(
     job_defaults={
         "misfire_grace_time": settings.SCHEDULER_MISFIRE_GRACE_SECONDS,
         "coalesce": True,
-        "max_instances": 1,  # 🚨 APScheduler-level safety
+        "max_instances": 1,
     },
     timezone=IST,
 )
@@ -48,79 +38,77 @@ scheduler = BackgroundScheduler(
 _DAILY_JOB_ID = settings.SCHEDULER_JOB_ID
 
 
-# ---------------------------------------------------------------------------
-# THROTTLED JOB WRAPPER
-# ---------------------------------------------------------------------------
 def _throttled_daily_job():
     """
-    Fully safe wrapper:
-    - Prevents overlapping execution
-    - Adds delay before and after execution
-    """
+    Wrapper for daily attendance job execution.
 
-    # 🚨 Prevent parallel execution manually
+    Ensures:
+    - Only one job runs at a time using a global lock
+    - Controlled delay before execution
+    - Cooldown after execution
+    """
     if not job_lock.acquire(blocking=False):
-        logger.warning("⚠️ Job already running, skipping this run")
+        logger.warning("Daily job skipped: another job is already running")
         return
 
     try:
-        logger.info("⏳ Throttling before daily job...")
         time.sleep(JOB_START_DELAY)
 
-        logger.info("🚀 Running daily attendance job...")
         result = run_daily_attendance_job()
-
-        logger.info("✅ Daily job finished: %s", result)
+        logger.info("Daily job completed successfully: %s", result)
 
     except Exception as exc:
-        logger.exception("❌ Daily job failed: %s", exc)
+        logger.exception("Daily job failed: %s", exc)
 
     finally:
-        logger.info("⏳ Cooling down after job...")
         time.sleep(BETWEEN_JOB_DELAY)
-
         job_lock.release()
 
 
-# ---------------------------------------------------------------------------
-# START SCHEDULER
-# ---------------------------------------------------------------------------
-def start_scheduler() -> None:
+def _run_catchup_async():
     """
-    Safe startup sequence:
-    1. Run catch-up SYNCHRONOUSLY (with delays)
-    2. Register daily job
-    3. Start scheduler
-    """
+    Executes catch-up job in a background thread.
 
-    if scheduler.running:
-        logger.warning("Scheduler already running")
+    Ensures:
+    - No overlap with other jobs using global lock
+    - Runs independently of application startup
+    """
+    if not job_lock.acquire(blocking=False):
+        logger.warning("Catch-up job skipped: another job is already running")
         return
 
     try:
-        # 🔥 STEP 1: SAFE CATCH-UP
+        logger.info("Catch-up job started")
+        run_catchup_jobs()
+        logger.info("Catch-up job completed successfully")
+
+    except Exception as exc:
+        logger.exception("Catch-up job failed: %s", exc)
+
+    finally:
+        time.sleep(CATCHUP_COOLDOWN)
+        job_lock.release()
+
+
+def start_scheduler() -> None:
+    """
+    Initialize and start the scheduler.
+
+    Behavior:
+    - Optionally triggers catch-up job asynchronously at startup
+    - Registers daily attendance job with cron schedule
+    - Starts the scheduler
+    """
+    if scheduler.running:
+        logger.warning("Scheduler is already running")
+        return
+
+    try:
+        # Start catch-up job in background if enabled
         if settings.ENABLE_CATCHUP_ON_STARTUP:
-            logger.info("⏳ Starting catch-up with throttling...")
+            threading.Thread(target=_run_catchup_async, daemon=True).start()
 
-            time.sleep(3)  # initial delay
-
-            # 🚨 LOCK even for catch-up
-            if job_lock.acquire(blocking=False):
-                try:
-                    run_catchup_jobs()
-                    logger.info("✅ Catch-up completed")
-
-                except Exception as exc:
-                    logger.exception("❌ Catch-up failed (continuing): %s", exc)
-
-                finally:
-                    logger.info("⏳ Cooling down after catch-up...")
-                    time.sleep(CATCHUP_COOLDOWN)
-                    job_lock.release()
-            else:
-                logger.warning("⚠️ Skipping catch-up (another job running)")
-
-        # 🔥 STEP 2: REGISTER DAILY JOB
+        # Register daily attendance job
         scheduler.add_job(
             _throttled_daily_job,
             trigger=CronTrigger(
@@ -132,49 +120,41 @@ def start_scheduler() -> None:
             replace_existing=True,
         )
 
-        # 🔥 STEP 3: START
         scheduler.start()
-
-        logger.info(
-            "✅ Scheduler started (SAFE MODE). Daily job at %02d:%02d IST",
-            settings.SCHEDULER_DAILY_HOUR,
-            settings.SCHEDULER_DAILY_MINUTE,
-        )
+        logger.info("Scheduler started successfully")
 
     except Exception as exc:
-        logger.exception("❌ Failed to start scheduler: %s", exc)
+        logger.exception("Failed to start scheduler: %s", exc)
         raise
 
 
-# ---------------------------------------------------------------------------
-# STOP SCHEDULER
-# ---------------------------------------------------------------------------
 def stop_scheduler() -> None:
+    """
+    Gracefully stop the scheduler.
+    """
     if not scheduler.running:
-        logger.warning("Scheduler not running")
+        logger.warning("Scheduler is not running")
         return
 
     try:
         scheduler.shutdown(wait=True)
-        logger.info("✅ Scheduler stopped")
+        logger.info("Scheduler stopped successfully")
 
     except Exception as exc:
-        logger.exception("❌ Error stopping scheduler: %s", exc)
+        logger.exception("Error while stopping scheduler: %s", exc)
 
 
-# ---------------------------------------------------------------------------
-# MANUAL TRIGGER (SAFE)
-# ---------------------------------------------------------------------------
 def trigger_daily_job_now() -> dict:
     """
-    Manual trigger with full safety
-    """
-    logger.info("⚡ Manual trigger requested")
+    Manually trigger the daily attendance job.
 
+    Returns:
+        dict: Status of execution
+    """
     try:
         _throttled_daily_job()
         return {"status": "success"}
 
     except Exception as exc:
-        logger.exception("❌ Manual trigger failed: %s", exc)
+        logger.exception("Manual trigger failed: %s", exc)
         return {"status": "failed", "error": str(exc)}
