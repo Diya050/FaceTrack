@@ -7,11 +7,6 @@ export const resolveRoute = async (auth: any, axios: any) => {
       return "/super-admin/dashboard";
     }
 
-    // ---------------- ORG ADMINS ----------------
-    if (role === "HR_ADMIN" || role === "ADMIN" || role === "ORG_ADMIN") {
-      return "/admin/dashboard";
-    }
-
     // ---------------- USER FLOW ----------------
     if (!status) return "/pending-approval";
 
@@ -29,6 +24,11 @@ export const resolveRoute = async (auth: any, axios: any) => {
       } catch {
         return "/pending-approval";
       }
+    }
+
+    // ---------------- ORG ADMINS ----------------
+    if (role === "HR_ADMIN" || role === "ADMIN" || role === "ORG_ADMIN") {
+      return "/admin/dashboard";
     }
 
     if (status === "active" && face_enrolled) {

@@ -6,6 +6,7 @@ from app.models.core import User, UserStatusEnum
 from app.models.biometrics import FaceEnrollmentSession
 from app.models.core import Department, Role, Organization
 from app.services.audit_log_service import AuditLogService
+from app.services.notification_service import NotificationService
 
 
 class UserService:
@@ -117,6 +118,19 @@ class UserService:
         db.commit()
         db.refresh(user)
 
+        try:
+            NotificationService.create_notification(
+                db=db,
+                user_id=user.user_id,
+                organization_id=user.organization_id,
+                message="Your account has been approved. You can now proceed with face enrollment.",
+                type="SUCCESS",
+                redirect_path="/user/capture",
+                event_type="USER_APPROVED"
+            )
+        except Exception as e:
+            print("Notification failed:", e)
+
         # Log the user approval action
         try:
             AuditLogService.log_action(
@@ -176,6 +190,19 @@ class UserService:
         user.approved_at = datetime.utcnow()
 
         db.commit()
+
+        try:
+            NotificationService.create_notification(
+                db=db,
+                user_id=user.user_id,
+                organization_id=user.organization_id,
+                message="Your registration request has been rejected. Please contact your administrator.",
+                type="ERROR",
+                redirect_path=None,
+                event_type="USER_REJECTED"
+            )
+        except Exception as e:
+            print("Notification failed:", e)
 
         # Log the user rejection action
         try:

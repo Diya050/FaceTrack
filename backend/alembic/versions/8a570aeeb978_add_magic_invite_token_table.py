@@ -39,8 +39,13 @@ def upgrade() -> None:
     )
     op.create_index(op.f('ix_magic_invite_tokens_department_id'), 'magic_invite_tokens', ['department_id'], unique=False)
     op.create_index(op.f('ix_magic_invite_tokens_organization_id'), 'magic_invite_tokens', ['organization_id'], unique=False)
-    op.drop_column('login_history', 'ip_address')
-    op.drop_column('login_history', 'user_agent')
+    # with op.batch_alter_table("login_history") as batch_op:
+    #     try:
+    #         batch_op.drop_column("ip_address")
+    #         batch_op.drop_column("user_agent")
+    #     except Exception:
+    #         pass
+    
     # ### end Alembic commands ###
 
 

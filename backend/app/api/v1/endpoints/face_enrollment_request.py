@@ -35,6 +35,7 @@ def approve_request(
 ):
     return AdminFaceApprovalService.approve_enrollment(
         db,
+        current_user,
         session_id
     )
 

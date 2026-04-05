@@ -73,7 +73,7 @@ const HeaderIcons = ({ firstName }: Props) => {
     handleClose();
 
     // Check the role to determine the correct prefix
-    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN") {
+    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN" || role === "ORG_ADMIN") {
       navigate("/admin/capture");
     } else {
       navigate("/user/capture");
@@ -81,7 +81,7 @@ const HeaderIcons = ({ firstName }: Props) => {
   };
 
   const handleSettings = () => {
-    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN") {
+    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN" || role === "ORG_ADMIN") {
       navigate("/admin/settings/help/admin-guide");
     } else {
       navigate("/user/settings/user-guide");

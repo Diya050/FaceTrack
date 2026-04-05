@@ -1,8 +1,12 @@
+from email import message
 from sqlalchemy.orm import Session
 from uuid import UUID
 from sqlalchemy import func
 
 from app.models.system import Notification
+from app.services.email_service import EmailService
+from app.models.core import User
+from app.utils.notification_rules import EMAIL_TRIGGER_EVENTS, EMAIL_TRIGGER_TYPES
 
 
 class NotificationService:
@@ -31,6 +35,24 @@ class NotificationService:
 
         db.add(notification)
         db.flush()  # flush so the new one gets an ID and created_at
+
+        should_send_email = (
+        (event_type in EMAIL_TRIGGER_EVENTS)
+        or (type in EMAIL_TRIGGER_TYPES)
+        )
+
+        if should_send_email:
+            user = db.query(User).filter(User.user_id == user_id).first()
+
+            if user and user.email:
+                try:
+                    EmailService.send_notification_email(
+                        to_email=user.email,
+                        subject=f"{type}: Notification",
+                        message=message
+                    )
+                except Exception as e:
+                    print("Email failed:", e)
 
         # Keep only the latest 10 notifications per user
         # Delete any beyond the 10 most recent

@@ -1,9 +1,9 @@
-from sqlalchemy import select
+from sqlalchemy import not_, select
 from fastapi import HTTPException
 from typing import List, Dict, Any
 import os
 
-from app.models.core import User
+from app.models.core import User, Role
 from app.models.biometrics import (
     FaceEnrollmentSession,
     FaceEnrollmentImage
@@ -22,6 +22,10 @@ class FaceEnrollmentRequestService:
             .join(User, FaceEnrollmentSession.user_id == User.user_id)
             .where(FaceEnrollmentSession.status == "pending_approval")
         )
+        if current_user.role.role_name == "HR_ADMIN":
+            query = query.where(
+                not_(User.role.has(role_name="HR_ADMIN"))
+            )
 
         sessions = db.execute(query).scalars().all()
 
