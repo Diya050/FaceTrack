@@ -37,7 +37,7 @@ def list_orgs(
 def get_my_org(
     db: Session = Depends(get_db),
     # Assuming require_roles or a similar dependency returns the current user
-    current_user = Depends(require_roles(["HR_ADMIN"]))
+    current_user = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"]))
 ):
     """Fetch the organization details for the logged-in admin."""
     org = db.execute(
@@ -52,7 +52,7 @@ def get_my_org(
 def update_my_org(
     data: OrganizationUpdate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_roles(["HR_ADMIN"]))
+    current_user = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"]))
 ):
     """Update organization settings like min_hours_for_present."""
     org = db.execute(

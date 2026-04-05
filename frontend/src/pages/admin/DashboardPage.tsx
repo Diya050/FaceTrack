@@ -25,7 +25,7 @@ const DashboardPage = () => {
   const { hash } = useLocation();
   const { role } = useAuth();
 
-  const isHRAdmin = role === "HR_ADMIN";
+  const isHRAdmin = role === "HR_ADMIN" || role === "ORG_ADMIN";
 
   useEffect(() => {
     if (!hash) return;

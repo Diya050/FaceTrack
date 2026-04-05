@@ -22,7 +22,7 @@ router = APIRouter(
 )
 def get_requests(
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     return FaceEnrollmentRequestService.get_pending_requests(db, current_user)
 
@@ -31,7 +31,7 @@ def get_requests(
 def approve_request(
     session_id: UUID,
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     return AdminFaceApprovalService.approve_enrollment(
         db,
@@ -44,7 +44,7 @@ def reject_request(
     session_id: UUID,
     payload: dict, # This captures {"reason": "..."} from the frontend
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     # Extract reason safely, provide a fallback if it's missing
     reason = payload.get("reason", "No specific reason provided.")

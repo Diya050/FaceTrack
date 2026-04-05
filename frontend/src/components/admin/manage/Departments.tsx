@@ -54,7 +54,7 @@ const Departments: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (role === "HR_ADMIN") fetchDepartments();
+    if (role === "HR_ADMIN" || role === "ORG_ADMIN") fetchDepartments();
   }, [role]);
 
   // --- Action Handlers ---
@@ -105,10 +105,10 @@ const Departments: React.FC = () => {
     return departments.slice(start, start + rowsPerPage);
   }, [departments, page, rowsPerPage]);
 
-  if (role && role !== "HR_ADMIN") {
+  if (role && role !== "HR_ADMIN" && role !== "ORG_ADMIN") {
     return (
       <Box p={4} display="flex" justifyContent="center">
-        <Alert severity="warning">Access Denied: HR Admin only.</Alert>
+        <Alert severity="warning">Access Denied: HR Admin and Org Admin only.</Alert>
       </Box>
     );
   }

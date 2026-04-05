@@ -105,7 +105,7 @@ def get_my_attendance(
 )
 def generate_daily_attendance(
     target_date: date = Query(...),
-    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db),
 ):
     organization_id = current_user.organization_id
@@ -145,7 +145,7 @@ def get_org_attendance(
     ),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(50, ge=1, le=200, description="Maximum number of records to return"),
-    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db),
 ):
     """
@@ -182,7 +182,7 @@ def get_department_attendance_endpoint(
     skip: int = 0,
     limit: int = 50,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
 ):
     return get_department_attendance(
         db, current_user, department_id, target_date, start_date, end_date, status, skip, limit
@@ -210,7 +210,7 @@ def monthly_attendance(
     response_model=List[AttendanceRuleResponse],
 )
 def get_attendance_rules(
-    current_user: User = Depends(require_roles(["ADMIN", "HR_ADMIN"])),
+    current_user: User = Depends(require_roles(["ADMIN", "HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db),
 ):
 
@@ -225,7 +225,7 @@ def get_attendance_rules(
 )
 def create_attendance_rule(
     payload: AttendanceRuleCreate,
-    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db),
 ):
 
@@ -242,7 +242,7 @@ def create_attendance_rule(
 def update_attendance_rule(
     rule_id: UUID,
     payload: AttendanceRuleUpdate,
-    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db),
 ):
 
@@ -256,7 +256,7 @@ def update_attendance_rule(
 @router.delete("/rules/{rule_id}")
 def delete_attendance_rule(
     rule_id: UUID,
-    current_user: User = Depends(require_roles(["HR_ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db),
 ):
 
@@ -276,7 +276,7 @@ def delete_attendance_rule(
 def get_recognition_events(
     limit: int = Query(20, ge=1, le=100, description="Maximum number of events to return"),
     skip: int = Query(0, ge=0, description="Number of records to skip"),
-    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db),
 ):
     """

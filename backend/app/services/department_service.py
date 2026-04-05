@@ -41,7 +41,7 @@ class DepartmentService:
         if role == "SUPER_ADMIN":
             raise HTTPException(status_code=403)
 
-        if role == "HR_ADMIN":
+        if role == "HR_ADMIN" or role == "ORG_ADMIN":
             result = db.execute(
                 select(Department).where(
                     Department.organization_id == user.organization_id,

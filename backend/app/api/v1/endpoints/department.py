@@ -17,7 +17,7 @@ router = APIRouter(prefix="/departments", tags=["Departments"])
 def create_department(
     data: DepartmentCreate,
     db=Depends(get_db),
-    user=Depends(require_roles([ "HR_ADMIN"]))
+    user=Depends(require_roles([ "HR_ADMIN", "ORG_ADMIN"]))
 ):
     return DepartmentService.create_department(db, data, user)
 
@@ -25,8 +25,9 @@ def create_department(
 @router.get("", response_model=list[DepartmentResponse])
 def list_departments(
     db=Depends(get_db),
-    user=Depends(require_roles([ "ADMIN", "HR_ADMIN"]))
+    user=Depends(require_roles([ "ADMIN", "HR_ADMIN", "ORG_ADMIN"]))
 ):
+    print(f"DEBUG: User {user.user_id} with role {user.role.role_name} is listing departments")
     return DepartmentService.list_departments(db, user)
 
 
@@ -80,7 +81,7 @@ def edit_department(
     department_id: UUID,
     payload: DepartmentUpdate, # Ensure you have a schema with optional name/desc
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["HR_ADMIN"]))
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"]))
 ):
     return DepartmentService.update_department(
         db=db,
@@ -93,7 +94,7 @@ def edit_department(
 def remove_department(
     department_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_roles(["HR_ADMIN"]))
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"]))
 ):
     DepartmentService.delete_department(
         db=db,

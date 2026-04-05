@@ -21,7 +21,7 @@ router = APIRouter(
 def get_my_notifications(
     db: Session = Depends(get_db),
     current_user = Depends(
-        require_roles(["USER","ADMIN","HR_ADMIN"])
+        require_roles(["USER","ADMIN","HR_ADMIN", "ORG_ADMIN"])
     )
 ):
 
@@ -36,7 +36,7 @@ def mark_notification_read(
     notification_id: UUID,
     db: Session = Depends(get_db),
     current_user = Depends(
-        require_roles(["USER","ADMIN","HR_ADMIN"])
+        require_roles(["USER","ADMIN","HR_ADMIN", "ORG_ADMIN"])
     )
 ):
 
@@ -51,7 +51,7 @@ def mark_notification_read(
 def get_unread_count(
     db: Session = Depends(get_db),
     current_user = Depends(
-        require_roles(["USER","ADMIN","HR_ADMIN"])
+        require_roles(["USER","ADMIN","HR_ADMIN", "ORG_ADMIN"])
     )
 ):
 

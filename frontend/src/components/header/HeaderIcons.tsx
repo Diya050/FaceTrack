@@ -62,7 +62,7 @@ const HeaderIcons = ({ firstName }: Props) => {
   const handleMyProfile = () => {
     handleClose();
     // Check the role to determine the correct prefix
-    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN") {
+    if (role === "SUPER_ADMIN" || role === "HR_ADMIN" || role === "ADMIN" || role === "ORG_ADMIN") {
       navigate("/admin/me");
     } else {
       navigate("/user/me");

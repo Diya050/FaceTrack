@@ -12,10 +12,10 @@ class RoleService:
     def assign_role(db: Session, current_user, target_user_id: UUID, role_name: str):
 
         # Only HR_ADMIN can assign roles
-        if current_user.role.role_name != "HR_ADMIN":
+        if current_user.role.role_name != "HR_ADMIN" and current_user.role.role_name != "ORG_ADMIN":
             raise HTTPException(
                 status_code=403,
-                detail="Only HR_ADMIN can manage roles"
+                detail="Only HR_ADMIN and ORG_ADMIN can manage roles"
             )
 
         # Get target user

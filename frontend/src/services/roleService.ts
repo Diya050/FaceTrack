@@ -3,7 +3,7 @@ import api from "./api";
 
 export interface AssignRoleRequest {
   user_id: string;
-  role_name: "USER" | "ADMIN" | "HR_ADMIN";
+  role_name: "USER" | "ADMIN" | "HR_ADMIN" | "ORG_ADMIN";
 }
 
 export const assignRole = async (data: AssignRoleRequest) => {

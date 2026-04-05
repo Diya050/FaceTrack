@@ -46,6 +46,7 @@ function RootDecider() {
   if (auth.loading) return <div>Loading...</div>;
 
   if (!auth.token) {
+    console.log("No token found, redirecting to home");
     return <Navigate to="/home" replace />;
   }
 

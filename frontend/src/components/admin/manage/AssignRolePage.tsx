@@ -31,7 +31,7 @@ import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
 import { assignRole, getUsers } from "../../../services/roleService";
 
-type RoleType = "USER" | "ADMIN" | "HR_ADMIN";
+type RoleType = "USER" | "ADMIN" | "HR_ADMIN" | "ORG_ADMIN";
 
 interface UserRow {
   user_id: string;

@@ -8,7 +8,7 @@ export const resolveRoute = async (auth: any, axios: any) => {
     }
 
     // ---------------- ORG ADMINS ----------------
-    if (role === "HR_ADMIN" || role === "ADMIN") {
+    if (role === "HR_ADMIN" || role === "ADMIN" || role === "ORG_ADMIN") {
       return "/admin/dashboard";
     }
 

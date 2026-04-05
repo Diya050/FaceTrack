@@ -58,7 +58,9 @@ def org_login_route(
         "access_token": token,
         "token_type": "bearer",
         "role": user.role.role_name,
-        "organization_id": str(user.organization_id)
+        "organization_id": str(user.organization_id),
+        "status": user.status,
+        "face_enrolled": user.face_enrolled
     }
 
 

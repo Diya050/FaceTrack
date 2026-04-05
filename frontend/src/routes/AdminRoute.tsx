@@ -27,7 +27,7 @@ export const adminRoutes: RouteObject = {
   path: "/admin",
   element: (
     <ProtectedRoute>
-      <RoleGuard allowedRoles={["HR_ADMIN", "ADMIN"]}>
+      <RoleGuard allowedRoles={["HR_ADMIN", "ADMIN", "ORG_ADMIN"]}>
         <AdminLayout />
       </RoleGuard>
     </ProtectedRoute>
@@ -57,7 +57,7 @@ export const adminRoutes: RouteObject = {
     {
       path: "manage/users",
       element: (
-        <RoleGuard allowedRoles={["HR_ADMIN"]}>
+        <RoleGuard allowedRoles={["HR_ADMIN", "ORG_ADMIN"]}>
           <ViewOrganizationUsers />
         </RoleGuard>
       ),

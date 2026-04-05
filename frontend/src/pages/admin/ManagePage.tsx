@@ -3,22 +3,26 @@ import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 
-// Manage Department
+// Components
 import Departments from "../../components/admin/manage/Departments";
 import AssignRolePage from "../../components/admin/manage/AssignRolePage";
 import ViewOrganizationUsers from "./ViewOrganizationUsers";
-// import BulkUpload from "../../components/admin/manage/BulkUpload";
 import AttendanceRules from "../../components/admin/manage/AttendanceRules";
 import RegistrationRequests from "../../components/admin/manage/RegistrationRequests";
 import AdminFaceEnrollmentRequests from "../../components/admin/manage/FaceEnrollmentRequests";
 import DepartmentUsers from "../../components/admin/manage/DepartmentUsers";
-
+import InviteUsers from "../../components/admin/manage/InviteUsers";
 
 const NAVBAR_HEIGHT = 64;
 
 const ManagePage = () => {
   const { hash } = useLocation();
   const { role } = useAuth();
+
+  // ✅ Role Groups (SCALABLE)
+  const isHRLevel = role === "HR_ADMIN" || role === "ORG_ADMIN";
+  const isAdminLevel =
+    role === "ADMIN" || role === "HR_ADMIN" || role === "ORG_ADMIN";
 
   useEffect(() => {
     if (!hash) return;
@@ -40,42 +44,61 @@ const ManagePage = () => {
   return (
     <Box sx={{ bgcolor: "#F8F9FA" }}>
       <Stack spacing={0}>
-        {role === "HR_ADMIN" && (<Box id="departments">
-          <Departments />
-        </Box>
+
+        {role === "ORG_ADMIN" && (
+          <Box id="invite-users">
+            <InviteUsers />
+          </Box>
+        )}
+        
+        {/* Departments (HR + ORG_ADMIN) */}
+        {isHRLevel && (
+          <Box id="departments">
+            <Departments />
+          </Box>
         )}
 
-        {role === "ADMIN" && (<Box id="users">
-          <DepartmentUsers />
-        </Box>
+        {/* Department Users (ADMIN + ORG_ADMIN optional) */}
+        {(role === "ADMIN") && (
+          <Box id="users">
+            <DepartmentUsers />
+          </Box>
         )}
 
-        {role === "HR_ADMIN" && (
+        {/* Organization Users */}
+        {isHRLevel && (
           <Box id="organization-users">
             <ViewOrganizationUsers embedded />
           </Box>
         )}
 
-        {role === "HR_ADMIN" && (
+        {/* Assign Role */}
+        {isHRLevel && (
           <Box id="assign-role">
-          <AssignRolePage />
-        </Box>
+            <AssignRolePage />
+          </Box>
         )}
 
-        {role === "HR_ADMIN" && (
-        <Box id="requests">
-          <RegistrationRequests />
-        </Box>
+        {/* Registration Requests */}
+        {isHRLevel && (
+          <Box id="requests">
+            <RegistrationRequests />
+          </Box>
         )}
 
-        {role === "HR_ADMIN" && (
-        <Box id="face-enrollment-requests">
-          <AdminFaceEnrollmentRequests />
-        </Box>
+        {/* Face Enrollment Requests */}
+        {isHRLevel && (
+          <Box id="face-enrollment-requests">
+            <AdminFaceEnrollmentRequests />
+          </Box>
         )}
-        <Box id="rules">
-          <AttendanceRules />
-        </Box>
+
+        {/* Attendance Rules (Admin-level access) */}
+        {isAdminLevel && (
+          <Box id="rules">
+            <AttendanceRules />
+          </Box>
+        )}
 
       </Stack>
     </Box>

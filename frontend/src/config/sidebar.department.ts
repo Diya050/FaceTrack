@@ -14,7 +14,7 @@ export const departmentSidebar: SidebarItem[] = [
     label: "Departments",
     path: "/admin/manage#departments",
     icon: Apartment,
-    allowedRoles: ["HR_ADMIN"],
+    allowedRoles: ["HR_ADMIN", "ORG_ADMIN"],
   },
   {
     label: "Department Users",
@@ -26,13 +26,13 @@ export const departmentSidebar: SidebarItem[] = [
     label: "Organization Users",
     path: "/admin/manage#organization-users",
     icon: People,
-    allowedRoles: ["HR_ADMIN"],
+    allowedRoles: ["HR_ADMIN", "ORG_ADMIN"],
   },
   {
     label: "Assign Roles",
     path: "/admin/manage#assign-role",
     icon: AssignmentInd,
-    allowedRoles: ["HR_ADMIN"],
+    allowedRoles: ["HR_ADMIN", "ORG_ADMIN"],
   },
   // {
   //   label: "Bulk Upload",
@@ -43,18 +43,18 @@ export const departmentSidebar: SidebarItem[] = [
     label: "Registration Requests",
     path: "/admin/manage#requests",
     icon: HowToReg,
-    allowedRoles: ["HR_ADMIN"],
+    allowedRoles: ["HR_ADMIN", "ORG_ADMIN"],
   },
   {
     label: "Face Enrollment Requests",
     path: "/admin/manage#face-enrollment-requests",
     icon: Face,
-    allowedRoles: ["HR_ADMIN"],
+    allowedRoles: ["HR_ADMIN", "ORG_ADMIN"],
   },
   {
     label: "Attendance Rules",
     path: "/admin/manage#rules",
     icon: Rule,
-    allowedRoles: ["ADMIN", "HR_ADMIN"],
+    allowedRoles: ["ADMIN", "HR_ADMIN", "ORG_ADMIN"],
   },
 ];

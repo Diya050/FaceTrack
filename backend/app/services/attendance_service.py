@@ -175,7 +175,7 @@ def list_attendance_corrections(db: Session, current_user):
     )
 
     # HR_ADMIN → sees all corrections in org
-    if role == "HR_ADMIN":
+    if role == "HR_ADMIN" or role == "ORG_ADMIN":
         pass
 
     # ADMIN → only their department
@@ -276,7 +276,7 @@ def review_attendance_correction(
         raise HTTPException(status_code=404, detail="Requesting user not found or inactive")
 
     # Authorization
-    if role == "HR_ADMIN":
+    if role == "HR_ADMIN" or role == "ORG_ADMIN":
         pass
 
     elif role == "ADMIN":
@@ -434,8 +434,9 @@ def get_organization_attendance(
     ensure_active_user(current_user)
 
     role_name = current_user.role.role_name if current_user.role else None
+    print(f"User Role: {role_name}")
 
-    if role_name not in ["HR_ADMIN", "ADMIN"]:
+    if role_name not in ["HR_ADMIN", "ADMIN", "ORG_ADMIN"]:
         raise HTTPException(
             status_code=403,
             detail="Not authorized to view organization attendance"
