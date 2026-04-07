@@ -111,7 +111,13 @@ class UserService:
         if user.status != UserStatusEnum.PENDING:
             raise HTTPException(400, "User is not pending approval")
 
-        user.status = UserStatusEnum.APPROVED
+        # ORG_ADMIN becomes ACTIVE immediately (no face enrollment required)
+        # Other roles become APPROVED and need face enrollment
+        if user.role.role_name == "ORG_ADMIN":
+            user.status = UserStatusEnum.ACTIVE
+        else:
+            user.status = UserStatusEnum.APPROVED
+            
         user.approved_by = current_user.user_id
         user.approved_at = datetime.utcnow()
 
@@ -119,13 +125,20 @@ class UserService:
         db.refresh(user)
 
         try:
+            if user.role.role_name == "ORG_ADMIN":
+                message = "Your account has been approved. You can now access the admin dashboard."
+                redirect_path = "/admin/dashboard"
+            else:
+                message = "Your account has been approved. You can now proceed with face enrollment."
+                redirect_path = "/user/capture"
+                
             NotificationService.create_notification(
                 db=db,
                 user_id=user.user_id,
                 organization_id=user.organization_id,
-                message="Your account has been approved. You can now proceed with face enrollment.",
+                message=message,
                 type="SUCCESS",
-                redirect_path="/user/capture",
+                redirect_path=redirect_path,
                 event_type="USER_APPROVED"
             )
         except Exception as e:

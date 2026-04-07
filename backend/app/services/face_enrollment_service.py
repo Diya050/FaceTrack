@@ -31,9 +31,9 @@ class FaceEnrollmentService:
                 )
             ).scalars().first()
 
-            # If user is HR_ADMIN, we can auto-create a session if one doesn't exist
+            # If user is ORG_ADMIN, we can auto-create a session if one doesn't exist
             if not session:
-                if current_user.role.role_name == "HR_ADMIN":
+                if current_user.role.role_name == "ORG_ADMIN":
                     session = FaceEnrollmentSession(
                         session_id=uuid4(),
                         user_id=current_user.user_id,
