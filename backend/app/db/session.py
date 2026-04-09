@@ -49,6 +49,3 @@ def get_db_connection_count():
         return None
     
 
-@event.listens_for(engine, "connect")
-def connect(dbapi_connection, connection_record):
-    print("🔥 New DB connection opened")
