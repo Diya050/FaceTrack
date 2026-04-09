@@ -179,43 +179,7 @@ const FAQ = () => {
         </Box>
 
         {/* Support Section */}
-        <Box sx={{ 
-          mt: 8, 
-          bgcolor: 'rgba(172, 186, 196, 0.3)', 
-          borderRadius: 4, 
-          p: 4, 
-          textAlign: 'center', 
-          border: '2px dashed #30364F' 
-        }}>
-          <ChatBubbleOutlineIcon sx={{ color: '#30364F', fontSize: 40, mb: 2 }} />
-          <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#30364F', mb: 1 }}>
-            Still have questions?
-          </Typography>
-          <Typography sx={{ color: '#30364F', opacity: 0.8, mb: 3 }}>
-            If you can't find the answer you're looking for, please submit a detailed query.
-          </Typography>
-          <Button
-            onClick={() => navigate('/query')}
-            variant="contained"
-            size="large"
-            sx={{ 
-              bgcolor: '#30364F', 
-              color: '#F0F0DB', 
-              fontWeight: 'bold', 
-              px: 4, 
-              py: 1.5,
-              borderRadius: 2,
-              boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)',
-              transition: 'transform 0.2s',
-              '&:hover': { 
-                bgcolor: '#1e2336',
-                transform: 'scale(1.05)'
-              }
-            }}
-          >
-            Submit a Query
-          </Button>
-        </Box>
+        
       </Container>
     </Box>
   );

@@ -34,7 +34,6 @@ import TermsOfUsePage from "../pages/TermsOfUse";
 import Features from "../pages/public/Features";
 import HowItWorks from "../pages/public/HowItWorks";
 import FAQ from "../pages/public/FAQ/FAQ";
-import QueryForm from "../pages/public/FAQ/QueryForm";
 import ContactPage from "../pages/ContactPage";
 import AboutTechnologyPage from "../pages/AboutTechnologyPage";
 import Home from "../pages/Home";
@@ -116,7 +115,7 @@ export default function AppRoutes() {
         { path: "/help-center", element: <HelpCenterPage /> },
         { path: "/admin-guide", element: <AdminGuidePage /> },
         { path: "/user-guide", element: <UserGuidePage /> },
-        { path: "/query", element: <QueryForm /> },
+  
       ],
     },
 

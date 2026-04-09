@@ -1,7 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ThemeProvider, createTheme, CssBaseline } from '@mui/material';
 import FAQ from './FAQ';
-import QueryForm from './QueryForm';
 
 // Create a central FaceTrack theme
 const theme = createTheme({
@@ -29,7 +28,6 @@ function App() {
       <Router>
         <Routes>
           <Route path="/" element={<FAQ />} /> 
-          <Route path="/query" element={<QueryForm />} />
         </Routes>
       </Router>
     </ThemeProvider>
