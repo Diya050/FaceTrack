@@ -835,7 +835,7 @@ class AdminAnalyticsService:
                         ).all()
 
                         total_hours = 0.0
-                        counted_users = len(rows)
+                        counted_users = 0  # ✅ FIX: start from 0 instead of len(rows)
 
                         for row in rows:
                             if row.first_in and row.last_out:
@@ -848,6 +848,7 @@ class AdminAnalyticsService:
 
                                 if h_out >= h_in:
                                     total_hours += (h_out - h_in)
+                                    counted_users += 1  # ✅ FIX: count only valid users
 
                         avg = round(total_hours / counted_users, 2) if counted_users > 0 else 0.0
 
@@ -1009,8 +1010,8 @@ class AdminAnalyticsService:
                 )
 
                 # Role-based filtering
-                if role == "HR_ADMIN":
-                    logger.info("Access: HR_ADMIN (organization-wide)")
+                if role in ["HR_ADMIN", "ORG_ADMIN"]:
+                    logger.info(f"Access: {role} (organization-wide)")
 
                 elif role == "ADMIN":
                     if not current_user.department_id:
