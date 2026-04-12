@@ -1,27 +1,18 @@
 import { useEffect, useState } from "react";
 import {
-  Box, Typography, Stack, Switch, FormControlLabel, Divider, Button,
-  Alert, Paper, TextField, Chip, Tooltip, Select, MenuItem, InputLabel,
-  FormControl, Grid, Collapse, Checkbox, Slider, Radio, RadioGroup,
-  InputAdornment,
+  Box, Typography, Stack, Switch, Divider, Button,
+  Alert, Paper, TextField, Chip, Select, MenuItem, InputLabel,
+  FormControl, Grid, Collapse, Slider,
 } from "@mui/material";
 import NotificationsNoneOutlinedIcon from "@mui/icons-material/NotificationsNoneOutlined";
 import SaveOutlinedIcon from "@mui/icons-material/SaveOutlined";
 import RestartAltOutlinedIcon from "@mui/icons-material/RestartAltOutlined";
-import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
-import SmsOutlinedIcon from "@mui/icons-material/SmsOutlined";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import PauseCircleOutlineIcon from "@mui/icons-material/PauseCircleOutline";
 import DoNotDisturbOnOutlinedIcon from "@mui/icons-material/DoNotDisturbOnOutlined";
 import VolumeUpOutlinedIcon from "@mui/icons-material/VolumeUpOutlined";
 import TuneOutlinedIcon from "@mui/icons-material/TuneOutlined";
-import IntegrationInstructionsOutlinedIcon from "@mui/icons-material/IntegrationInstructionsOutlined";
-import AccessTimeOutlinedIcon from "@mui/icons-material/AccessTimeOutlined";
-import SmartphoneOutlinedIcon from "@mui/icons-material/SmartphoneOutlined";
-import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
-import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import api from "../../../../services/api";
+import { playNotificationSound, type NotificationSound } from "../../../../utils/notificationSounds";
 
 type FrequencyMode = "instant" | "batched";
 interface AdminContact {
@@ -42,9 +33,15 @@ interface Settings {
   batchEvents: string[];
 }
 
-const ALL_BATCH_GROUPS = ["Attendance"];
+const SOUND_OPTIONS: Array<{ value: NotificationSound; label: string; description: string }> = [
+  { value: "chime", label: "Chime", description: "A layered tone for general alerts" },
+  { value: "ping", label: "Ping", description: "Sharper and more noticeable" },
+  { value: "ding", label: "Ding", description: "Short and balanced" },
+  { value: "beep", label: "Beep", description: "Minimal single-tone alert" },
+  { value: "none", label: "Silent", description: "No sound playback" },
+];
 
-const DEFAULTS: Settings = {
+const createDefaultSettings = (): Settings => ({
   pauseAll: false,
   dndEnabled: false,
   dndStart: "22:00",
@@ -55,6 +52,49 @@ const DEFAULTS: Settings = {
   frequencyMode: "instant",
   batchTime: "17:00",
   batchEvents: ["Attendance"],
+});
+
+const normalizeSettings = (value: unknown): Settings => {
+  const defaults = createDefaultSettings();
+
+  if (typeof value === "string") {
+    try {
+      return normalizeSettings(JSON.parse(value));
+    } catch {
+      return defaults;
+    }
+  }
+
+  if (!value || typeof value !== "object") {
+    return defaults;
+  }
+
+  const raw = value as Partial<Settings>;
+
+  return {
+    pauseAll: Boolean(raw.pauseAll),
+    dndEnabled: Boolean(raw.dndEnabled),
+    dndStart: typeof raw.dndStart === "string" ? raw.dndStart : defaults.dndStart,
+    dndEnd: typeof raw.dndEnd === "string" ? raw.dndEnd : defaults.dndEnd,
+    alertSound:
+      raw.alertSound === "ping" ||
+      raw.alertSound === "ding" ||
+      raw.alertSound === "beep" ||
+      raw.alertSound === "none"
+        ? raw.alertSound
+        : defaults.alertSound,
+    alertVolume: typeof raw.alertVolume === "number" ? raw.alertVolume : defaults.alertVolume,
+    adminContacts:
+      Array.isArray(raw.adminContacts) && raw.adminContacts.length > 0
+        ? raw.adminContacts
+        : defaults.adminContacts,
+    frequencyMode: raw.frequencyMode === "batched" ? "batched" : "instant",
+    batchTime: typeof raw.batchTime === "string" ? raw.batchTime : defaults.batchTime,
+    batchEvents:
+      Array.isArray(raw.batchEvents) && raw.batchEvents.length > 0
+        ? raw.batchEvents
+        : defaults.batchEvents,
+  };
 };
 
 interface SectionCardProps {
@@ -102,14 +142,11 @@ const SectionCard = ({ icon, title, subtitle, children, badge }: SectionCardProp
 );
 
 const NotificationConfig = () => {
-  const [s, setS] = useState<Settings>(() => ({
-    ...DEFAULTS,
-    adminContacts: [{ id: "1", email: "", phone: "" }],
-    batchEvents: [...DEFAULTS.batchEvents],
-  }));
+  const [s, setS] = useState<Settings>(() => createDefaultSettings());
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingSound, setSavingSound] = useState(false);
   const [error, setError] = useState("");
   const [notificationConfigRoot, setNotificationConfigRoot] = useState<Record<string, unknown>>({});
 
@@ -129,16 +166,12 @@ const NotificationConfig = () => {
 
           const scopedSettings = rootConfig.notification_settings;
           if (scopedSettings && typeof scopedSettings === "object") {
-            setS(scopedSettings as Settings);
+            setS(normalizeSettings(scopedSettings));
           } else if (data.notification_config) {
             // Backward compatibility: accept legacy flat notification_config shape.
-            setS(data.notification_config);
+            setS(normalizeSettings(data.notification_config));
           } else {
-            setS({
-              ...DEFAULTS,
-              adminContacts: [{ id: "1", email: "", phone: "" }],
-              batchEvents: [...DEFAULTS.batchEvents],
-            });
+            setS(createDefaultSettings());
           }
         })
         .catch(() => {
@@ -158,43 +191,9 @@ const NotificationConfig = () => {
     setS((prev) => ({ ...prev, [key]: val }));
   };
 
-  const updateContact = (id: string, field: keyof Omit<AdminContact, "id">, val: string) => {
-    setSaved(false);
-    setError("");
-    setS((prev) => ({
-      ...prev,
-      adminContacts: prev.adminContacts.map((c) => (c.id === id ? { ...c, [field]: val } : c)),
-    }));
-  };
-
-  const addContact = () => {
-    setSaved(false);
-    setError("");
-    setS((prev) => ({
-      ...prev,
-      adminContacts: [...prev.adminContacts, { id: Date.now().toString(), email: "", phone: "" }],
-    }));
-  };
-
-  const removeContact = (id: string) => {
-    setSaved(false);
-    setError("");
-    setS((prev) => ({ ...prev, adminContacts: prev.adminContacts.filter((c) => c.id !== id) }));
-  };
-
-  const toggleBatchGroup = (grp: string) => {
-    setSaved(false);
-    setError("");
-    setS((prev) => ({
-      ...prev,
-      batchEvents: prev.batchEvents.includes(grp)
-        ? prev.batchEvents.filter((g) => g !== grp)
-        : [...prev.batchEvents, grp],
-    }));
-  };
-
   const handleSave = () => {
     setSaving(true);
+    setSavingSound(false);
     setSaved(false);
     setError("");
 
@@ -210,6 +209,18 @@ const NotificationConfig = () => {
           ...prev,
           notification_settings: s,
         }));
+        window.dispatchEvent(
+          new CustomEvent("notification-settings-updated", {
+            detail: {
+              pauseAll: s.pauseAll,
+              dndEnabled: s.dndEnabled,
+              dndStart: s.dndStart,
+              dndEnd: s.dndEnd,
+              alertSound: s.alertSound,
+              alertVolume: s.alertVolume,
+            },
+          })
+        );
         setSaved(true);
       })
       .catch(() => {
@@ -220,14 +231,70 @@ const NotificationConfig = () => {
       });
   };
 
-  const handleReset = () => {
-    setS({
-      ...DEFAULTS,
-      adminContacts: [{ id: "1", email: "", phone: "" }],
-      batchEvents: [...DEFAULTS.batchEvents],
-    });
+  const handleSaveSound = () => {
+    setSavingSound(true);
     setSaved(false);
     setError("");
+
+    const rootScopedSettings =
+      notificationConfigRoot.notification_settings &&
+      typeof notificationConfigRoot.notification_settings === "object"
+        ? normalizeSettings(notificationConfigRoot.notification_settings)
+        : normalizeSettings(notificationConfigRoot);
+
+    const nextSettings: Settings = {
+      ...rootScopedSettings,
+      alertSound: s.alertSound,
+      alertVolume: s.alertVolume,
+    };
+
+    api
+      .put("/organizations/me", {
+        notification_config: {
+          ...notificationConfigRoot,
+          notification_settings: nextSettings,
+        },
+      })
+      .then(() => {
+        setNotificationConfigRoot((prev) => ({
+          ...prev,
+          notification_settings: nextSettings,
+        }));
+        setS((prev) => ({
+          ...prev,
+          alertSound: nextSettings.alertSound,
+          alertVolume: nextSettings.alertVolume,
+        }));
+        window.dispatchEvent(
+          new CustomEvent("notification-settings-updated", {
+            detail: {
+              pauseAll: nextSettings.pauseAll,
+              dndEnabled: nextSettings.dndEnabled,
+              dndStart: nextSettings.dndStart,
+              dndEnd: nextSettings.dndEnd,
+              alertSound: nextSettings.alertSound,
+              alertVolume: nextSettings.alertVolume,
+            },
+          })
+        );
+        setSaved(true);
+      })
+      .catch(() => {
+        setError("Failed to save sound settings.");
+      })
+      .finally(() => {
+        setSavingSound(false);
+      });
+  };
+
+  const handleReset = () => {
+    setS(createDefaultSettings());
+    setSaved(false);
+    setError("");
+  };
+
+  const handlePreviewSound = () => {
+    void playNotificationSound(s.alertSound as NotificationSound, s.alertVolume);
   };
 
   return (
@@ -380,11 +447,18 @@ const NotificationConfig = () => {
                         value={s.alertSound}
                         onChange={(e) => update("alertSound", e.target.value)}
                       >
-                        <MenuItem value="chime">Chime</MenuItem>
-                        <MenuItem value="ping">Ping</MenuItem>
-                        <MenuItem value="ding">Ding</MenuItem>
-                        <MenuItem value="beep">Beep</MenuItem>
-                        <MenuItem value="none">None (silent)</MenuItem>
+                        {SOUND_OPTIONS.map((option) => (
+                          <MenuItem key={option.value} value={option.value}>
+                            <Box sx={{ display: "flex", flexDirection: "column", alignItems: "flex-start" }}>
+                              <Typography variant="body2" fontWeight={600}>
+                                {option.label}
+                              </Typography>
+                              <Typography variant="caption" color="text.secondary">
+                                {option.description}
+                              </Typography>
+                            </Box>
+                          </MenuItem>
+                        ))}
                       </Select>
                     </FormControl>
                     <Stack direction="row" alignItems="center" spacing={1.5}>
@@ -405,6 +479,32 @@ const NotificationConfig = () => {
                         {s.alertVolume}%
                       </Typography>
                     </Stack>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                      <Typography variant="caption" color="text.secondary">
+                        Preview the currently selected sound before saving.
+                      </Typography>
+                      <Button
+                        size="small"
+                        variant="text"
+                        onClick={handlePreviewSound}
+                        disabled={s.alertSound === "none"}
+                        sx={{ textTransform: "none", fontWeight: 600 }}
+                      >
+                        Preview Sound
+                      </Button>
+                    </Stack>
+                    <Stack direction="row" justifyContent="flex-end">
+                      <Button
+                        size="small"
+                        variant="contained"
+                        startIcon={<SaveOutlinedIcon />}
+                        onClick={handleSaveSound}
+                        disabled={loading || saving || savingSound}
+                        sx={{ textTransform: "none", borderRadius: 1.5 }}
+                      >
+                        {savingSound ? "Saving Sound..." : "Save Sound"}
+                      </Button>
+                    </Stack>
                   </Stack>
                 </Paper>
               </Grid>
@@ -412,202 +512,6 @@ const NotificationConfig = () => {
           </Stack>
         </SectionCard>
 
-        <SectionCard
-          icon={<IntegrationInstructionsOutlinedIcon sx={{ color: "white", fontSize: 18 }} />}
-          title="Delivery Channels & Integrations"
-          subtitle="Admin contact info for alert delivery"
-        >
-          <Stack spacing={2.5}>
-            <Box>
-              <Stack direction="row" alignItems="center" spacing={1} mb={2}>
-                <SmartphoneOutlinedIcon sx={{ fontSize: 18, color: "primary.main" }} />
-                <Typography variant="subtitle2" fontWeight={700}>
-                  Admin Contact Info
-                </Typography>
-                <Tooltip title="Used specifically for alert delivery — can differ from your account email." placement="right" arrow>
-                  <InfoOutlinedIcon sx={{ fontSize: 14, color: "text.secondary", cursor: "pointer" }} />
-                </Tooltip>
-                <Box flex={1} />
-                <Button
-                  size="small"
-                  startIcon={<AddCircleOutlineIcon />}
-                  onClick={addContact}
-                  sx={{ textTransform: "none", fontWeight: 600 }}
-                >
-                  Add Admin
-                </Button>
-              </Stack>
-
-              <Stack spacing={1.5}>
-                {s.adminContacts.map((contact, idx) => (
-                  <Paper key={contact.id} variant="outlined" sx={{ p: 1.5, borderRadius: 2, borderColor: "divider" }}>
-                    <Stack direction="row" alignItems="center" spacing={1} mb={1}>
-                      <Typography variant="caption" fontWeight={700} color="text.secondary">
-                        Admin {idx + 1}
-                      </Typography>
-                      <Box flex={1} />
-                      {s.adminContacts.length > 1 && (
-                        <Tooltip title="Remove this admin" arrow>
-                          <span>
-                            <Button
-                              size="small"
-                              variant="text"
-                              color="error"
-                              startIcon={<DeleteOutlineIcon />}
-                              onClick={() => removeContact(contact.id)}
-                              sx={{ textTransform: "none" }}
-                            >
-                              Remove
-                            </Button>
-                          </span>
-                        </Tooltip>
-                      )}
-                    </Stack>
-                    <Stack direction="row" spacing={1.5}>
-                      <TextField
-                        label="Email"
-                        type="email"
-                        size="small"
-                        value={contact.email}
-                        onChange={(e) => updateContact(contact.id, "email", e.target.value)}
-                        placeholder="admin@company.com"
-                        slotProps={{ input: { startAdornment: <InputAdornment position="start"><EmailOutlinedIcon /></InputAdornment> } }}
-                        fullWidth
-                      />
-                      <TextField
-                        label="Phone"
-                        type="tel"
-                        size="small"
-                        value={contact.phone}
-                        onChange={(e) => updateContact(contact.id, "phone", e.target.value)}
-                        placeholder="+1 (555) 000-0000"
-                        slotProps={{ input: { startAdornment: <InputAdornment position="start"><SmsOutlinedIcon /></InputAdornment> } }}
-                        fullWidth
-                      />
-                    </Stack>
-                  </Paper>
-                ))}
-              </Stack>
-            </Box>
-          </Stack>
-        </SectionCard>
-
-        <SectionCard
-          icon={<AccessTimeOutlinedIcon sx={{ color: "white", fontSize: 18 }} />}
-          title="Alert Frequency"
-          subtitle="Control how often notifications are dispatched — instant or batched digest"
-        >
-          <Stack spacing={2}>
-            <RadioGroup value={s.frequencyMode} onChange={(e) => update("frequencyMode", e.target.value as FrequencyMode)}>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Paper
-                    variant="outlined"
-                    onClick={() => update("frequencyMode", "instant")}
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      cursor: "pointer",
-                      height: "100%",
-                      borderColor: s.frequencyMode === "instant" ? "primary.main" : "divider",
-                      borderWidth: s.frequencyMode === "instant" ? 2 : 1,
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <Stack direction="row" alignItems="flex-start" spacing={1}>
-                      <Radio value="instant" size="small" sx={{ p: 0, mt: 0.25 }} />
-                      <Box>
-                        <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" gap={0.5}>
-                          <NotificationsActiveOutlinedIcon sx={{ fontSize: 18, color: "primary.main" }} />
-                          <Typography variant="subtitle2" fontWeight={700}>
-                            Instant
-                          </Typography>
-                          <Chip label="Best for security" size="small" color="error" sx={{ fontSize: "0.6rem", height: 16 }} />
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
-                          Every alert is sent immediately as it occurs — ideal for camera failures, spoofing attempts, and breaches where reaction time matters.
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Paper>
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 6 }}>
-                  <Paper
-                    variant="outlined"
-                    onClick={() => update("frequencyMode", "batched")}
-                    sx={{
-                      p: 2,
-                      borderRadius: 2,
-                      cursor: "pointer",
-                      height: "100%",
-                      borderColor: s.frequencyMode === "batched" ? "primary.main" : "divider",
-                      borderWidth: s.frequencyMode === "batched" ? 2 : 1,
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <Stack direction="row" alignItems="flex-start" spacing={1}>
-                      <Radio value="batched" size="small" sx={{ p: 0, mt: 0.25 }} />
-                      <Box>
-                        <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" gap={0.5}>
-                          <AccessTimeOutlinedIcon sx={{ fontSize: 18, color: "warning.main" }} />
-                          <Typography variant="subtitle2" fontWeight={700}>
-                            Batched Digest
-                          </Typography>
-                          <Chip
-                            label="Less noisy"
-                            size="small"
-                            color="warning"
-                            sx={{ fontSize: "0.6rem", height: 16 }}
-                          />
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
-                          Consolidate alerts into a single daily digest at your preferred time. Useful for non-critical events and reducing notification fatigue.
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  </Paper>
-                </Grid>
-              </Grid>
-            </RadioGroup>
-
-            <Collapse in={s.frequencyMode === "batched"}>
-              <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: "divider" }}>
-                <Stack spacing={2}>
-                  <TextField
-                    label="Batch Delivery Time"
-                    type="time"
-                    size="small"
-                    value={s.batchTime}
-                    onChange={(e) => update("batchTime", e.target.value)}
-                    slotProps={{ inputLabel: { shrink: true } }}
-                    fullWidth
-                  />
-                  <Box>
-                    <Typography variant="subtitle2" fontWeight={700} mb={1}>
-                      Include in Batch
-                    </Typography>
-                    <Stack spacing={1}>
-                      {ALL_BATCH_GROUPS.map((grp) => (
-                        <FormControlLabel
-                          key={grp}
-                          control={
-                            <Checkbox
-                              checked={s.batchEvents.includes(grp)}
-                              onChange={() => toggleBatchGroup(grp)}
-                              color="primary"
-                            />
-                          }
-                          label={grp}
-                        />
-                      ))}
-                    </Stack>
-                  </Box>
-                </Stack>
-              </Paper>
-            </Collapse>
-          </Stack>
-        </SectionCard>
       </Stack>
 
       <Divider sx={{ my: 4 }} />

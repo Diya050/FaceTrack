@@ -1,15 +1,44 @@
 from email import message
+import json
 from sqlalchemy.orm import Session
 from uuid import UUID
 from sqlalchemy import func
 
 from app.models.system import Notification
 from app.services.email_service import EmailService
-from app.models.core import User
+from app.models.core import User, Organization
 from app.utils.notification_rules import EMAIL_TRIGGER_EVENTS, EMAIL_TRIGGER_TYPES
 
 
 class NotificationService:
+
+    @staticmethod
+    def _is_pause_all_enabled(db: Session, organization_id: UUID) -> bool:
+        org = db.query(Organization).filter(Organization.organization_id == organization_id).first()
+        if not org:
+            return False
+
+        config = org.notification_config
+        if isinstance(config, str):
+            try:
+                config = json.loads(config)
+            except json.JSONDecodeError:
+                return False
+
+        if not isinstance(config, dict):
+            return False
+
+        settings = config.get("notification_settings", config)
+        if isinstance(settings, str):
+            try:
+                settings = json.loads(settings)
+            except json.JSONDecodeError:
+                return False
+
+        if not isinstance(settings, dict):
+            return False
+
+        return bool(settings.get("pauseAll", False))
 
     @staticmethod
     def create_notification(
@@ -22,6 +51,9 @@ class NotificationService:
         entity_id: UUID = None,
         event_type: str = None
     ):
+        if NotificationService._is_pause_all_enabled(db, organization_id):
+            return None
+
         notification = Notification(
             user_id=user_id,
             organization_id=organization_id,
