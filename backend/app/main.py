@@ -47,7 +47,7 @@ app.add_middleware(
 # ROUTES
 # ---------------------------------------------------------------------------
 app.include_router(api_router, prefix="/api/v1")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+# app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 
 # ---------------------------------------------------------------------------
