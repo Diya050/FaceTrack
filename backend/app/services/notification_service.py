@@ -1,11 +1,44 @@
+from email import message
+import json
 from sqlalchemy.orm import Session
 from uuid import UUID
 from sqlalchemy import func
 
 from app.models.system import Notification
+from app.services.email_service import EmailService
+from app.models.core import User, Organization
+from app.utils.notification_rules import EMAIL_TRIGGER_EVENTS, EMAIL_TRIGGER_TYPES
 
 
 class NotificationService:
+
+    @staticmethod
+    def _is_pause_all_enabled(db: Session, organization_id: UUID) -> bool:
+        org = db.query(Organization).filter(Organization.organization_id == organization_id).first()
+        if not org:
+            return False
+
+        config = org.notification_config
+        if isinstance(config, str):
+            try:
+                config = json.loads(config)
+            except json.JSONDecodeError:
+                return False
+
+        if not isinstance(config, dict):
+            return False
+
+        settings = config.get("notification_settings", config)
+        if isinstance(settings, str):
+            try:
+                settings = json.loads(settings)
+            except json.JSONDecodeError:
+                return False
+
+        if not isinstance(settings, dict):
+            return False
+
+        return bool(settings.get("pauseAll", False))
 
     @staticmethod
     def create_notification(
@@ -18,6 +51,9 @@ class NotificationService:
         entity_id: UUID = None,
         event_type: str = None
     ):
+        if NotificationService._is_pause_all_enabled(db, organization_id):
+            return None
+
         notification = Notification(
             user_id=user_id,
             organization_id=organization_id,
@@ -31,6 +67,24 @@ class NotificationService:
 
         db.add(notification)
         db.flush()  # flush so the new one gets an ID and created_at
+
+        should_send_email = (
+        (event_type in EMAIL_TRIGGER_EVENTS)
+        or (type in EMAIL_TRIGGER_TYPES)
+        )
+
+        if should_send_email:
+            user = db.query(User).filter(User.user_id == user_id).first()
+
+            if user and user.email:
+                try:
+                    EmailService.send_notification_email(
+                        to_email=user.email,
+                        subject=f"{type}: Notification",
+                        message=message
+                    )
+                except Exception as e:
+                    print("Email failed:", e)
 
         # Keep only the latest 10 notifications per user
         # Delete any beyond the 10 most recent

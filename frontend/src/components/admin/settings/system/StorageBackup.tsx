@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
-  Box,Typography,Stack,Paper,Button,Divider,LinearProgress,
-  Switch,FormControlLabel,Select,MenuItem,InputLabel,FormControl,
+  Box,Typography,Stack,Paper,Button,Divider,
+  Select,MenuItem,InputLabel,FormControl,
   Chip,Alert,Tooltip,TextField,Dialog,DialogTitle,DialogContent,
   DialogContentText,DialogActions,CircularProgress,
 } from "@mui/material";
@@ -16,20 +16,12 @@ import BackupOutlinedIcon            from "@mui/icons-material/BackupOutlined";
 import WarningAmberOutlinedIcon      from "@mui/icons-material/WarningAmberOutlined";
 import SaveOutlinedIcon              from "@mui/icons-material/SaveOutlined";
 import RestartAltOutlinedIcon        from "@mui/icons-material/RestartAltOutlined";
-import FolderOutlinedIcon            from "@mui/icons-material/FolderOutlined";
 import InfoOutlinedIcon              from "@mui/icons-material/InfoOutlined";
 import DeleteForeverOutlinedIcon     from "@mui/icons-material/DeleteForeverOutlined";
 import AutoDeleteOutlinedIcon        from "@mui/icons-material/AutoDeleteOutlined";
 import api from "../../../../services/api";
+import { downloadBlob } from "../../../../utils/downloadBlob";
 // Types 
-interface BucketInfo {
-  name: string;
-  label: string;
-  usedGB: number;
-  totalGB: number;
-  isPublic: boolean;
-}
-
 interface RetentionSettings {
   unrecognizedFaceDays: number;
   attendanceArchiveYears: number;
@@ -37,15 +29,20 @@ interface RetentionSettings {
 }
 
 interface StorageBackupConfig {
-  buckets: BucketInfo[];
   retention: RetentionSettings;
 }
-// Mock Data
-const INITIAL_BUCKETS: BucketInfo[] = [
-  { name: "face-captures",       label: "Face Captures",       usedGB: 4.8,  totalGB: 10,  isPublic: false },
-  { name: "registered-profiles", label: "Registered Profiles", usedGB: 1.2,  totalGB: 5,   isPublic: false },
-  { name: "unrecognized-faces",  label: "Unrecognized Faces",  usedGB: 2.1,  totalGB: 5,   isPublic: false },
-];
+
+interface RetentionPolicyResponse {
+  id: string;
+  category: string;
+  retention_days: number;
+  auto_delete: boolean;
+  archive_before_delete: boolean;
+}
+
+const CAMERA_SNAPSHOTS_CATEGORY = "camera_snapshots";
+const ATTENDANCE_RECORDS_CATEGORY = "attendance_records";
+const BIOMETRIC_EMBEDDINGS_CATEGORY = "biometric_embeddings";
 
 const INITIAL_RETENTION: RetentionSettings = {
   unrecognizedFaceDays:    14,
@@ -53,16 +50,7 @@ const INITIAL_RETENTION: RetentionSettings = {
   embeddingCleanupMonths:  6,
 };
 
-const cloneBuckets = () => INITIAL_BUCKETS.map((b) => ({ ...b }));
 const cloneRetention = () => ({ ...INITIAL_RETENTION });
-//  Helpers
-const pct = (used: number, total: number) =>
-  Math.min(100, Math.round((used / total) * 100));
-
-const barColor = (p: number): "success" | "warning" | "error" =>
-  p >= 85 ? "error" : p >= 60 ? "warning" : "success";
-
-const fmtGB = (v: number) => `${v.toFixed(1)} GB`;
 
 // Sub-components 
 
@@ -101,108 +89,6 @@ const SectionCard = ({ icon, title, subtitle, children, badge }: SectionCardProp
     <Box p={2.5}>{children}</Box>
   </Paper>
 );
-
-interface BucketRowProps {
-  bucket: BucketInfo;
-  onTogglePublic: () => void;
-  onEmpty?: () => void;
-  isEmptying?: boolean;
-}
-
-const BucketRow = ({ bucket, onTogglePublic, onEmpty, isEmptying }: BucketRowProps) => {
-  const p = pct(bucket.usedGB, bucket.totalGB);
-  const color = barColor(p);
-
-  return (
-    <Paper variant="outlined" sx={{ p: 2, borderRadius: 1.5, borderColor: "divider" }}>
-      <Stack direction="row" alignItems="flex-start" spacing={1} mb={1}>
-        <FolderOutlinedIcon sx={{ fontSize: 18, color: "primary.main", mt: 0.2 }} />
-        <Box flex={1}>
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <Typography variant="subtitle2" fontWeight={600} color="text.primary">
-              {bucket.label}
-            </Typography>
-            <Chip
-              label={bucket.name}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: "0.68rem", height: 20, fontFamily: "monospace" }}
-            />
-            <Chip
-              label={bucket.isPublic ? "Public" : "Private"}
-              size="small"
-              color={bucket.isPublic ? "warning" : "success"}
-              sx={{ fontSize: "0.68rem", height: 20, fontWeight: 600 }}
-            />
-          </Stack>
-          <Stack direction="row" alignItems="center" spacing={1} mt={0.5}>
-            <Typography variant="caption" color="text.secondary">
-              {fmtGB(bucket.usedGB)} used of {fmtGB(bucket.totalGB)}
-            </Typography>
-            <Typography variant="caption" fontWeight={700} color={`${color}.main`}>
-              {p}%
-            </Typography>
-          </Stack>
-        </Box>
-      </Stack>
-
-      <LinearProgress
-        variant="determinate"
-        value={p}
-        color={color}
-        sx={{ height: 8, borderRadius: 4, mb: 1.5 }}
-      />
-
-      <Stack direction="row" alignItems="center" spacing={1.5}>
-        <Tooltip
-          title={
-            bucket.isPublic
-              ? "Switch to Private — files will require signed URLs"
-              : "Switch to Public — files accessible via direct URL (less secure)"
-          }
-          arrow
-        >
-          <FormControlLabel
-            control={
-              <Switch
-                checked={bucket.isPublic}
-                onChange={onTogglePublic}
-                size="small"
-                color="warning"
-              />
-            }
-            label={
-              <Typography variant="caption" color="text.secondary">
-                Public access
-              </Typography>
-            }
-            sx={{ m: 0 }}
-          />
-        </Tooltip>
-
-        {onEmpty && (
-          <Button
-            size="small"
-            variant="outlined"
-            color="error"
-            startIcon={
-              isEmptying ? (
-                <CircularProgress size={13} color="inherit" />
-              ) : (
-                <DeleteSweepOutlinedIcon />
-              )
-            }
-            onClick={onEmpty}
-            disabled={isEmptying || bucket.usedGB === 0}
-            sx={{ ml: "auto !important", fontSize: "0.75rem" }}
-          >
-            {isEmptying ? "Emptying…" : "Empty Bucket"}
-          </Button>
-        )}
-      </Stack>
-    </Paper>
-  );
-};
 
 //  Confirm Dialog 
 
@@ -246,10 +132,6 @@ const ConfirmDialog = ({
 //  Main Component 
 
 const StorageBackup = () => {
-  //  Bucket state 
-  const [buckets, setBuckets] = useState<BucketInfo[]>(cloneBuckets);
-  const [emptying, setEmptying] = useState<string | null>(null);
-
   //  Retention state 
   const [retention, setRetention] = useState<RetentionSettings>(cloneRetention);
   const [retentionSaved, setRetentionSaved] = useState(false);
@@ -259,6 +141,11 @@ const StorageBackup = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [notificationConfigRoot, setNotificationConfigRoot] = useState<Record<string, unknown>>({});
+  const [retentionPolicyIds, setRetentionPolicyIds] = useState<{
+    cameraSnapshots?: string;
+    attendanceRecords?: string;
+    biometricEmbeddings?: string;
+  }>({});
 
   //  Export loading
   const [exporting, setExporting] = useState<string | null>(null);
@@ -271,6 +158,55 @@ const StorageBackup = () => {
   // Saved alert
   const [savedAlert, setSavedAlert] = useState(false);
 
+  const syncRetentionPolicies = (policies: RetentionPolicyResponse[]) => {
+    const cameraPolicy = policies.find((p) => p.category === CAMERA_SNAPSHOTS_CATEGORY);
+    const attendancePolicy = policies.find((p) => p.category === ATTENDANCE_RECORDS_CATEGORY);
+    const embeddingsPolicy = policies.find((p) => p.category === BIOMETRIC_EMBEDDINGS_CATEGORY);
+
+    setRetentionPolicyIds({
+      cameraSnapshots: cameraPolicy?.id,
+      attendanceRecords: attendancePolicy?.id,
+      biometricEmbeddings: embeddingsPolicy?.id,
+    });
+
+    setRetention((prev) => ({
+      ...prev,
+      unrecognizedFaceDays:
+        typeof cameraPolicy?.retention_days === "number"
+          ? cameraPolicy.retention_days
+          : prev.unrecognizedFaceDays,
+      attendanceArchiveYears:
+        typeof attendancePolicy?.retention_days === "number"
+          ? Math.max(1, Math.round(attendancePolicy.retention_days / 365))
+          : prev.attendanceArchiveYears,
+      embeddingCleanupMonths:
+        typeof embeddingsPolicy?.retention_days === "number"
+          ? Math.max(1, Math.round(embeddingsPolicy.retention_days / 30))
+          : prev.embeddingCleanupMonths,
+    }));
+  };
+
+  const loadRetentionPolicies = async () => {
+    try {
+      const { data } = await api.get("/data-retention/policies");
+      const policies = Array.isArray(data) ? (data as RetentionPolicyResponse[]) : [];
+
+      if (policies.length === 0) {
+        await api.post("/data-retention/policies/initialize");
+        const initialized = await api.get("/data-retention/policies");
+        const initializedPolicies = Array.isArray(initialized.data)
+          ? (initialized.data as RetentionPolicyResponse[])
+          : [];
+        syncRetentionPolicies(initializedPolicies);
+        return;
+      }
+
+      syncRetentionPolicies(policies);
+    } catch {
+      // Keep notification_config fallback settings when retention API is unavailable.
+    }
+  };
+
   useEffect(() => {
     setLoading(true);
     setError("");
@@ -278,35 +214,32 @@ const StorageBackup = () => {
     api
       .get("/organizations/me")
       .then(({ data }) => {
-        const notificationConfig =
-          data.notification_config && typeof data.notification_config === "object"
-            ? (data.notification_config as Record<string, unknown>)
-            : {};
+        let notificationConfig: Record<string, unknown> = {};
+        if (data.notification_config && typeof data.notification_config === "object") {
+          notificationConfig = data.notification_config as Record<string, unknown>;
+        } else if (typeof data.notification_config === "string") {
+          try {
+            const parsed = JSON.parse(data.notification_config);
+            notificationConfig =
+              parsed && typeof parsed === "object"
+                ? (parsed as Record<string, unknown>)
+                : {};
+          } catch {
+            notificationConfig = {};
+          }
+        }
 
         setNotificationConfigRoot(notificationConfig);
 
         const storageConfig = notificationConfig.storage_backup as StorageBackupConfig | undefined;
         if (storageConfig && typeof storageConfig === "object") {
-          const configuredBuckets = Array.isArray(storageConfig.buckets) ? storageConfig.buckets : [];
-          const normalizedBuckets = INITIAL_BUCKETS.map((defaultBucket) => {
-            const found = configuredBuckets.find((b) => b.name === defaultBucket.name);
-            return {
-              ...defaultBucket,
-              isPublic: typeof found?.isPublic === "boolean" ? found.isPublic : defaultBucket.isPublic,
-              usedGB: typeof found?.usedGB === "number" ? found.usedGB : defaultBucket.usedGB,
-              totalGB: typeof found?.totalGB === "number" ? found.totalGB : defaultBucket.totalGB,
-            };
-          });
-
           const incomingRetention = storageConfig.retention || cloneRetention();
-          setBuckets(normalizedBuckets);
           setRetention({
             unrecognizedFaceDays: Number(incomingRetention.unrecognizedFaceDays) || INITIAL_RETENTION.unrecognizedFaceDays,
             attendanceArchiveYears: Number(incomingRetention.attendanceArchiveYears) || INITIAL_RETENTION.attendanceArchiveYears,
             embeddingCleanupMonths: Number(incomingRetention.embeddingCleanupMonths) || INITIAL_RETENTION.embeddingCleanupMonths,
           });
         } else {
-          setBuckets(cloneBuckets());
           setRetention(cloneRetention());
         }
       })
@@ -316,20 +249,27 @@ const StorageBackup = () => {
       .finally(() => {
         setLoading(false);
       });
+
+    void loadRetentionPolicies();
   }, []);
 
   const persistStorageBackup = (
-    nextBuckets: BucketInfo[],
     nextRetention: RetentionSettings,
     showSavedMessage = false,
   ) => {
     setSaving(true);
     setError("");
 
+    const existingStorageBackup =
+      notificationConfigRoot.storage_backup &&
+      typeof notificationConfigRoot.storage_backup === "object"
+        ? (notificationConfigRoot.storage_backup as Record<string, unknown>)
+        : {};
+
     const nextNotificationConfig = {
       ...notificationConfigRoot,
       storage_backup: {
-        buckets: nextBuckets,
+        ...existingStorageBackup,
         retention: nextRetention,
       },
     };
@@ -355,32 +295,49 @@ const StorageBackup = () => {
 
   //  Handlers 
 
-  const togglePublic = (name: string) => {
-    const nextBuckets = buckets.map((b) =>
-      b.name === name ? { ...b, isPublic: !b.isPublic } : b
-    );
-    setBuckets(nextBuckets);
-    persistStorageBackup(nextBuckets, retention);
-  };
-
-  const handleEmptyBucket = (name: string) => {
-    setEmptying(name);
-    const nextBuckets = buckets.map((b) =>
-      b.name === name ? { ...b, usedGB: 0 } : b
-    );
-    setBuckets(nextBuckets);
-    persistStorageBackup(nextBuckets, retention);
-    setEmptying(null);
-  };
-
   const setRet = <K extends keyof RetentionSettings>(k: K, v: RetentionSettings[K]) => {
     setRetentionSaved(false);
     setRetention((prev) => ({ ...prev, [k]: v }));
   };
 
   const handleSaveRetention = () => {
-    persistStorageBackup(buckets, retention, true);
-    setRetentionSaved(true);
+    const { cameraSnapshots, attendanceRecords, biometricEmbeddings } = retentionPolicyIds;
+
+    if (!cameraSnapshots || !attendanceRecords || !biometricEmbeddings) {
+      setError("Retention policies are unavailable for this account.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    Promise.all([
+      api.put(`/data-retention/policies/${cameraSnapshots}`, {
+        retention_days: retention.unrecognizedFaceDays,
+        auto_delete: true,
+        archive_before_delete: false,
+      }),
+      api.put(`/data-retention/policies/${attendanceRecords}`, {
+        retention_days: retention.attendanceArchiveYears * 365,
+        auto_delete: true,
+        archive_before_delete: true,
+      }),
+      api.put(`/data-retention/policies/${biometricEmbeddings}`, {
+        retention_days: retention.embeddingCleanupMonths * 30,
+        auto_delete: true,
+        archive_before_delete: true,
+      }),
+    ])
+      .then(() => {
+        persistStorageBackup(retention, true);
+        setRetentionSaved(true);
+      })
+      .catch(() => {
+        setError("Failed to save retention policies to backend.");
+      })
+      .finally(() => {
+        setSaving(false);
+      });
   };
 
   const handleResetRetention = () => {
@@ -388,30 +345,108 @@ const StorageBackup = () => {
     setRetentionSaved(false);
   };
 
-  const handleExport = (type: string) => {
+  const resolveFileName = (headerValue: string | undefined, fallback: string) => {
+    if (!headerValue) {
+      return fallback;
+    }
+
+    const match = /filename=\"?([^\";]+)\"?/i.exec(headerValue);
+    return match?.[1] || fallback;
+  };
+
+  const handleExport = async (type: string) => {
     setExporting(type);
-    // TODO: call backend API / Edge Function for each export type
-    setTimeout(() => setExporting(null), 2000);
+    setError("");
+
+    try {
+      if (type === "attendance-csv") {
+        const response = await api.get("/analytics/export-logs", {
+          params: { format: "csv" },
+          responseType: "blob",
+        });
+
+        const fallbackName = `attendance_${new Date().toISOString().slice(0, 10)}.csv`;
+        const filename = resolveFileName(response.headers["content-disposition"], fallbackName);
+        downloadBlob(response.data as Blob, filename);
+      } else if (type === "attendance-json") {
+        const response = await api.get("/data-retention/exports/attendance", {
+          params: { format: "json" },
+          responseType: "blob",
+        });
+
+        const fallbackName = `attendance_${new Date().toISOString().slice(0, 10)}.json`;
+        const filename = resolveFileName(response.headers["content-disposition"], fallbackName);
+        downloadBlob(response.data as Blob, filename);
+      } else if (type === "embeddings") {
+        const response = await api.get("/data-retention/exports/embeddings", {
+          responseType: "blob",
+        });
+
+        const fallbackName = `embeddings_${new Date().toISOString().slice(0, 10)}.json`;
+        const filename = resolveFileName(response.headers["content-disposition"], fallbackName);
+        downloadBlob(response.data as Blob, filename);
+      } else if (type === "sql-dump") {
+        const response = await api.get("/data-retention/exports/sql-dump", {
+          responseType: "blob",
+        });
+
+        const fallbackName = `org_snapshot_${new Date().toISOString().slice(0, 10)}.sql`;
+        const filename = resolveFileName(response.headers["content-disposition"], fallbackName);
+        downloadBlob(response.data as Blob, filename);
+      } else {
+        setError("This export option is not available in backend yet.");
+      }
+    } catch {
+      setError("Failed to export data from backend.");
+    } finally {
+      setExporting(null);
+    }
   };
 
   const handlePurge = () => {
+    const policyId = retentionPolicyIds.cameraSnapshots;
+    if (!policyId) {
+      setError("Unrecognized media purge policy is unavailable.");
+      return;
+    }
+
     setDangerLoading("purge");
-    const nextBuckets = buckets.map((b) =>
-      b.name === "unrecognized-faces" ? { ...b, usedGB: 0 } : b
-    );
-    setBuckets(nextBuckets);
-    persistStorageBackup(nextBuckets, retention);
-    setDangerLoading(null);
-    setConfirmPurge(false);
+
+    api
+      .post(`/data-retention/policies/${policyId}/purge`)
+      .then(() => {
+        persistStorageBackup(retention);
+        setConfirmPurge(false);
+      })
+      .catch(() => {
+        setError("Failed to trigger purge job in backend.");
+      })
+      .finally(() => {
+        setDangerLoading(null);
+      });
   };
 
   const handleHardReset = () => {
-    setDangerLoading("reset");
-    setDangerLoading(null);
-    setConfirmReset(false);
-  };
+    const policyId = retentionPolicyIds.biometricEmbeddings;
+    if (!policyId) {
+      setError("Embedding reset policy is unavailable.");
+      return;
+    }
 
-  const unrecognizedBucket = buckets.find((b) => b.name === "unrecognized-faces")!;
+    setDangerLoading("reset");
+
+    api
+      .post(`/data-retention/policies/${policyId}/purge`)
+      .then(() => {
+        setConfirmReset(false);
+      })
+      .catch(() => {
+        setError("Failed to trigger embedding reset in backend.");
+      })
+      .finally(() => {
+        setDangerLoading(null);
+      });
+  };
 
   //  Render 
 
@@ -432,7 +467,7 @@ const StorageBackup = () => {
             Storage & Backup
           </Typography>
           <Typography variant="caption" color="text.secondary">
-            Manage Supabase buckets, retention policies, data exports, and emergency overrides
+            Manage retention policies, data exports, and emergency overrides
           </Typography>
         </Box>
       </Stack>
@@ -451,47 +486,7 @@ const StorageBackup = () => {
 
       <Stack spacing={3}>
 
-        {/*  1. SUPABASE STORAGE BUCKETS */}
-        <SectionCard
-          icon={<StorageOutlinedIcon sx={{ color: "white", fontSize: 18 }} />}
-          title="Supabase Storage Buckets"
-          subtitle="Monitor bucket usage and control public / private access rules"
-          badge={
-            <Chip
-              label="Supabase Storage"
-              size="small"
-              color="primary"
-              variant="outlined"
-              sx={{ fontWeight: 600 }}
-            />
-          }
-        >
-          <Stack spacing={1.5}>
-            {buckets.map((b) => (
-              <BucketRow
-                key={b.name}
-                bucket={b}
-                onTogglePublic={() => togglePublic(b.name)}
-                onEmpty={
-                  b.name === "unrecognized-faces"
-                    ? () => handleEmptyBucket(b.name)
-                    : undefined
-                }
-                isEmptying={saving || emptying === b.name}
-              />
-            ))}
-          </Stack>
-
-          <Stack direction="row" alignItems="flex-start" spacing={1} mt={2}>
-            <InfoOutlinedIcon sx={{ fontSize: 15, color: "text.secondary", mt: 0.25 }} />
-            <Typography variant="caption" color="text.secondary">
-              Switching a bucket to <strong>Public</strong> makes files accessible via direct URL without authentication.
-              Keep biometric buckets <strong>Private</strong> and use signed URLs for production.
-            </Typography>
-          </Stack>
-        </SectionCard>
-
-        {/*  2. AUTOMATED RETENTION POLICIES */}
+        {/*  1. AUTOMATED RETENTION POLICIES */}
         <SectionCard
           icon={<ScheduleOutlinedIcon sx={{ color: "white", fontSize: 18 }} />}
           title="Automated Retention Policies"
@@ -727,7 +722,7 @@ const StorageBackup = () => {
                   disabled={exporting === "embeddings"}
                   sx={{ fontSize: "0.75rem" }}
                 >
-                  {exporting === "embeddings" ? "Exporting…" : "Export (.npy)"}
+                  {exporting === "embeddings" ? "Exporting…" : "Export (.json)"}
                 </Button>
               </Stack>
             </Paper>
@@ -829,9 +824,6 @@ const StorageBackup = () => {
                     <Typography variant="caption" color="text.secondary">
                       Permanently delete every captured frame stored in the <code>unrecognized-faces</code> bucket
                       along with all associated database rows.
-                      Currently{" "}
-                      <strong>{fmtGB(unrecognizedBucket.usedGB)}</strong> used (
-                      {pct(unrecognizedBucket.usedGB, unrecognizedBucket.totalGB)}%).
                     </Typography>
                   </Box>
                   <Button
@@ -840,7 +832,6 @@ const StorageBackup = () => {
                     color="error"
                     startIcon={<DeleteSweepOutlinedIcon />}
                     onClick={() => setConfirmPurge(true)}
-                    disabled={unrecognizedBucket.usedGB === 0}
                     sx={{ fontSize: "0.75rem", flexShrink: 0 }}
                   >
                     Purge
@@ -885,7 +876,7 @@ const StorageBackup = () => {
       <ConfirmDialog
         open={confirmPurge}
         title="Purge All Unregistered Media?"
-        body={`This will permanently delete all ${fmtGB(unrecognizedBucket.usedGB)} of captured frames in the unrecognized-faces bucket and all related database records. This action cannot be undone.`}
+        body="This will permanently delete all captured frames in the unrecognized-faces bucket and all related database records. This action cannot be undone."
         confirmLabel="Yes, Purge"
         onConfirm={handlePurge}
         onCancel={() => setConfirmPurge(false)}

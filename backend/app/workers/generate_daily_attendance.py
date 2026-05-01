@@ -1,277 +1,143 @@
-"""
-Attendance Background Workers
-==============================
-Two entry-points consumed by the APScheduler:
-
-  run_daily_attendance_job(target_date?)
-      Processes all active organisations for a single IST calendar date.
-      Each org runs inside its own savepoint — one org failing never blocks
-      the others.
-
-  run_catchup_jobs()
-      Fills gaps for the last N days.
-      Checks per (org_id, date) pair — not just by date — so if one org
-      already has rows for a date, other orgs are still processed.
-
-Session strategy
-----------------
-One SQLAlchemy session per worker invocation.
-Each org uses a nested transaction (savepoint) for isolation.
-db.commit() is called once per date after all orgs for that date are done,
-minimising lock duration.
-"""
-
 import logging
-from contextlib import contextmanager
-from datetime import date, timedelta
-from typing import Optional
-from uuid import UUID
+import time
+from datetime import timedelta
 
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.db.session import SessionLocal
-from app.models.core import Organization
-from app.models.attendance import Attendance
 from app.services.daily_attendance_service import DailyAttendanceService
-from app.exceptions.attendance_exceptions import (
-    FutureDateError,
-    OrganizationNotFoundError,
-    AttendanceGenerationError,
-)
 from app.utils.timezone import today_ist
-from app.core.config import settings
+from app.models.core import Organization
 
 logger = logging.getLogger(__name__)
 
+# Delay between processing organizations to avoid database pressure
+ORG_DELAY = 1
 
-# ---------------------------------------------------------------------------
-# Session context manager
-# ---------------------------------------------------------------------------
-@contextmanager
-def _db_session():
+# Delay between processing individual days in catch-up
+DAY_DELAY = 0.3
+
+
+def _get_active_orgs():
+    """
+    Fetch all active (non-deleted) organization IDs.
+
+    Uses a short-lived database session to minimize connection usage.
+    """
     db: Session = SessionLocal()
     try:
-        yield db
+        rows = db.execute(
+            text("""
+                SELECT organization_id
+                FROM organization
+                WHERE is_deleted = false
+            """)
+        ).fetchall()
+
+        return [row[0] for row in rows]
+
     finally:
         db.close()
 
 
-# ---------------------------------------------------------------------------
-# Single-org processor
-# ---------------------------------------------------------------------------
-def _process_org(db: Session, org_id: UUID, target_date: date) -> Optional[dict]:
+def run_daily_attendance_job():
     """
-    Run DailyAttendanceService for one org inside a savepoint.
+    Generate attendance for all organizations for the previous day.
 
-    Returns the result dict on success, or None on any failure.
-    The outer session is untouched on failure — only the savepoint rolls back.
+    - Reuses a single database session for all organizations
+    - Commits per organization to isolate failures
+    - Applies delay between organizations to prevent connection spikes
     """
-    try:
-        with db.begin_nested():   # SAVEPOINT
-            result = DailyAttendanceService.generate_daily_attendance(
-                db=db,
-                target_date=target_date,
-                organization_id=org_id,
-            )
-        return result
+    logger.info("Running daily attendance job")
 
-    except FutureDateError as exc:
-        logger.warning("Skipping future date: %s", exc)
-        return None
+    target_date = today_ist() - timedelta(days=1)
+    org_ids = _get_active_orgs()
 
-    except OrganizationNotFoundError as exc:
-        logger.error("Organisation not found (deleted mid-run?): %s", exc)
-        return None
-
-    except AttendanceGenerationError as exc:
-        logger.error(
-            "Attendance generation failed org=%s date=%s — savepoint rolled back: %s",
-            org_id, target_date, exc, exc_info=True,
-        )
-        return None
-
-    except Exception as exc:
-        logger.exception("Unexpected error org=%s date=%s: %s", org_id, target_date, exc)
-        return None
-
-
-# ---------------------------------------------------------------------------
-# Daily job
-# ---------------------------------------------------------------------------
-def run_daily_attendance_job(target_date: Optional[date] = None) -> dict:
-    """
-    Generate attendance for ALL active organisations for `target_date`.
-
-    FIX: Uses short-lived DB sessions (one per org) to avoid
-    exhausting Supabase connection limits.
-    """
-
-    if target_date is None:
-        target_date = today_ist() - timedelta(days=settings.ATTENDANCE_DEFAULT_OFFSET_DAYS)
-
-    logger.info("=== Daily attendance job started | date=%s ===", target_date)
-
-    total_orgs = success_orgs = failed_orgs = 0
-    aggregate = {
-        "processed_users_count": 0,
-        "present_count": 0,
-        "absent_count": 0,
-        "half_day_count": 0,
-        "late_count": 0,
-    }
+    db: Session = SessionLocal()
 
     try:
-        # ✅ Step 1: Fetch orgs using ONE short-lived session
-        with _db_session() as db:
-            orgs = db.execute(
-                select(Organization).where(
-                    Organization.is_deleted == False,
-                    Organization.status == "active",
-                )
-            ).scalars().all()
-
-        total_orgs = len(orgs)
-
-        if not orgs:
-            logger.warning("No active organisations — nothing to process.")
-            return {"status": "ok", "total_orgs": 0}
-
-        # ✅ Step 2: Process each org with its OWN session
-        for org in orgs:
+        for org_id in org_ids:
             try:
-                with _db_session() as db:
-                    result = _process_org(db, org.organization_id, target_date)
-
-                    if result is not None:
-                        success_orgs += 1
-                        for key in aggregate:
-                            aggregate[key] += result.get(key, 0)
-                    else:
-                        failed_orgs += 1
-
-                    db.commit()  # ✅ commit per org
+                DailyAttendanceService.generate_daily_attendance(
+                    db=db,
+                    target_date=target_date,
+                    organization_id=org_id,
+                )
+                db.commit()
 
             except Exception:
-                logger.exception(
-                    "Fatal error processing org=%s date=%s",
-                    org.organization_id,
-                    target_date,
-                )
-                failed_orgs += 1
+                db.rollback()
+                logger.exception("Error processing organization %s", org_id)
 
-        logger.info(
-            "=== Daily job done | date=%s | orgs %d/%d ok | "
-            "users=%d present=%d late=%d half_day=%d absent=%d ===",
-            target_date,
-            success_orgs,
-            total_orgs,
-            aggregate["processed_users_count"],
-            aggregate["present_count"],
-            aggregate["late_count"],
-            aggregate["half_day_count"],
-            aggregate["absent_count"],
-        )
+            time.sleep(ORG_DELAY)
 
-        return {
-            "status": "ok",
-            "target_date": str(target_date),
-            "total_orgs": total_orgs,
-            "success_orgs": success_orgs,
-            "failed_orgs": failed_orgs,
-            **aggregate,
-        }
+    finally:
+        db.close()
 
-    except Exception:
-        logger.exception("Fatal error in daily attendance job | date=%s", target_date)
-        return {"status": "failed", "target_date": str(target_date)}
+    return {"status": "done"}
 
 
-# ---------------------------------------------------------------------------
-# Catch-up job
-# ---------------------------------------------------------------------------
-def run_catchup_jobs() -> None:
+def run_catchup_jobs():
     """
-    FIX: Uses short-lived DB sessions per (org, date)
-    to avoid exhausting Supabase connection limits.
+    Perform catch-up attendance generation for recent days.
+
+    Behavior:
+    - Fetches all active organizations
+    - Processes each organization sequentially
+    - Uses a dedicated session per organization
+    - Generates attendance for recent past days (currently last 1 day)
+    - Applies delays to control database load
     """
+    logger.info("Starting catch-up job")
 
-    today = today_ist()
-    start_date = today - timedelta(days=settings.ATTENDANCE_CATCHUP_DAYS)
-
-    logger.info(
-        "=== Catch-up job started | range=%s → %s ===",
-        start_date,
-        today - timedelta(days=1),
-    )
-
-    generated = skipped = 0
-
+    # Step 1: Fetch organization IDs using a short-lived session
+    db = SessionLocal()
     try:
-        # ✅ Step 1: fetch orgs once
-        with _db_session() as db:
-            orgs = db.execute(
-                select(Organization).where(
-                    Organization.is_deleted == False,
-                    Organization.status == "active",
-                )
-            ).scalars().all()
+        org_ids = db.execute(
+            select(Organization.organization_id).where(
+                Organization.is_deleted == False
+            )
+        ).scalars().all()
+    finally:
+        db.close()
 
-        if not orgs:
-            logger.info("Catch-up: no active organisations.")
-            return
+    logger.info("Total organizations: %d", len(org_ids))
 
-        current_date = start_date
+    # Step 2: Process each organization sequentially
+    for index, org_id in enumerate(org_ids, start=1):
+        logger.info("Processing organization %s (%d/%d)", org_id, index, len(org_ids))
 
-        # ✅ Step 2: iterate dates
-        while current_date < today:
+        db = SessionLocal()
 
-            for org in orgs:
+        try:
+            today = today_ist()
+
+            # Currently configured to process only the previous day
+            for i in range(1, 2):
+                target_date = today - timedelta(days=i)
+
                 try:
-                    # ✅ NEW session per (org, date)
-                    with _db_session() as db:
-
-                        # check existence
-                        exists = db.execute(
-                            select(Attendance).where(
-                                Attendance.organization_id == org.organization_id,
-                                Attendance.attendance_date == current_date,
-                            ).limit(1)
-                        ).scalars().first()
-
-                        if exists:
-                            skipped += 1
-                            logger.debug(
-                                "Catch-up skip org=%s date=%s",
-                                org.organization_id,
-                                current_date,
-                            )
-                            continue
-
-                        logger.info(
-                            "Catch-up generating org=%s date=%s",
-                            org.organization_id,
-                            current_date,
-                        )
-
-                        result = _process_org(db, org.organization_id, current_date)
-
-                        if result is not None:
-                            generated += 1
-
-                        db.commit()  # ✅ commit per org-date
+                    DailyAttendanceService.generate_daily_attendance(
+                        db=db,
+                        target_date=target_date,
+                        organization_id=org_id,
+                    )
+                    db.commit()
 
                 except Exception:
+                    db.rollback()
                     logger.exception(
-                        "Catch-up failed org=%s date=%s",
-                        org.organization_id,
-                        current_date,
+                        "Error processing organization %s for date %s",
+                        org_id,
+                        target_date,
                     )
 
-            current_date += timedelta(days=1)
+                time.sleep(DAY_DELAY)
 
-    except Exception:
-        logger.exception("Catch-up job encountered a fatal error.")
-        return
+        finally:
+            db.close()
 
-    logger.info("=== Catch-up done | generated=%d skipped=%d ===", generated, skipped)
+        time.sleep(ORG_DELAY)
+
+    logger.info("Catch-up job completed")

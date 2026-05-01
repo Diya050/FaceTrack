@@ -16,7 +16,7 @@ router = APIRouter(
 
 @router.get("/", response_model=List[UnknownFaceResponse])
 def get_unknown_faces(
-    current_user = Depends(require_roles(["HR_ADMIN"])),
+    current_user = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
     return UnknownFacesService.get_unknown_faces(db, current_user)
@@ -25,7 +25,7 @@ def get_unknown_faces(
 @router.post("/resolve")
 def resolve_unknown_face(
     data: ResolveUnknownFaceRequest,
-    current_user = Depends(require_roles(["HR_ADMIN"])),
+    current_user = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
     return UnknownFacesService.resolve_unknown_face(db, current_user, data)
@@ -34,7 +34,7 @@ def resolve_unknown_face(
 @router.delete("/{unknown_id}")
 def delete_unknown_face(
     unknown_id: str,
-    current_user = Depends(require_roles(["HR_ADMIN"])),
+    current_user = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
     return UnknownFacesService.delete_unknown_face(db, unknown_id, current_user)
@@ -43,7 +43,7 @@ def delete_unknown_face(
 @router.get("/employees")
 def get_employees(
     search: str = "",
-    current_user = Depends(require_roles(["HR_ADMIN"])),
+    current_user = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
     query = select(User).where(

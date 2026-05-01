@@ -19,6 +19,7 @@ def get_my_profile(
     current_user=Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    print("USER STATUS FROM DB:", current_user.status)
     return ProfileService.get_profile(db, current_user.user_id)
 
 
@@ -35,7 +36,7 @@ def update_profile(
 @router.get("/users", response_model=List[ProfileResponse])
 def list_organization_users(
     status: Optional[UserStatusEnum] = Query(None, description="Filter by status (e.g. pending, approved)"),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
     """Allows HR_ADMIN and ADMIN to list users and view their status."""
@@ -45,7 +46,7 @@ def list_organization_users(
 @router.get("/users/{target_user_id}", response_model=ProfileResponse)
 def get_user_details(
     target_user_id: UUID,
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
     """Allows HR_ADMIN and ADMIN to view detailed info of a specific user."""

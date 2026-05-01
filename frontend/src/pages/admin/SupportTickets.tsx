@@ -84,9 +84,12 @@ export default function SupportTickets() {
   }, []);
 
   useEffect(() => {
-    if (role !== "HR_ADMIN") return;
+    // ✅ Only fetch tickets if HR_ADMIN or ORG_ADMIN
+    if (role !== "HR_ADMIN" && role !== "ORG_ADMIN") return;
+    
+    // Call the function to actually load the tickets
     loadTickets();
-  }, [role, loadTickets]);
+  }, [role, loadTickets]); // <-- Properly close the useEffect here
 
   const handleStatusChange = async (id: string, status: TicketStatus) => {
     try {
@@ -287,8 +290,8 @@ export default function SupportTickets() {
     }
   ];
 
-  /* Non-admin view */
-  if (role !== "HR_ADMIN") {
+  // ✅ ROLE-BASED RENDERING
+  if (role !== "HR_ADMIN" && role !== "ORG_ADMIN") {
     return (
       <Box sx={{ backgroundColor: "#F8F9FA", minHeight: "100vh", pt: 12 }}>
         <Container maxWidth="md">
@@ -328,7 +331,7 @@ export default function SupportTickets() {
                 disableRowSelectionOnClick
                 density="comfortable"
                 rowHeight={72}
-                headerHeight={56}
+                // headerHeight={56}
                 sx={{
                   border: "none",
                   fontSize: "0.9rem",

@@ -25,6 +25,7 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PendingApproval from "../pages/auth/PendingApproval";
 import PendingFaceApproval from "../pages/auth/PendingFaceApproval";
+import Invite from "../pages/auth/Invite";
 
 /* ---------------- PUBLIC PAGES ---------------- */
 import MeetOurTeam from "../pages/MeetOurTeam";
@@ -33,7 +34,6 @@ import TermsOfUsePage from "../pages/TermsOfUse";
 import Features from "../pages/public/Features";
 import HowItWorks from "../pages/public/HowItWorks";
 import FAQ from "../pages/public/FAQ/FAQ";
-import QueryForm from "../pages/public/FAQ/QueryForm";
 import ContactPage from "../pages/ContactPage";
 import AboutTechnologyPage from "../pages/AboutTechnologyPage";
 import Home from "../pages/Home";
@@ -45,6 +45,7 @@ function RootDecider() {
   if (auth.loading) return <div>Loading...</div>;
 
   if (!auth.token) {
+    console.log("No token found, redirecting to home");
     return <Navigate to="/home" replace />;
   }
 
@@ -114,7 +115,7 @@ export default function AppRoutes() {
         { path: "/help-center", element: <HelpCenterPage /> },
         { path: "/admin-guide", element: <AdminGuidePage /> },
         { path: "/user-guide", element: <UserGuidePage /> },
-        { path: "/query", element: <QueryForm /> },
+  
       ],
     },
 
@@ -123,6 +124,7 @@ export default function AppRoutes() {
     { path: "/register", element: <Register /> },
     { path: "/forgot-password", element: <ForgotPassword /> },
     { path: "/reset-password/:token", element: <ResetPassword /> },
+    { path: "/invite/:token", element: <Invite /> },
 
     /*  FALLBACK */
     {

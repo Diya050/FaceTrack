@@ -6,6 +6,7 @@ from app.models.core import User, UserStatusEnum
 from app.models.biometrics import FaceEnrollmentSession
 from app.models.core import Department, Role, Organization
 from app.services.audit_log_service import AuditLogService
+from app.services.notification_service import NotificationService
 
 
 class UserService:
@@ -85,22 +86,63 @@ class UserService:
             raise HTTPException(404, "User not found")
 
         # ADMIN restriction (department scoped)
-        if current_user.role.role_name == "ADMIN":
+        role = current_user.role.role_name
+
+        # ORG_ADMIN → can approve anyone in org
+        if role == "ORG_ADMIN":
+            pass
+
+        # HR_ADMIN → cannot approve ORG_ADMIN or HR_ADMIN
+        elif role == "HR_ADMIN":
+            if user.role.role_name in ["ORG_ADMIN", "HR_ADMIN"]:
+                raise HTTPException(403, "Cannot approve this role")
+
+        # ADMIN → only within department & only USER
+        elif role == "ADMIN":
+            if user.role.role_name != "USER":
+                raise HTTPException(403, "Admins can only approve users")
+
             if user.department_id != current_user.department_id:
-                raise HTTPException(
-                    403,
-                    "Cannot approve users outside your department"
-                )
+                raise HTTPException(403, "Cannot approve outside your department")
+
+        else:
+            raise HTTPException(403, "Unauthorized")
 
         if user.status != UserStatusEnum.PENDING:
             raise HTTPException(400, "User is not pending approval")
 
-        user.status = UserStatusEnum.APPROVED
+        # ORG_ADMIN becomes ACTIVE immediately (no face enrollment required)
+        # Other roles become APPROVED and need face enrollment
+        if user.role.role_name == "ORG_ADMIN":
+            user.status = UserStatusEnum.ACTIVE
+        else:
+            user.status = UserStatusEnum.APPROVED
+            
         user.approved_by = current_user.user_id
         user.approved_at = datetime.utcnow()
 
         db.commit()
         db.refresh(user)
+
+        try:
+            if user.role.role_name == "ORG_ADMIN":
+                message = "Your account has been approved. You can now access the admin dashboard."
+                redirect_path = "/admin/dashboard"
+            else:
+                message = "Your account has been approved. You can now proceed with face enrollment."
+                redirect_path = "/user/capture"
+                
+            NotificationService.create_notification(
+                db=db,
+                user_id=user.user_id,
+                organization_id=user.organization_id,
+                message=message,
+                type="SUCCESS",
+                redirect_path=redirect_path,
+                event_type="USER_APPROVED"
+            )
+        except Exception as e:
+            print("Notification failed:", e)
 
         # Log the user approval action
         try:
@@ -129,6 +171,29 @@ class UserService:
 
         if user.organization_id != current_user.organization_id:
             raise HTTPException(403, "Unauthorized")
+        
+        # ADMIN restriction (department scoped)
+        role = current_user.role.role_name
+
+        # ORG_ADMIN → can approve anyone in org
+        if role == "ORG_ADMIN":
+            pass
+
+        # HR_ADMIN → cannot approve ORG_ADMIN or HR_ADMIN
+        elif role == "HR_ADMIN":
+            if user.role.role_name in ["ORG_ADMIN", "HR_ADMIN"]:
+                raise HTTPException(403, "Cannot approve this role")
+
+        # ADMIN → only within department & only USER
+        elif role == "ADMIN":
+            if user.role.role_name != "USER":
+                raise HTTPException(403, "Admins can only approve users")
+
+            if user.department_id != current_user.department_id:
+                raise HTTPException(403, "Cannot approve outside your department")
+
+        else:
+            raise HTTPException(403, "Unauthorized")
 
         if user.status != UserStatusEnum.PENDING:
             raise HTTPException(400, "User is not pending")
@@ -138,6 +203,19 @@ class UserService:
         user.approved_at = datetime.utcnow()
 
         db.commit()
+
+        try:
+            NotificationService.create_notification(
+                db=db,
+                user_id=user.user_id,
+                organization_id=user.organization_id,
+                message="Your registration request has been rejected. Please contact your administrator.",
+                type="ERROR",
+                redirect_path=None,
+                event_type="USER_REJECTED"
+            )
+        except Exception as e:
+            print("Notification failed:", e)
 
         # Log the user rejection action
         try:

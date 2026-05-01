@@ -4,7 +4,7 @@ from fastapi import HTTPException
 def get_access_scope(user):
     role = user.role.role_name
 
-    if role == "HR_ADMIN":
+    if role == "HR_ADMIN" or role == "ORG_ADMIN":
         return {
             "type": "org"
         }

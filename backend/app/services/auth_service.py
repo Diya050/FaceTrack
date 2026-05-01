@@ -13,6 +13,8 @@ from app.models.system import PasswordResetToken
 from datetime import timedelta
 import datetime
 from datetime import timezone, datetime
+from app.services.magic_link_service import MagicLinkService
+from app.models.system import MagicInviteToken
 
 from app.services.notification_service import NotificationService
 
@@ -68,17 +70,7 @@ class AuthService:
                 "User already exists in this organization"
             )
         
-        count_result = db.execute(
-            select(func.count(User.user_id)).where(
-                User.organization_id == organization.organization_id,
-                User.is_deleted == False
-            )
-        )
-        user_count = count_result.scalar()
-        if user_count == 0:
-            role_name = "HR_ADMIN"
-        else:
-            role_name = "USER"
+        role_name = "USER"  # Always default for open registration
 
         if role_name == "HR_ADMIN":
             hr_dept_result = db.execute(
@@ -124,11 +116,7 @@ class AuthService:
             role_id=user_role.role_id,
             department_id=department.department_id,
             organization_id=organization.organization_id,
-            status = (
-                UserStatusEnum.APPROVED
-                if role_name == "HR_ADMIN"
-                else UserStatusEnum.PENDING
-            ),
+            status = UserStatusEnum.PENDING,
             face_enrolled=False,
             is_active=False
         )
@@ -137,16 +125,16 @@ class AuthService:
         db.commit()
         db.refresh(new_user)
 
-        hr_admins = db.query(User).filter(
+        org_admins = db.query(User).filter(
             User.organization_id == organization.organization_id,
-            User.role.has(role_name="HR_ADMIN")
+            User.role.has(role_name="ORG_ADMIN")
         ).all()
 
-        for hr in hr_admins:
+        for org_admin in org_admins:
             NotificationService.create_notification(
                 db,
-                hr.user_id,
-                hr.organization_id,
+                org_admin.user_id,
+                organization.organization_id,
                 f"New user registered: {new_user.full_name}",
                 "INFO",
                 redirect_path="/admin/manage#requests",
@@ -155,6 +143,101 @@ class AuthService:
             )
 
         return new_user
+    
+    @staticmethod
+    def register_via_invite(db, token_id: str, data):
+
+        token = MagicLinkService.verify_token(db, token_id)
+
+        # Check if user already exists
+        existing = db.execute(
+            select(User).where(
+                User.email == token.email,
+                User.organization_id == token.organization_id,
+                User.is_deleted == False
+            )
+        ).scalars().first()
+
+        if existing:
+            raise HTTPException(400, "User already exists")
+
+        # Fetch role
+        role_result = db.execute(
+            select(Role)
+            .join(OrganizationRole)
+            .where(
+                Role.role_name == token.role,
+                OrganizationRole.organization_id == token.organization_id
+            )
+        )
+        role = role_result.scalars().first()
+
+        if not role:
+            raise HTTPException(500, "Role not configured")
+        
+        
+        department_id = token.department_id
+        # Special case: HR_ADMIN → always HR department
+        if token.role == "HR_ADMIN":
+            hr_department = db.execute(
+                select(Department).where(
+                    Department.organization_id == token.organization_id,
+                    Department.name == "HR"
+                )
+            ).scalars().first()
+
+            if not hr_department:
+                raise HTTPException(500, "HR department missing")
+
+            department_id = hr_department.department_id
+
+
+        #CHECKS
+        if role in ["ADMIN", "USER"] and not department_id:
+            raise HTTPException(400, "Department required")
+
+        if role == "ORG_ADMIN" and department_id:
+            raise HTTPException(400, "ORG_ADMIN cannot have department")
+        
+
+        hashed_password = get_password_hash(data.password)
+        
+
+        # 🧠 KEY LOGIC
+        if token.role == "ORG_ADMIN":
+            status = UserStatusEnum.APPROVED
+            is_active = True
+        else:
+            status = UserStatusEnum.PENDING
+            is_active = False
+
+        new_user = User(
+            full_name=data.full_name,
+            email=token.email,
+            password_hash=hashed_password,
+            role_id=role.role_id,
+            organization_id=token.organization_id,
+            department_id=department_id,
+            status=status,
+            is_active=is_active,
+            face_enrolled=False
+        )
+
+        db.add(new_user)
+
+        # Mark token used
+        token.is_used = True
+
+        db.commit()
+        db.refresh(new_user)
+
+        return {
+            "message": (
+                "Organization Admin created successfully"
+                if token.role == "ORG_ADMIN"
+                else "Account created. Awaiting approval."
+            )
+        }
     
     # Separate login method for platform users (no org name required)
     @staticmethod

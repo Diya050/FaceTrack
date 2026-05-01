@@ -42,6 +42,13 @@ class ProfileService:
         if not user:
             raise HTTPException(404, "User not found")
         
+        # Auto-upgrade ORG_ADMIN from 'approved' to 'active' (no face enrollment required)
+        if user.role.role_name == "ORG_ADMIN" and user.status.value == "approved":
+            from app.models.core import UserStatusEnum
+            user.status = UserStatusEnum.ACTIVE
+            db.commit()
+            db.refresh(user)
+        
         return ProfileService._format_user_dict(db, user)
 
     @staticmethod

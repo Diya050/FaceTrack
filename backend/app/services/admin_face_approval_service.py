@@ -21,7 +21,7 @@ BUCKET = "face-images"
 class AdminFaceApprovalService:
 
     @staticmethod
-    def approve_enrollment(db, session_id):
+    def approve_enrollment(db, current_user, session_id):
 
         session = db.execute(
             select(FaceEnrollmentSession).where(
@@ -31,6 +31,16 @@ class AdminFaceApprovalService:
 
         if not session:
             raise HTTPException(404, "Session not found")
+        user = db.execute(
+            select(User).where(User.user_id == session.user_id)
+        ).scalars().first()
+
+        target_role = user.role.role_name
+        actor_role = current_user.role.role_name
+
+        # ❌ HR_ADMIN cannot approve HR_ADMIN
+        if target_role == "HR_ADMIN" and actor_role != "ORG_ADMIN":
+            raise HTTPException(403, "Only ORG_ADMIN can approve HR_ADMIN")
 
         images = db.execute(
             select(FaceEnrollmentImage).where(
@@ -140,6 +150,9 @@ class AdminFaceApprovalService:
         user = db.execute(
             select(User).where(User.user_id == user_id, User.is_deleted == False)
         ).scalars().first()
+
+        if user.status != UserStatusEnum.APPROVED:
+            raise HTTPException(400, "User must be approved before requesting enrollment")
         
         # Logic to create session...
         session = FaceEnrollmentSession(

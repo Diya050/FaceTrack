@@ -1,0 +1,21 @@
+EMAIL_TRIGGER_EVENTS = {
+    # High priority flows
+    "NEW_USER_REGISTERED",
+    "FACE_ENROLLMENT_SUBMITTED",
+    "FACE_ENROLLMENT_APPROVED",
+    "FACE_ENROLLMENT_REJECTED",
+    "FACE_ENROLLMENT_REQUESTED",
+    "USER_APPROVED",
+    "USER_REJECTED",
+
+    # Security / alerts
+    "UNKNOWN_FACE_DETECTED",
+
+    # Important user-impact events
+    "ATTENDANCE_CORRECTION_REVIEWED",
+}
+
+EMAIL_TRIGGER_TYPES = {
+    "ERROR",
+    "ALERT"
+}

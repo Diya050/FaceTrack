@@ -1,6 +1,6 @@
 import type { SvgIconComponent } from "@mui/icons-material";
 
-export type AppRole = "SUPER_ADMIN" | "HR_ADMIN" | "ADMIN" | "USER";
+export type AppRole = "SUPER_ADMIN" | "HR_ADMIN" | "ADMIN" | "USER" | "ORG_ADMIN";
 
 export type SidebarLeaf = {
   label: string;

@@ -44,7 +44,8 @@ def create_ticket(
 def list_tickets(
     status: Optional[TicketStatus] = Query(None),
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN"])),
+    
+    current_user=Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
 ):
     return SupportTicketService.list_tickets(db, current_user, status)
 
@@ -57,7 +58,7 @@ def update_ticket_status(
     ticket_id: UUID,
     data: SupportTicketUpdate,
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN"])),
+    current_user=Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"])),
 ):
     return SupportTicketService.update_ticket_status(
         db=db,

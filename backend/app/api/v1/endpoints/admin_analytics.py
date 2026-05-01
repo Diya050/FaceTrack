@@ -29,6 +29,7 @@ router = APIRouter(prefix="/analytics", tags=["Admin Analytics"])
 def build_scope(current_user):
     try:
         role = current_user.role.role_name
+        print(f"DEBUG: Building scope for user_id={current_user.user_id}, role={role}, department_id={getattr(current_user, 'department_id', None)}")
 
         if role == "ADMIN":
             if not current_user.department_id:
@@ -44,6 +45,12 @@ def build_scope(current_user):
             }
 
         elif role == "HR_ADMIN":
+            return {
+                "type": "organization",
+                "user_id": current_user.user_id  # ✅ Add for consistency
+            }
+        
+        elif role == "ORG_ADMIN":
             return {
                 "type": "organization",
                 "user_id": current_user.user_id  # ✅ Add for consistency
@@ -66,7 +73,7 @@ def build_scope(current_user):
 def get_kpi_overview(
     db: Session = Depends(get_db),
     organization_id: UUID = Depends(get_org_id),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     KPI Overview Endpoint
@@ -132,7 +139,7 @@ def get_attendance_trend(
     days: int = Query(7, ge=1, le=30),
     db: Session = Depends(get_db),
     organization_id: UUID = Depends(get_org_id),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     Attendance Trend API
@@ -184,7 +191,7 @@ def get_attendance_trend(
 def get_department_attendance(
     db: Session = Depends(get_db),
     organization_id: UUID = Depends(get_org_id),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     Department Attendance %
@@ -233,7 +240,7 @@ def get_department_attendance(
 def get_recognition_analytics(
     db: Session = Depends(get_db),
     organization_id: UUID = Depends(get_org_id),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     Recognition Quality API
@@ -287,7 +294,7 @@ def get_recognition_analytics(
 def get_absent_analytics(
     db: Session = Depends(get_db),
     organization_id: UUID = Depends(get_org_id),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     Absent Analytics API
@@ -337,7 +344,7 @@ def get_absent_analytics(
 def get_half_day_analytics(
     db: Session = Depends(get_db),
     organization_id: UUID = Depends(get_org_id),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     Half-Day Analytics API
@@ -390,7 +397,7 @@ def get_late_analytics(
     db: Session = Depends(get_db),
     #current_user=Depends(get_current_user),
     organization_id=Depends(get_org_id),
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     Late Analytics API
@@ -442,7 +449,7 @@ def get_late_analytics(
 def get_working_hours_analytics(
     db: Session = Depends(get_db),
     organization_id: UUID = Depends(get_org_id),
-    current_user = Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user = Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     Get Average Working Hours Metrics
@@ -478,7 +485,7 @@ def get_recent_detections(
     limit: int = Query(10, ge=1, le=50, description="Number of recent detections to fetch"),
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user),
-    _: None = Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    _: None = Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     """
     Fetch recent attendance detections for today.
@@ -508,7 +515,7 @@ def export_attendance_logs(
     target_date: date = Query(None), # Defaults to today if not passed
     db: Session = Depends(get_db),
     organization_id: UUID = Depends(get_org_id),
-    current_user = Depends(require_roles(["HR_ADMIN", "ADMIN"]))
+    current_user = Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"]))
 ):
     scope = build_scope(current_user)
     

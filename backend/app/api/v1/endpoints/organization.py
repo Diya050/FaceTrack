@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+import json
 from app.db.session import get_db
 from app.schemas.organization import OrganizationCreate, OrganizationResponse, OrganizationUpdate
 from app.services.organization_service import create_organization
@@ -19,7 +20,7 @@ def create_org(
     db: Session = Depends(get_db),
     user=Depends(require_roles(["SUPER_ADMIN"]))
 ):
-    return create_organization(db, data)
+    return create_organization(db, data, created_by=user.user_id)
 
 @router.get("", response_model=list[OrganizationResponse])
 def list_orgs(
@@ -37,7 +38,7 @@ def list_orgs(
 def get_my_org(
     db: Session = Depends(get_db),
     # Assuming require_roles or a similar dependency returns the current user
-    current_user = Depends(require_roles(["HR_ADMIN"]))
+    current_user = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"]))
 ):
     """Fetch the organization details for the logged-in admin."""
     org = db.execute(
@@ -52,7 +53,7 @@ def get_my_org(
 def update_my_org(
     data: OrganizationUpdate,
     db: Session = Depends(get_db),
-    current_user = Depends(require_roles(["HR_ADMIN"]))
+    current_user = Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"]))
 ):
     """Update organization settings like min_hours_for_present."""
     org = db.execute(
@@ -64,6 +65,27 @@ def update_my_org(
 
     # Update only fields that are provided in the request
     update_data = data.model_dump(exclude_unset=True)
+
+    if "notification_config" in update_data:
+        config_value = update_data["notification_config"]
+
+        if isinstance(config_value, str):
+            try:
+                config_value = json.loads(config_value)
+            except json.JSONDecodeError as exc:
+                raise HTTPException(status_code=422, detail="notification_config must be valid JSON") from exc
+
+        if isinstance(config_value, dict):
+            settings_value = config_value.get("notification_settings")
+            if isinstance(settings_value, str):
+                try:
+                    config_value["notification_settings"] = json.loads(settings_value)
+                except json.JSONDecodeError:
+                    # Keep original value if parsing fails.
+                    pass
+
+        update_data["notification_config"] = config_value
+
     for key, value in update_data.items():
         setattr(org, key, value)
 

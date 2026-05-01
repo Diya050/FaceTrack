@@ -33,3 +33,13 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token_id: str
     new_password: str
+
+class InviteRegisterRequest(BaseModel):
+    full_name: str
+    password: str
+
+class InviteCreateRequest(BaseModel):
+    email: EmailStr
+    role: str  # ORG_ADMIN, HR_ADMIN, ADMIN, USER
+    department_id: Optional[UUID] = None
+

@@ -15,7 +15,7 @@ router = APIRouter(prefix="/audit", tags=["Audit Logs"])
 def get_audit_logs(
     limit: int = Query(50, ge=1, le=500),
     skip: int = Query(0, ge=0),
-    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user: User = Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db),
 ):
     """

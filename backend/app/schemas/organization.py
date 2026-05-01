@@ -16,6 +16,7 @@ class OrganizationCreate(BaseModel):
     liveness_threshold: float = 0.8
     min_face_size: int = 60
     notification_config: Any | None = None
+    org_admin_email: EmailStr
 
 class OrganizationResponse(BaseModel):
     organization_id: UUID

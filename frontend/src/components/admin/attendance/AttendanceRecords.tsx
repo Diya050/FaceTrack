@@ -28,29 +28,34 @@ interface DecodedToken {
 // --- Helpers ---
 const formatDateForInput = (date: Date) => date.toISOString().split("T")[0];
 
-const formatTime = (timeStr: string | null) => {
+const formatTime = (timeStr) => {
   if (!timeStr) return "—";
   try {
-    const [hours, minutes, seconds] = timeStr.split(":");
-    const date = new Date();
-    date.setUTCHours(parseInt(hours), parseInt(minutes), parseInt(seconds.split(".")[0]), 0);
-    return date.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
-  } catch { return "—"; }
+    return new Date(timeStr).toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return "—";
+  }
 };
 
-function getWorkingHours(checkIn: string | null, checkOut: string | null) {
-  if (!checkIn || !checkOut || checkIn === checkOut) return "—";
+function getWorkingHours(checkIn, checkOut) {
+  if (!checkIn || !checkOut) return "—";
+
   try {
-    const parseUTC = (t: string) => {
-      const [h, m, s] = t.split(":");
-      const d = new Date(0);
-      d.setUTCHours(parseInt(h), parseInt(m), parseInt(s.split(".")[0]), 0);
-      return d.getTime();
-    };
-    const totalMinutes = Math.floor((parseUTC(checkOut) - parseUTC(checkIn)) / 60000);
-    if (totalMinutes <= 0) return "—";
+    const inTime = new Date(checkIn);
+    const outTime = new Date(checkOut);
+
+    const diffMs = outTime - inTime;
+    if (diffMs <= 0) return "—";
+
+    const totalMinutes = Math.floor(diffMs / 60000);
     return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
-  } catch { return "—"; }
+  } catch {
+    return "—";
+  }
 }
 
 const statusOptions = [

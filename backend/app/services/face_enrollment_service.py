@@ -8,7 +8,7 @@ import traceback
 
 from app.utils.supabase_storage import upload_image
 from app.models.biometrics import FaceEnrollmentSession, FaceEnrollmentImage
-from app.models.core import User
+from app.models.core import User, Role
 from app.services.notification_service import NotificationService
 from app.services.admin_face_approval_service import AdminFaceApprovalService
 
@@ -31,9 +31,9 @@ class FaceEnrollmentService:
                 )
             ).scalars().first()
 
-            # If user is HR_ADMIN, we can auto-create a session if one doesn't exist
+            # If user is ORG_ADMIN, we can auto-create a session if one doesn't exist
             if not session:
-                if current_user.role.role_name == "HR_ADMIN":
+                if current_user.role.role_name == "ORG_ADMIN":
                     session = FaceEnrollmentSession(
                         session_id=uuid4(),
                         user_id=current_user.user_id,
@@ -68,15 +68,16 @@ class FaceEnrollmentService:
                 image_records.append(img_record)
 
             # 4. THE AUTO-APPROVAL LOGIC
-            is_hr_admin = current_user.role.role_name == "HR_ADMIN"
+            role = current_user.role.role_name
 
-            if is_hr_admin:
-                print("DEBUG: HR Admin detected. Auto-processing embeddings...")
-                db.flush() # Ensure images are in DB for the next service call
-                
-                # Directly call the approval logic
-                AdminFaceApprovalService.approve_enrollment(db, session.session_id)
-                
+            is_org_admin = role == "ORG_ADMIN"
+
+            if is_org_admin:
+                print("DEBUG: ORG_ADMIN detected. Auto-processing embeddings...")
+                db.flush()
+
+                AdminFaceApprovalService.approve_enrollment(db, current_user, session.session_id)
+
                 return {
                     "session_id": str(session.session_id),
                     "message": "Success! Your biometric profile is generated and you are now ACTIVE."
@@ -85,14 +86,19 @@ class FaceEnrollmentService:
                 # Regular User Flow: Requires Manual Admin Approval
                 session.status = "pending_approval"
                 
-                # Notify other HR Admins (existing notification logic)
-                hr_admins = db.query(User).filter(
-                    User.organization_id == current_user.organization_id,
-                    User.role.has(role_name="HR_ADMIN"),
-                    User.user_id != current_user.user_id # Don't notify self
-                ).all()
+                role = current_user.role.role_name
 
-                for hr in hr_admins:
+                if role == "HR_ADMIN":
+                    approvers = db.query(User).filter(
+                        User.organization_id == current_user.organization_id,
+                        User.role.has(role_name="ORG_ADMIN")
+                    ).all()
+                else:
+                    approvers = db.query(User).filter(
+                        User.organization_id == current_user.organization_id,
+                        User.role.has(Role.role_name.in_(["HR_ADMIN", "ORG_ADMIN"]))
+                    ).all()
+                for hr in approvers:
                     NotificationService.create_notification(
                         db, hr.user_id, hr.organization_id,
                         f"{current_user.full_name} submitted face images for approval",

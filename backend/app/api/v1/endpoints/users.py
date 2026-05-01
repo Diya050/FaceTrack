@@ -16,7 +16,7 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get("/pending")
 def get_pending_users(
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
 
@@ -28,7 +28,7 @@ def get_pending_users(
 @router.patch("/{user_id}/approve")
 def approve_user(
     user_id: UUID,
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
     return UserService.approve_user(db, current_user, user_id)
@@ -37,7 +37,7 @@ def approve_user(
 def request_face_enrollment(
     user_id: UUID,
     db: Session = Depends(get_db),
-    current_user = Depends(require_roles(["HR_ADMIN","ADMIN"]))
+    current_user = Depends(require_roles(["HR_ADMIN","ADMIN", "ORG_ADMIN"]))
 ):
 
     return FaceEnrollmentAdminService.request_enrollment(
@@ -49,7 +49,7 @@ def request_face_enrollment(
 @router.patch("/{user_id}/reject")
 def reject_user(
     user_id: UUID,
-    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN"])),
+    current_user=Depends(require_roles(["HR_ADMIN", "ADMIN", "ORG_ADMIN"])),
     db: Session = Depends(get_db)
 ):
     return UserService.reject_user(db, current_user, user_id)

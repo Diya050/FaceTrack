@@ -12,6 +12,9 @@ from app.enums.attendance_enums import AttendanceEventType
 from app.enums.attendance_enums import AttendanceStatus
 from app.enums.attendance_enums import AttendanceCorrectionStatus
 from app.services.notification_service import NotificationService
+from datetime import datetime
+from app.utils.timezone import today_ist, utc_to_ist_date
+from app.utils.Dep_and_Org_records import serialize_common_fields, combine_ist_datetime
 
 
 COOLDOWN_SECONDS = 60
@@ -175,7 +178,7 @@ def list_attendance_corrections(db: Session, current_user):
     )
 
     # HR_ADMIN → sees all corrections in org
-    if role == "HR_ADMIN":
+    if role == "HR_ADMIN" or role == "ORG_ADMIN":
         pass
 
     # ADMIN → only their department
@@ -276,7 +279,7 @@ def review_attendance_correction(
         raise HTTPException(status_code=404, detail="Requesting user not found or inactive")
 
     # Authorization
-    if role == "HR_ADMIN":
+    if role == "HR_ADMIN" or role == "ORG_ADMIN":
         pass
 
     elif role == "ADMIN":
@@ -345,6 +348,15 @@ def review_attendance_correction(
 
     return correction
 
+
+# ------------------------------------------------------------------------------------------------------- #
+
+
+
+
+
+
+
 def get_department_attendance(
     db: Session,
     current_user: User,
@@ -357,20 +369,30 @@ def get_department_attendance(
     limit: int = 50
 ):
     ensure_active_user(current_user)
+
     role_name = current_user.role.role_name if current_user.role else None
 
-    # Logic: ADMIN can ONLY view their own department.
-    # We override the requested department_id with the admin's own ID to be safe.
+    # Normalize dates
+    if isinstance(target_date, datetime):
+        target_date = utc_to_ist_date(target_date)
+    if isinstance(start_date, datetime):
+        start_date = utc_to_ist_date(start_date)
+    if isinstance(end_date, datetime):
+        end_date = utc_to_ist_date(end_date)
+
+    if not target_date and not start_date and not end_date:
+        target_date = today_ist()
+
+    # Role restriction
     if role_name == "ADMIN":
         if not current_user.department_id:
-            raise HTTPException(status_code=400, detail="Department not assigned to admin")
-        
+            raise HTTPException(400, "Department not assigned")
+
         if department_id != current_user.department_id:
-             raise HTTPException(status_code=403, detail="Unauthorized: Admins can only view their own department")
-        
+            raise HTTPException(403, "Unauthorized")
+
         effective_dept_id = current_user.department_id
     else:
-        # HR_ADMIN can view any department
         effective_dept_id = department_id
 
     query = (
@@ -392,6 +414,7 @@ def get_department_attendance(
         )
     )
 
+    # Filters
     if target_date:
         query = query.where(Attendance.attendance_date == target_date)
     else:
@@ -403,21 +426,23 @@ def get_department_attendance(
     if status:
         query = query.where(Attendance.status == status)
 
-    query = query.order_by(Attendance.attendance_date.desc(), User.full_name.asc()).offset(skip).limit(limit)
+    query = query.order_by(
+        Attendance.attendance_date.desc(),
+        User.full_name.asc()
+    ).offset(skip).limit(limit)
+
     rows = db.execute(query).all()
 
-    return [
-        {
-            "user_id": row.user_id,
-            "full_name": row.full_name,
-            "attendance_id": row.attendance_id,
-            "attendance_date": row.attendance_date,
-            "first_check_in": row.first_check_in,
-            "last_check_out": row.last_check_out,
-            "status": row.status.value if hasattr(row.status, "value") else row.status,
-        }
-        for row in rows
-    ]
+    return [serialize_common_fields(row) for row in rows]
+
+
+
+
+
+
+# ------------------------------------------------------------------------------------------------------- #
+
+
 
 def get_organization_attendance(
     db: Session,
@@ -430,16 +455,12 @@ def get_organization_attendance(
     skip: int = 0,
     limit: int = 50
 ):
-
     ensure_active_user(current_user)
 
     role_name = current_user.role.role_name if current_user.role else None
 
-    if role_name not in ["HR_ADMIN", "ADMIN"]:
-        raise HTTPException(
-            status_code=403,
-            detail="Not authorized to view organization attendance"
-        )
+    if role_name not in ["HR_ADMIN", "ADMIN", "ORG_ADMIN"]:
+        raise HTTPException(403, "Not authorized")
 
     query = (
         select(
@@ -462,12 +483,12 @@ def get_organization_attendance(
         )
     )
 
+    # Filters
     if attendance_date:
         query = query.where(Attendance.attendance_date == attendance_date)
     else:
         if start_date:
             query = query.where(Attendance.attendance_date >= start_date)
-
         if end_date:
             query = query.where(Attendance.attendance_date <= end_date)
 
@@ -482,26 +503,24 @@ def get_organization_attendance(
 
     query = query.order_by(
         Attendance.attendance_date.desc(),
-        User.full_name.asc(),
+        User.full_name.asc()
     ).offset(skip).limit(limit)
 
     rows = db.execute(query).all()
 
     return [
         {
-            "user_id": row.user_id,
-            "full_name": row.full_name,
+            **serialize_common_fields(row),
             "department_name": row.department_name,
-            "attendance_id": row.attendance_id,
-            "attendance_date": row.attendance_date,
-            "first_check_in": row.first_check_in,
-            "last_check_out": row.last_check_out,
-            "status": row.status.value if hasattr(row.status, "value") else row.status,
             "organization_id": row.organization_id,
         }
         for row in rows
     ]
 
+
+
+
+# --------------------------------------------------------------------------------------------------------- # 
 
 def get_monthly_attendance_stats(db: Session, user_id, year: int, month: int):
 

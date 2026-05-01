@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from datetime import date, time
+from datetime import date, datetime, time
 from typing import Optional
 from uuid import UUID
 
@@ -56,8 +56,8 @@ class OrgAttendanceRecord(BaseModel):
     department_name: Optional[str] = None
     attendance_id: UUID
     attendance_date: date
-    first_check_in: Optional[time] = None
-    last_check_out: Optional[time] = None
+    first_check_in: Optional[datetime] = None
+    last_check_out: Optional[datetime] = None
     status: str
     organization_id: Optional[UUID] = None
 
