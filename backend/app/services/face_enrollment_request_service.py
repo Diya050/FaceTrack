@@ -20,7 +20,9 @@ class FaceEnrollmentRequestService:
         query = (
             select(FaceEnrollmentSession)
             .join(User, FaceEnrollmentSession.user_id == User.user_id)
-            .where(FaceEnrollmentSession.status == "pending_approval")
+            .where(FaceEnrollmentSession.status == "pending_approval",
+                   User.organization_id == current_user.organization_id
+            )
         )
         if current_user.role.role_name == "HR_ADMIN":
             query = query.where(
@@ -61,11 +63,14 @@ class FaceEnrollmentRequestService:
         return pending_requests
 
     @staticmethod
-    def approve_enrollment(db, session_id):
+    def approve_enrollment(db, current_user, session_id):
 
         session = db.execute(
-            select(FaceEnrollmentSession).where(
-                FaceEnrollmentSession.session_id == session_id
+            select(FaceEnrollmentSession)
+            .join(User, FaceEnrollmentSession.user_id == User.user_id)
+            .where(
+                FaceEnrollmentSession.session_id == session_id,
+                User.organization_id == current_user.organization_id
             )
         ).scalars().first()
 
@@ -82,11 +87,14 @@ class FaceEnrollmentRequestService:
         return {"message": "Face enrollment approved"}
 
     @staticmethod
-    def reject_enrollment(db, session_id):
+    def reject_enrollment(db, current_user, session_id):
 
         session = db.execute(
-            select(FaceEnrollmentSession).where(
-                FaceEnrollmentSession.session_id == session_id
+            select(FaceEnrollmentSession)
+            .join(User, FaceEnrollmentSession.user_id == User.user_id)
+            .where(
+                FaceEnrollmentSession.session_id == session_id,
+                User.organization_id == current_user.organization_id
             )
         ).scalars().first()
 

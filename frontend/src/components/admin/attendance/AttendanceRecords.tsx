@@ -26,10 +26,17 @@ interface DecodedToken {
 }
 
 // --- Helpers ---
-const formatDateForInput = (date: Date) => date.toISOString().split("T")[0];
+const formatDateForInput = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
-const formatTime = (timeStr) => {
+  return `${year}-${month}-${day}`;
+};
+
+const formatTime = (timeStr: string | null): string => {
   if (!timeStr) return "—";
+
   try {
     return new Date(timeStr).toLocaleTimeString("en-IN", {
       hour: "2-digit",
@@ -41,18 +48,26 @@ const formatTime = (timeStr) => {
   }
 };
 
-function getWorkingHours(checkIn, checkOut) {
+function getWorkingHours(
+  checkIn: string | null,
+  checkOut: string | null
+): string {
   if (!checkIn || !checkOut) return "—";
 
   try {
-    const inTime = new Date(checkIn);
-    const outTime = new Date(checkOut);
+    const inTime = new Date(checkIn).getTime();
+    const outTime = new Date(checkOut).getTime();
 
     const diffMs = outTime - inTime;
+
     if (diffMs <= 0) return "—";
 
     const totalMinutes = Math.floor(diffMs / 60000);
-    return `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}m`;
+
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+
+    return `${hours}h ${minutes}m`;
   } catch {
     return "—";
   }
