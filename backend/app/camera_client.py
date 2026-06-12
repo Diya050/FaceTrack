@@ -7,7 +7,7 @@ import time
 
 #CONFIGURATION
 BACKEND_URL = "http://localhost:8000/api/v1"
-JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3Nzg5MTU0MTYsInN1YiI6IjRjNjY5OTdlLTYwZTktNGI1NC05MjI1LTg2NmM3OWQ4ZDYxOCIsIm9yZ19pZCI6IjY2MTc0N2ViLTU2ZDUtNDI2ZS05MTY2LTZmOTZiY2Q2Mjc3ZCIsInJvbGUiOiJPUkdfQURNSU4ifQ.Wcdgu9h3_kQ8IFZFlRHTmvAX8lzSBhPPBMqhB2KR6to"
+JWT_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3ODE1MjE3MTYsInN1YiI6ImJjYWJlYWVlLTg4MDItNGViMi04ZTliLTI0YzdlYmE1OTdiMiIsIm9yZ19pZCI6IjY2MTc0N2ViLTU2ZDUtNDI2ZS05MTY2LTZmOTZiY2Q2Mjc3ZCIsInJvbGUiOiJVU0VSIn0.eTXyim50hsXkVZwc1nu8E-iJC6OlKFlk3DojWLv4Ec4"
 HEADERS = {
     "Authorization": f"Bearer {JWT_TOKEN}",
 }
@@ -19,10 +19,6 @@ def generate_device_identifier():
     hostname=socket.gethostname()
     mac=hex(uuid.getnode())[2:]
     return f"{hostname}-{mac}"
-
-
-
-
 
 #REGISTER OR IDENTIFY CAMERA
 def identify_camera():
@@ -45,7 +41,6 @@ def identify_camera():
     print("Camera identified/registered successfully.")
     print("Camera ID:", data["camera_id"])
     return data["camera_id"]
-
 
 
 #SEND FRAME TO BACKEND FOR RECOGNITION
@@ -73,7 +68,6 @@ def send_frame(camera_id, frame):
 
 
 #STREAM FRAMES TO BACKEND FOR LIVE VIEWING
-
 def send_stream_frame(camera_id, frame):
 
     _, buffer = cv2.imencode(".jpg", frame)

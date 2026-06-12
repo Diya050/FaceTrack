@@ -91,10 +91,15 @@ def calculate_productivity_metrics_for_user(
     hours_list = []
     for rec in records:
         if rec["first_in"] and rec["last_out"]:
-            dt_in = datetime.combine(rec["date"], rec["first_in"])
-            dt_out = datetime.combine(rec["date"], rec["last_out"])
-            delta = dt_out - dt_in
-            hours = max(0.0, delta.total_seconds() / 3600.0)
+            dt_in = rec["first_in"]
+            dt_out = rec["last_out"]
+
+            if dt_in and dt_out:
+                if dt_out < dt_in:
+                    dt_out += timedelta(days=1)
+
+                delta = dt_out - dt_in
+                hours = delta.total_seconds() / 3600.0
             hours_list.append(hours)
 
     avg_hours = sum(hours_list) / (len(hours_list) or 1)
@@ -253,8 +258,8 @@ def get_working_hours_trend_for_user(
         hours = 0.0
         if time_in and time_out:
             # time_in and time_out are time objects; convert to datetime for subtraction
-            dt_in = datetime.combine(att_date, time_in)
-            dt_out = datetime.combine(att_date, time_out)
+            dt_in = time_in
+            dt_out = time_out
             delta = dt_out - dt_in
             hours = round(delta.total_seconds() / 3600.0, 2)
             if hours < 0:

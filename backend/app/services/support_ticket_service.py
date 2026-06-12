@@ -58,19 +58,32 @@ class SupportTicketService:
         ticket = db.execute(
             select(SupportTicket).where(
                 SupportTicket.ticket_id == ticket_id,
-                SupportTicket.organization_id == current_user.organization_id
+                SupportTicket.organization_id
+                == current_user.organization_id
             )
-        ).scalars().first()
+        ).scalar_one_or_none()
 
         if not ticket:
-            raise HTTPException(status_code=404, detail="Support ticket not found")
+            raise HTTPException(
+                status_code=404,
+                detail="Support ticket not found"
+            )
+
+        # Avoid unnecessary update
+        if ticket.status == status_data.status:
+            raise HTTPException(
+                status_code=400,
+                detail="Ticket already has this status"
+            )
 
         ticket.status = status_data.status
 
         db.commit()
         db.refresh(ticket)
 
+
         return ticket
+
 
     @staticmethod
     def resolve_with_message(
@@ -91,19 +104,22 @@ class SupportTicketService:
         replies = {
             "resolved": "Your issue has been resolved. Thank you!",
             "wait": "We have received your ticket; it will take some time to resolve.",
-            "info_needed": "HR Admin needs more details to process your request.",
+            "info_needed": "HR Admin needs more details to process your request. They will contact you soon.",
             "tech_assigned": "A technician has been assigned to your case."
         }
 
         message_text = replies.get(action_key, "Your ticket status has been updated.")
 
-        # ✅ Proper enum usage
+        # Proper enum usage
         if action_key == "resolved":
             ticket.status = TicketStatus.RESOLVED
         else:
             ticket.status = TicketStatus.IN_PROGRESS
 
-        # ✅ Notify ONLY ticket creator
+        db.commit()
+        db.refresh(ticket)
+
+        # Notify ONLY ticket creator
         NotificationService.create_notification(
             db=db,
             user_id=ticket.user_id,
@@ -114,8 +130,5 @@ class SupportTicketService:
             entity_id=ticket.ticket_id,
             event_type="SUPPORT_REPLY"
         )
-
-        db.commit()
-        db.refresh(ticket)
 
         return ticket

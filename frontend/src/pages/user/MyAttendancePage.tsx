@@ -4,7 +4,7 @@ import { Box, Typography, Paper, Grid, Snackbar, Alert } from "@mui/material";
 import AttendanceFilters from "../../components/attendance/AttendanceFilters";
 import AttendanceCalendar from "../../components/attendance/AttendanceCalendar";
 import AttendanceTable from "../../components/attendance/AttendanceTable";
-import LeaveManagementPanel from "../../components/attendance/LeaveManagementPanel";
+// import LeaveManagementPanel from "../../components/attendance/LeaveManagementPanel";
 import CorrectionForm from "../../components/attendance/CorrectionForm";
 
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
@@ -26,10 +26,6 @@ type AttendanceRow = {
   checkIn: string;
   checkOut: string;
   total: string;
-  hours: string;
-  confidence: string;
-  camera: string;
-  method: string;
 };
 
 /* ───────── COMPONENT ───────── */
@@ -47,20 +43,11 @@ const MyAttendancePage = () => {
 
       const data = await getMyAttendance(params);
 
-      const mapped: AttendanceRow[] = data.map((item: any) => ({
-        attendance_id: item.attendance_id,
-        date: item.date,
-        status: item.status,
-        checkIn: item.check_in || "--",
-        checkOut: item.check_out || "--",
-        total: item.total || "--",
-        hours: item.total || "--",
-        confidence: "--",
-        camera: item.camera_name || "--",
-        method: item.recognition_method || "--",
-      }));
+      console.log("RAW RESPONSE", data);
 
-      setAttendance(mapped);
+      
+
+      setAttendance(data);
     } catch (err) {
       console.error("Fetch attendance failed:", err);
     } finally {
@@ -228,9 +215,9 @@ const MyAttendancePage = () => {
       </Box>
 
       {/* LEAVE */}
-      <Box mt={4}>
+      {/* <Box mt={4}>
         <LeaveManagementPanel />
-      </Box>
+      </Box> */}
 
       {/* CORRECTION */}
       <Box mt={4}>

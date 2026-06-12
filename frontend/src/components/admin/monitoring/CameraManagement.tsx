@@ -19,11 +19,11 @@ import {
 import { useTheme } from "@mui/material/styles";
 import type { GridColDef, GridRenderCellParams } from "@mui/x-data-grid";
 import { DataGrid } from "@mui/x-data-grid";
-import EditIcon from "@mui/icons-material/Edit";
+// import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 import StopIcon from "@mui/icons-material/Stop";
-import CameraAltIcon from "@mui/icons-material/CameraAlt";
+// import CameraAltIcon from "@mui/icons-material/CameraAlt";
 import { getCameras, type Camera as BackendCamera } from "../../../services/cameraService";
 
 /* TYPES */
@@ -137,21 +137,9 @@ const CameraManagement: React.FC = () => {
                             </IconButton>
                         </Tooltip>
 
-                        <Tooltip title="Edit">
-                            <IconButton size="small">
-                                <EditIcon />
-                            </IconButton>
-                        </Tooltip>
-
                         <Tooltip title="Delete">
                             <IconButton size="small" color="error">
                                 <DeleteIcon />
-                            </IconButton>
-                        </Tooltip>
-
-                        <Tooltip title="Snapshot">
-                            <IconButton size="small">
-                                <CameraAltIcon />
                             </IconButton>
                         </Tooltip>
                     </Stack>

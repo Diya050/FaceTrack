@@ -18,8 +18,8 @@ class AttendanceRecordResponse(BaseModel):
     attendance_id : UUID
     user_id : UUID
     attendace_date : date
-    first_check_in : Optional[time] = None
-    last_check_out : Optional[time] = None
+    first_check_in : Optional[datetime] = None
+    last_check_out : Optional[datetime] = None
     status: str
     organization_id : UUID
 
@@ -30,8 +30,8 @@ class UserAttendanceResponse(BaseModel):
     attendance_id: UUID
     user_id: UUID
     attendance_date: date
-    first_check_in: Optional[time] = None
-    last_check_out: Optional[time] = None
+    first_check_in: Optional[datetime] = None
+    last_check_out: Optional[datetime] = None
     status: str
     organization_id: Optional[UUID] = None
 
@@ -43,8 +43,8 @@ class DepartmentAttendanceUserRecord(BaseModel):
     full_name: str
     attendance_id: Optional[UUID] = None
     attendance_date: Optional[date] = None
-    first_check_in: Optional[time] = None
-    last_check_out: Optional[time] = None
+    first_check_in: Optional[datetime] = None
+    last_check_out: Optional[datetime] = None
     status: Optional[str] = None
 
     class Config:

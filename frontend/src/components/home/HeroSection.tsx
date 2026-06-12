@@ -1,5 +1,6 @@
 import { Box, Typography, Button} from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import { Link } from "react-router-dom";
 
 export default function HeroSection() {
     const theme = useTheme();
@@ -70,7 +71,9 @@ export default function HeroSection() {
 
           <Button
             variant="contained"
+            component={Link}
             size="large"
+            to="/register"
             sx={{
               px: 4,
               py: 1.5,
@@ -79,6 +82,7 @@ export default function HeroSection() {
           >
             Get Started
           </Button>
+
         </Box>
       {/* </Container> */}
     </Box>

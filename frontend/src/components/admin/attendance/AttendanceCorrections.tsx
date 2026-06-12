@@ -17,16 +17,49 @@ import {
 } from "@mui/material";
 import { COLORS } from "../../../theme/dashboardTheme";
 
+const formatTimeOnly = (value?: string | null) => {
+  if (!value) return "--";
+
+  // If backend sends "11:10 → 11:15"
+  if (value.includes("→")) {
+    const [start, end] = value.split("→").map(v => v.trim());
+    return `${formatSingleTime(start)} → ${formatSingleTime(end)}`;
+  }
+
+  return formatSingleTime(value);
+};
+
+const formatSingleTime = (time: string) => {
+  if (!time) return "--";
+
+  // remove microseconds like 08:34:32.373000 → 08:34:32
+  const cleaned = time.split(".")[0];
+
+  const [h, m, s] = cleaned.split(":");
+
+  if (!h || !m) return time;
+
+  const date = new Date();
+  date.setUTCHours(Number(h), Number(m), Number(s || 0), 0);
+
+  return date.toLocaleTimeString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 type AttendanceCorrection = {
   id: string;
   employeeName: string;
   date: string;
-  issueType: string;
   currentValue: string;
   requestedValue: string;
   reason: string;
   status: "pending" | "approved" | "rejected";
 };
+
 
 const STATUS_COLORS: Record<AttendanceCorrection["status"], string> = {
   pending: COLORS.late,
@@ -34,15 +67,11 @@ const STATUS_COLORS: Record<AttendanceCorrection["status"], string> = {
   rejected: COLORS.absent,
 };
 
-function formatIssue(type: string) {
-  return type.replace(/_/g, " ").toUpperCase();
-}
 
 export default function AttendanceCorrections() {
   const [records, setRecords] = useState<AttendanceCorrection[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ✅ FETCH DATA
   const fetchCorrections = async () => {
     try {
       const res = await fetch(
@@ -56,15 +85,25 @@ export default function AttendanceCorrections() {
 
       const data = await res.json();
 
+      console.log("CORRECTIONS RAW:", data);
+
       const formatted = data.map((r: any) => ({
-        id: r.id,
-        employeeName: r.full_name,
-        date: r.date,
-        issueType: r.issue_type,
-        currentValue: r.current_value,
-        requestedValue: r.requested_value,
-        reason: r.reason,
-        status: r.status,
+        id: r.correction_id,
+        employeeName: r.full_name || "--",
+        date: r.date?.split("T")[0] || "--",
+
+        currentValue: formatTimeOnly(r.current_value),
+        requestedValue: formatTimeOnly(r.requested_value),
+        //     [
+        //       formatTime(r.requested_time_in),
+        //       formatTime(r.requested_time_out),
+        //     ]
+        //       .filter(Boolean)
+        //       .join(" → ") || "--",
+
+        reason: r.reason || "--",
+
+        status: (r.status || "pending").toLowerCase(),
       }));
 
       setRecords(formatted);
@@ -86,12 +125,16 @@ export default function AttendanceCorrections() {
   ) => {
     try {
       await fetch(
-        `http://localhost:8000/api/v1/attendance-corrections/${id}/${status}`,
+        `http://localhost:8000/api/v1/attendance-corrections/${id}/review`,
         {
-          method: "PUT",
+          method: "PATCH",
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            status,
+          }),
         }
       );
 
@@ -126,7 +169,6 @@ export default function AttendanceCorrections() {
                   {[
                     "Employee",
                     "Date",
-                    "Issue",
                     "Current",
                     "Requested",
                     "Reason",
@@ -160,9 +202,6 @@ export default function AttendanceCorrections() {
                         {r.employeeName}
                       </TableCell>
                       <TableCell>{r.date}</TableCell>
-                      <TableCell>
-                        {formatIssue(r.issueType)}
-                      </TableCell>
                       <TableCell>{r.currentValue}</TableCell>
                       <TableCell>{r.requestedValue}</TableCell>
                       <TableCell sx={{ maxWidth: 240 }}>

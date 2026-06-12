@@ -38,7 +38,7 @@ class AdminFaceApprovalService:
         target_role = user.role.role_name
         actor_role = current_user.role.role_name
 
-        # ❌ HR_ADMIN cannot approve HR_ADMIN
+        # HR_ADMIN cannot approve HR_ADMIN
         if target_role == "HR_ADMIN" and actor_role != "ORG_ADMIN":
             raise HTTPException(403, "Only ORG_ADMIN can approve HR_ADMIN")
 

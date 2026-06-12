@@ -9,20 +9,18 @@ from app.models.streams import Camera
 
 
 
-def calculate_work_hours(check_in, check_out, reference_date: date) -> float:
+def calculate_work_hours(check_in: datetime, check_out: datetime) -> float:
     """
-    Calculate worked hours between check-in and check-out.
-    Handles overnight shifts where check-out < check-in.
-    Returns hours as float.
+    Calculate worked hours between two timestamps.
+    Handles overnight shifts.
     """
-    check_in_dt = datetime.combine(reference_date, check_in)
-    check_out_dt = datetime.combine(reference_date, check_out)
+    if not check_in or not check_out:
+        return 0.0
 
-    if check_out_dt < check_in_dt:
-        check_out_dt += timedelta(days=1)
+    if check_out < check_in:
+        check_out += timedelta(days=1)
 
-    return (check_out_dt - check_in_dt).total_seconds() / 3600
-
+    return (check_out - check_in).total_seconds() / 3600
 
 def calculate_user_monthly_kpis(db: Session, user_id: str) -> Dict[str, float]:
     today = date.today()
@@ -57,7 +55,7 @@ def calculate_user_monthly_kpis(db: Session, user_id: str) -> Dict[str, float]:
             leave_taken += 1
 
         if record.first_check_in and record.last_check_out:
-            hours = calculate_work_hours(record.first_check_in, record.last_check_out, record.attendance_date)
+            hours = calculate_work_hours(record.first_check_in, record.last_check_out)
             total_work_hours += hours
             days_with_hours_logged += 1
 
@@ -120,8 +118,8 @@ def get_today_attendance_details(db: Session, user_id: str) -> dict:
     # 3. Calculate Work Duration
     work_duration = "--"
     if attendance_record.first_check_in and attendance_record.last_check_out:
-        t1 = datetime.combine(today, attendance_record.first_check_in)
-        t2 = datetime.combine(today, attendance_record.last_check_out)
+        t1 = attendance_record.first_check_in
+        t2 = attendance_record.last_check_out
         
         if t2 < t1: # Handle overnight shifts
             from datetime import timedelta
@@ -218,18 +216,19 @@ def get_user_attendance_history(db: Session, user_id: str, limit: int = 10) -> l
 
         # Calculate Total Duration
         total_str = "--"
-        if record.first_check_in and record.last_check_out:
-            t1 = datetime.combine(record.attendance_date, record.first_check_in)
-            t2 = datetime.combine(record.attendance_date, record.last_check_out)
-            
-            if t2 < t1: # Handle overnight shifts
-                from datetime import timedelta
-                t2 += timedelta(days=1)
-                
-            diff = t2 - t1
-            hours, remainder = divmod(diff.seconds, 3600)
-            minutes, _ = divmod(remainder, 60)
-            total_str = f"{hours}h {minutes}m"
+
+    if record.first_check_in and record.last_check_out:
+        t1 = record.first_check_in
+        t2 = record.last_check_out
+
+        if t2 < t1:
+            t2 += timedelta(days=1)
+
+        diff = t2 - t1
+        hours, remainder = divmod(diff.seconds, 3600)
+        minutes, _ = divmod(remainder, 60)
+
+        total_str = f"{hours}h {minutes}m"
 
         # Format Status (e.g., "on_time" -> "On Time")
         raw_status = str(record.status) if record.status else "Absent"

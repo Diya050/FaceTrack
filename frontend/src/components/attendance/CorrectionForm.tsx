@@ -19,8 +19,8 @@ type Props = {
   attendance: AttendanceRow[];
   onSubmit: (data: {
     attendance_id: string;
-    requested_check_in?: string;
-    requested_check_out?: string;
+    requested_time_in?: string;
+    requested_time_out?: string;
     reason: string;
   }) => void;
 };
@@ -33,16 +33,34 @@ const CorrectionForm = ({ attendance, onSubmit }: Props) => {
   const [checkOut, setCheckOut] = useState("");
   const [reason, setReason] = useState("");
 
+  const convertISTToUTC = (time: string) => {
+    if (!time) return undefined;
+
+    const [hours, minutes] = time.split(":").map(Number);
+
+    const date = new Date();
+
+    // treat input as IST
+    date.setHours(hours, minutes, 0, 0);
+
+    // convert to UTC
+    const utcHours = date.getUTCHours().toString().padStart(2, "0");
+    const utcMinutes = date.getUTCMinutes().toString().padStart(2, "0");
+
+    return `${utcHours}:${utcMinutes}`;
+  };
+
   const handleSubmit = () => {
     if (!attendanceId || !reason) {
       alert("Please select record and provide reason");
+      console.log("attendance:", attendance);
       return;
     }
 
     onSubmit({
       attendance_id: attendanceId,
-      requested_check_in: checkIn || undefined,
-      requested_check_out: checkOut || undefined,
+      requested_time_in: checkIn ? convertISTToUTC(checkIn) : undefined,
+      requested_time_out: checkOut ? convertISTToUTC(checkOut) : undefined,
       reason,
     });
 
@@ -52,7 +70,7 @@ const CorrectionForm = ({ attendance, onSubmit }: Props) => {
     setCheckOut("");
     setReason("");
   };
-
+  console.log("ATTENDANCE DATA:", attendance);
   return (
     <Box>
       <Typography variant="h6" fontWeight="bold" mb={2}>
@@ -65,10 +83,19 @@ const CorrectionForm = ({ attendance, onSubmit }: Props) => {
           select
           label="Select Date"
           value={attendanceId}
-          onChange={(e) => setAttendanceId(e.target.value)}
+          onChange={(e) => {
+            console.log("SELECTED:", e.target.value);
+            setAttendanceId(String(e.target.value));
+            <Typography>
+              Selected ID: {attendanceId}
+            </Typography>
+          }}
         >
           {attendance.map((a) => (
-            <MenuItem key={a.attendance_id} value={a.attendance_id}>
+            <MenuItem
+              key={String(a.attendance_id)}
+              value={String(a.attendance_id)}
+            >
               {a.date} - {a.status}
             </MenuItem>
           ))}

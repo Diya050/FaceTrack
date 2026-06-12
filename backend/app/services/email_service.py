@@ -26,10 +26,10 @@ class EmailService:
                 server.login(SMTP_EMAIL, SMTP_PASSWORD)
                 server.send_message(msg)
 
-            print(f"📧 Email sent to {to_email}")
+            print(f"Email sent to {to_email}")
 
         except Exception as e:
-            print(f"❌ Email failed for {to_email}: {str(e)}")
+            print(f"Email failed for {to_email}: {str(e)}")
 
     # ---------------- RESET PASSWORD ---------------- #
 

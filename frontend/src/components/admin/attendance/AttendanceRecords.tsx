@@ -116,6 +116,7 @@ export default function AttendanceRecords() {
       });
 
       let url = `http://127.0.0.1:8000/api/v1/attendance/organization?${params}`;
+
       
       if (decoded.role === "ADMIN" && decoded.department_id) {
         url = `http://127.0.0.1:8000/api/v1/attendance/department/${decoded.department_id}?${params}`;

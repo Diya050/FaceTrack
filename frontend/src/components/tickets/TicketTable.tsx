@@ -6,7 +6,6 @@ import {
   CardContent,
   Button,
   Chip,
-  Tooltip,
   Avatar
 } from "@mui/material";
 import { DataGrid, type GridColDef } from "@mui/x-data-grid";
@@ -15,22 +14,17 @@ import { useEffect, useState, useCallback } from "react";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HourglassTopIcon from "@mui/icons-material/HourglassTop";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
-import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
 
 import {
   getTickets,
   respondToTicket,
-  updateTicketStatus
 } from "../../services/supportTicketService";
 
-import type { SupportTicket, TicketStatus } from "../../types/supportTicket";
+import type { SupportTicket } from "../../types/supportTicket";
 
 import { useAuth } from "../../context/AuthContext";
 import CreateTicket from "../../components/tickets/CreateTicketForm";
 
-const COLORS = {
-  dark: "#2E3A59"
-};
 
 /* ✅ Unified status config */
 const statusConfig: Record<
@@ -58,13 +52,6 @@ const statusConfig: Record<
     border: "#bbf7d0",
     Icon: CheckCircleIcon
   },
-  closed: {
-    label: "Closed",
-    color: "#475569",
-    bg: "#f8fafc",
-    border: "#e2e8f0",
-    Icon: CancelOutlinedIcon
-  }
 };
 
 /* Normalize status */
@@ -79,32 +66,23 @@ export default function SupportTickets() {
 
   const loadTickets = useCallback(async () => {
     try {
-      const data = await getTickets();
-      const ticketArray = Array.isArray(data)
-        ? data
-        : data?.data || data?.tickets || [];
+      const ticketArray = await getTickets();
+
       setTickets(ticketArray);
     } catch (error) {
       console.error("Failed to load tickets:", error);
+      setTickets([]);
     }
   }, []);
 
   useEffect(() => {
-    if (role === "HR_ADMIN") {
-      loadTickets();
-    }
-  }, [role, loadTickets]);
-
-  /* ✅ FIXED status update */
-  const handleStatusChange = async (id: string, statusKey: string) => {
-    try {
-      const backendStatus = statusKey.replace(/_/g, " ") as TicketStatus;
-      await updateTicketStatus(id, backendStatus);
-      await loadTickets();
-    } catch (error) {
-      console.error("Failed to update ticket status:", error);
-    }
-  };
+  if (
+    role === "HR_ADMIN" ||
+    role === "ORG_ADMIN"
+  ) {
+    loadTickets();
+  }
+}, [role, loadTickets]);
 
   const handleQuickAction = async (id: string, actionKey: string) => {
     try {
@@ -115,112 +93,181 @@ export default function SupportTickets() {
     }
   };
 
-  /* ✅ Columns */
+
   const columns: GridColDef[] = [
-    {
-      field: "subject",
-      headerName: "Subject",
-      flex: 1,
-      minWidth: 220
-    },
-    {
-      field: "description",
-      headerName: "Description",
-      flex: 1.5,
-      minWidth: 320
-    },
-    {
-      field: "status",
-      headerName: "Status",
-      flex: 1.3,
-      renderCell: (params) => {
-        const current = normalizeStatus(params.row.status);
+  {
+    field: "subject",
+    headerName: "Subject",
+    flex: 1,
+    minWidth: 220
+  },
 
-        return (
-          <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-            {Object.entries(statusConfig).map(([key, cfg]) => {
-              const isActive = current === key;
-              const Icon = cfg.Icon;
+  {
+    field: "description",
+    headerName: "Description",
+    flex: 1.5,
+    minWidth: 320
+  },
 
-              return (
-                <Tooltip key={key} title={cfg.label}>
-                  <Chip
-                    size="small"
-                    clickable
-                    onClick={() =>
-                      handleStatusChange(params.row.ticket_id, key)
-                    }
-                    avatar={
-                      <Avatar
-                        sx={{
-                          bgcolor: isActive ? cfg.color : "transparent",
-                          color: isActive ? "#fff" : cfg.color
-                        }}
-                      >
-                        <Icon fontSize="small" />
-                      </Avatar>
-                    }
-                    label={cfg.label}
-                    sx={{
-                      bgcolor: isActive ? cfg.bg : "#fff",
-                      border: `1px solid ${
-                        isActive ? cfg.border : "#e5e7eb"
-                      }`
-                    }}
-                  />
-                </Tooltip>
-              );
-            })}
-          </Box>
-        );
-      }
-    },
-    {
-      field: "actions",
-      headerName: "Quick Actions",
-      flex: 1.2,
-      sortable: false,
-      renderCell: (params) => (
-        <Box sx={{ display: "flex", gap: 1 }}>
-          <Button
-            size="small"
-            variant="contained"
-            color="success"
-            onClick={() =>
-              handleQuickAction(params.row.ticket_id, "resolved")
-            }
-          >
-            Resolve
-          </Button>
+  /* STATUS → ONLY ACTIVE STATUS */
+  {
+    field: "status",
+    headerName: "Status",
+    flex: 1,
 
-          <Button
-            size="small"
-            variant="outlined"
-            color="warning"
-            onClick={() =>
-              handleQuickAction(params.row.ticket_id, "wait")
-            }
-          >
-            Wait
-          </Button>
+    renderCell: (params) => {
+      const current = normalizeStatus(
+        params.row.status
+      );
 
-          <Button
-            size="small"
-            variant="outlined"
-            color="info"
-            onClick={() =>
-              handleQuickAction(params.row.ticket_id, "info_needed")
-            }
-          >
-            Info
-          </Button>
-        </Box>
-      )
+      const cfg =
+        statusConfig[current] ??
+        statusConfig.open;
+
+      const Icon = cfg.Icon;
+
+      return (
+        <Chip
+          avatar={
+            <Avatar
+              sx={{
+                bgcolor: cfg.color,
+                color: "#fff"
+              }}
+            >
+              <Icon fontSize="small" />
+            </Avatar>
+          }
+          label={cfg.label}
+          sx={{
+            bgcolor: cfg.bg,
+            color: cfg.color,
+            border: `0px solid ${cfg.border}`,
+            fontWeight: 700,
+            minWidth: 130
+          }}
+        />
+      );
     }
-  ];
+  },
+
+  /* QUICK ACTIONS */
+  {
+    field: "quickActions",
+    headerName: "Quick Actions",
+    flex: 1.6,
+    sortable: false,
+
+    renderCell: (params) => {
+      const current = normalizeStatus(
+        params.row.status
+      );
+
+      return (
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            flexWrap: "wrap"
+          }}
+        >
+          {/* OPEN */}
+          {current === "open" && (
+            <>
+              <Button
+                size="small"
+                variant="contained"
+                color="success"
+                onClick={() =>
+                  handleQuickAction(
+                    params.row.ticket_id,
+                    "resolved"
+                  )
+                }
+              >
+                Resolve
+              </Button>
+
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                onClick={() =>
+                  handleQuickAction(
+                    params.row.ticket_id,
+                    "wait"
+                  )
+                }
+              >
+                Wait
+              </Button>
+
+              <Button
+                size="small"
+                variant="outlined"
+                color="info"
+                onClick={() =>
+                  handleQuickAction(
+                    params.row.ticket_id,
+                    "info_needed"
+                  )
+                }
+              >
+                Info
+              </Button>
+            </>
+          )}
+
+          {/* IN PROGRESS */}
+          {current === "in_progress" && (
+            <>
+              <Button
+                size="small"
+                variant="contained"
+                color="success"
+                onClick={() =>
+                  handleQuickAction(
+                    params.row.ticket_id,
+                    "resolved"
+                  )
+                }
+              >
+                Resolve
+              </Button>
+
+              <Button
+                size="small"
+                variant="outlined"
+                color="info"
+                onClick={() =>
+                  handleQuickAction(
+                    params.row.ticket_id,
+                    "info_needed"
+                  )
+                }
+              >
+                Info
+              </Button>
+            </>
+          )}
+
+          {/* RESOLVED */}
+          {current === "resolved" && (
+            <Typography
+              color="success.main"
+              fontWeight={700}
+            >
+              Completed
+            </Typography>
+          )}
+        </Box>
+      );
+    }
+  }
+];
 
   /* User View */
-  if (role !== "HR_ADMIN") {
+  if ( role !== "HR_ADMIN" && role !== "ORG_ADMIN") {
     return (
       <Box sx={{ pt: 10 }}>
         <Container maxWidth="md">

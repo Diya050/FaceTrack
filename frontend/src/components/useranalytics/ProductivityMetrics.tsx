@@ -12,29 +12,62 @@ export default function ProductivityMetrics() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-  let mounted = true;
+    let mounted = true;
 
-  // 2. Remove setLoading(true) from here to satisfy the linter
-  getProductivityMetrics()
-    .then((res) => {
-      if (!mounted) return;
-      setMetrics(res);
-      setError(null);
-    })
-    .catch((err) => {
-      console.error(err);
-      if (!mounted) return;
-      setError("Failed to load metrics");
-    })
-    .finally(() => {
-      if (!mounted) return;
-      setLoading(false);
-    });
+    // 2. Remove setLoading(true) from here to satisfy the linter
+    getProductivityMetrics()
+      .then((res) => {
+        if (!mounted) return;
+        setMetrics(res);
+        setError(null);
+      })
+      .catch((err) => {
+        console.error(err);
+        if (!mounted) return;
+        setError("Failed to load metrics");
+      })
+      .finally(() => {
+        if (!mounted) return;
+        setLoading(false);
+      });
 
-  return () => {
-    mounted = false;
-  };
-}, []);
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const formatTimeOnly = (value?: string | null) => {
+      if (!value) return "--";
+
+      // If backend sends "11:10 → 11:15"
+      if (value.includes("→")) {
+        const [start, end] = value.split("→").map(v => v.trim());
+        return `${formatSingleTime(start)} → ${formatSingleTime(end)}`;
+      }
+
+      return formatSingleTime(value);
+    };
+
+    const formatSingleTime = (time: string) => {
+      if (!time) return "--";
+
+      // remove microseconds like 08:34:32.373000 → 08:34:32
+      const cleaned = time.split(".")[0];
+
+      const [h, m, s] = cleaned.split(":");
+
+      if (!h || !m) return time;
+
+      const date = new Date();
+      date.setUTCHours(Number(h), Number(m), Number(s || 0), 0);
+
+      return date.toLocaleTimeString("en-IN", {
+        timeZone: "Asia/Kolkata",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
 
   const behaviors = metrics ? [
     { label: "Attendance Consistency", value: Math.round(metrics.attendance_consistency), color: COLORS.present },
@@ -42,7 +75,7 @@ export default function ProductivityMetrics() {
   ] : [];
 
   const patterns = metrics ? [
-    { icon: <AccessTimeIcon fontSize="small" />, label: "Peak Arrival", value: metrics.peak_arrival ?? "—" },
+    { icon: <AccessTimeIcon fontSize="small" />, label: "Peak Arrival", value: formatTimeOnly(metrics.peak_arrival) ?? "—" },
     { icon: <QueryStatsIcon fontSize="small" />, label: "Late Frequency", value: `${metrics.late_frequency_per_week} / week` }
   ] : [];
 
@@ -78,11 +111,11 @@ export default function ProductivityMetrics() {
                     {item.value}%
                   </Typography>
                 </Stack>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={item.value} 
-                  sx={{ 
-                    height: 10, 
+                <LinearProgress
+                  variant="determinate"
+                  value={item.value}
+                  sx={{
+                    height: 10,
                     borderRadius: 5,
                     bgcolor: alpha(COLORS.navy, 0.05),
                     "& .MuiLinearProgress-bar": { bgcolor: item.color }
@@ -96,11 +129,11 @@ export default function ProductivityMetrics() {
         <Grid size={{ xs: 12, md: 5 }}>
           <Stack spacing={2.5}>
             {patterns.map((pattern, i) => (
-              <Box key={i} sx={{ 
-                p: 2.5, 
-                borderRadius: 3, 
-                display: 'flex', 
-                alignItems: 'center', 
+              <Box key={i} sx={{
+                p: 2.5,
+                borderRadius: 3,
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'space-between',
                 border: `1px solid ${alpha(COLORS.navy, 0.05)}`,
                 bgcolor: "background.default",
@@ -115,12 +148,12 @@ export default function ProductivityMetrics() {
                     {pattern.value}
                   </Typography>
                 </Box>
-                <Box sx={{ 
-                  color: COLORS.navy, 
-                  display: 'flex', 
-                  p: 1.5, 
-                  borderRadius: 2, 
-                  bgcolor: alpha(COLORS.navy, 0.05) 
+                <Box sx={{
+                  color: COLORS.navy,
+                  display: 'flex',
+                  p: 1.5,
+                  borderRadius: 2,
+                  bgcolor: alpha(COLORS.navy, 0.05)
                 }}>
                   {pattern.icon}
                 </Box>

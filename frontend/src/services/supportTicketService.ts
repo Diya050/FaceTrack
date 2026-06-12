@@ -9,13 +9,10 @@ export const createTicket = async (payload: {
   return response.data;
 };
 
-export const getTickets = async (
-  status?: TicketStatus
-): Promise<SupportTicket[]> => {
-
-  const response = await api.get("/support-tickets", {
-    params: { status }
-  });
+export const getTickets = async (): Promise<SupportTicket[]> => {
+  const response = await api.get<SupportTicket[]>(
+    "/support-tickets"
+  );
 
   return response.data;
 };

@@ -7,7 +7,6 @@ import {
   TableRow,
   Chip,
   Typography,
-  Button,
   Box
 } from "@mui/material";
 
@@ -15,10 +14,20 @@ interface Props {
   rows: any[];
 }
 
-const getStatusColor = (status: string) => {
-  if (status === "Present") return "success";
-  if (status === "Late") return "warning";
-  if (status === "Absent") return "error";
+const getStatusColor = (
+  status: string
+): "success" | "warning" | "error" | "info" | "default" => {
+
+  const value = status?.toLowerCase();
+
+  if (value === "present") return "success";
+
+  if (value === "late") return "warning";
+
+  if (value === "absent") return "error";
+
+  if (value === "half_day") return "info";
+
   return "default";
 };
 
@@ -57,10 +66,6 @@ const AttendanceTable = ({ rows }: Props) => {
               <TableCell>Check-In</TableCell>
               <TableCell>Check-Out</TableCell>
               <TableCell>Total Hours</TableCell>
-              <TableCell>Confidence</TableCell>
-              <TableCell>Camera</TableCell>
-              <TableCell>Method</TableCell>
-              <TableCell>Actions</TableCell>
             </TableRow>
 
           </TableHead>
@@ -77,7 +82,7 @@ const AttendanceTable = ({ rows }: Props) => {
 
                   <Chip
                     label={row.status}
-                    color={getStatusColor(row.status) as any}
+                    color={getStatusColor(row.status)}
                   />
 
                 </TableCell>
@@ -86,31 +91,8 @@ const AttendanceTable = ({ rows }: Props) => {
 
                 <TableCell>{row.checkOut}</TableCell>
 
-                <TableCell>{row.hours}</TableCell>
+                <TableCell>{row.total}</TableCell>
 
-                <TableCell>{row.confidence}</TableCell>
-
-                <TableCell>{row.camera}</TableCell>
-
-                <TableCell>{row.method}</TableCell>
-
-                <TableCell>
-
-                  <Button size="small">
-                    View
-                  </Button>
-
-                  <Button
-                    size="small"
-                    color="error"
-                    onClick={() =>
-                      alert("Dispute request submitted")
-                    }
-                  >
-                    Dispute
-                  </Button>
-
-                </TableCell>
 
               </TableRow>
 

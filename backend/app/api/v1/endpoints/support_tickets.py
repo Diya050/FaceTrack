@@ -54,6 +54,7 @@ def list_tickets(
     "/{ticket_id}/status",
     response_model=SupportTicketResponse,
 )
+
 def update_ticket_status(
     ticket_id: UUID,
     data: SupportTicketUpdate,
@@ -73,7 +74,7 @@ def respond_to_ticket(
     ticket_id: UUID,
     action_key: str = Query(...),
     db: Session = Depends(get_db),
-    current_user=Depends(require_roles(["HR_ADMIN"]))
+    current_user=Depends(require_roles(["HR_ADMIN", "ORG_ADMIN"]))
 ):
     return SupportTicketService.resolve_with_message(
         db=db,

@@ -1,6 +1,6 @@
 from sqlalchemy import select, and_, extract
 from fastapi import HTTPException
-from datetime import datetime, date, timezone
+from datetime import datetime, date, timezone, time
 from typing import Optional
 from uuid import UUID
 from sqlalchemy.orm import Session
@@ -36,13 +36,44 @@ def ensure_active_user(user):
         )
 
 
-def determine_attendance_status(
-    db: Session,
-    organization_id: UUID,
-    check_in_datetime: datetime
-):
+def _coerce_to_naive_time(value):
+    """
+    Normalize datetime/time to a naive time object for rule matching.
+    """
+    if isinstance(value, datetime):
+        return value.timetz().replace(tzinfo=None)
 
-    check_in_time = check_in_datetime.time()
+    if isinstance(value, time):
+        return value.replace(tzinfo=None)
+
+    raise ValueError("Invalid check_in_datetime type")
+
+
+def combine_date_and_time(base_date: date, value):
+    """
+    Convert a time/datetime into an aware datetime suitable for TIMESTAMPTZ columns.
+    If the input is a time, it is combined with base_date.
+    If the resulting datetime is naive, UTC is attached.
+    """
+    if isinstance(value, datetime):
+        result = value
+    elif isinstance(value, time):
+        result = datetime.combine(base_date, value)
+    else:
+        raise ValueError("Invalid value type for datetime conversion")
+
+    if result.tzinfo is None:
+        result = result.replace(tzinfo=timezone.utc)
+
+    return result
+
+
+def determine_attendance_status(
+    db,
+    organization_id,
+    check_in_datetime
+):
+    check_in_time = _coerce_to_naive_time(check_in_datetime)
 
     rules = db.execute(
         select(AttendanceRule)
@@ -69,7 +100,6 @@ def record_attendance_event(
     recognition_method: str,
     event_type
 ):
-
     user = db.execute(
         select(User).where(
             User.user_id == user_id,
@@ -140,7 +170,6 @@ def record_attendance_event(
     # ------------------------------------------------------------------
 
     if not attendance:
-
         status = determine_attendance_status(
             db=db,
             organization_id=organization_id,
@@ -152,7 +181,7 @@ def record_attendance_event(
             organization_id=organization_id,
             attendance_date=today,
 
-            # NOW STORED AS TIMESTAMPTZ
+            # STORED AS TIMESTAMPTZ
             first_check_in=now,
             last_check_out=now,
 
@@ -183,7 +212,6 @@ def get_user_attendance(
     skip: int = 0,
     limit: int = 50,
 ):
-
     if current_user.status != "active":
         raise HTTPException(
             status_code=403,
@@ -215,6 +243,7 @@ def get_user_attendance(
         .offset(skip)
         .limit(limit)
     )
+    
 
     return db.execute(query).scalars().all()
 
@@ -227,17 +256,26 @@ def list_attendance_corrections(
     role = current_user.role.role_name
 
     query = (
-        select(AttendanceCorrection)
+        select(
+            AttendanceCorrection,
+            User.full_name,
+            Attendance.attendance_date,
+            Attendance.first_check_in,
+            Attendance.last_check_out,
+        )
         .join(
             Attendance,
-            AttendanceCorrection.attendance_id == Attendance.attendance_id
+            AttendanceCorrection.attendance_id
+            == Attendance.attendance_id
         )
         .join(
             User,
-            Attendance.user_id == User.user_id
+            Attendance.user_id
+            == User.user_id,
         )
         .where(
-            AttendanceCorrection.organization_id == current_user.organization_id,
+            AttendanceCorrection.organization_id
+            == current_user.organization_id,
             User.status == "active"
         )
     )
@@ -249,18 +287,78 @@ def list_attendance_corrections(
     # ADMIN
     elif role == "ADMIN":
         query = query.where(
-            User.department_id == current_user.department_id
+            User.department_id
+            == current_user.department_id
         )
 
     # EMPLOYEE
     else:
         query = query.where(
-            AttendanceCorrection.user_id == current_user.user_id
+            AttendanceCorrection.user_id
+            == current_user.user_id
         )
 
-    return db.execute(
-        query.order_by(AttendanceCorrection.created_at.desc())
-    ).scalars().all()
+    rows = db.execute(
+        query.order_by(
+            AttendanceCorrection.created_at.desc()
+        )
+    ).all()
+
+    return [
+        {
+            "correction_id": correction.correction_id,
+            "attendance_id": correction.attendance_id,
+
+            # employee
+            "full_name": full_name,
+
+            # current attendance values
+            "current_value": (
+                (
+                    first_check_in.strftime("%H:%M")
+                    if first_check_in
+                    else "--"
+                )
+                +
+                (
+                    f" → {last_check_out.strftime('%H:%M')}"
+                    if last_check_out
+                    else ""
+                )
+            ),
+
+            # requested values
+            "requested_value": (
+                (
+                    str(correction.requested_time_in)
+                    if correction.requested_time_in
+                    else "--"
+                )
+                +
+                (
+                    f" → {correction.requested_time_out}"
+                    if correction.requested_time_out
+                    else ""
+                )
+            ),
+
+            "requested_time_in": correction.requested_time_in,
+            "requested_time_out": correction.requested_time_out,
+
+            "reason": correction.reason,
+            "status": correction.status.value,
+            "created_at": correction.created_at,
+            "date": attendance_date
+        }
+
+        for (
+            correction,
+            full_name,
+            attendance_date,
+            first_check_in,
+            last_check_out,
+        ) in rows
+    ]
 
 
 def request_attendance_correction(
@@ -268,7 +366,6 @@ def request_attendance_correction(
     current_user,
     data
 ):
-
     ensure_active_user(current_user)
 
     attendance = db.execute(
@@ -313,16 +410,12 @@ def request_attendance_correction(
         attendance_id=data.attendance_id,
         user_id=current_user.user_id,
         organization_id=current_user.organization_id,
-
-        # Should now also be full datetime values
         requested_time_in=data.requested_time_in,
         requested_time_out=data.requested_time_out,
-
         reason=data.reason
     )
 
     db.add(correction)
-
     db.commit()
     db.refresh(correction)
 
@@ -335,8 +428,7 @@ def review_attendance_correction(
     correction_id: UUID,
     data
 ):
-
-    role = current_user.role.role_name
+    role = current_user.role.role_name if current_user.role else None
 
     correction = db.execute(
         select(AttendanceCorrection).where(
@@ -378,7 +470,6 @@ def review_attendance_correction(
         pass
 
     elif role == "ADMIN":
-
         if current_user.department_id != request_user.department_id:
             raise HTTPException(
                 status_code=403,
@@ -395,7 +486,6 @@ def review_attendance_correction(
         )
 
     correction.status = AttendanceCorrectionStatus(data.status)
-
     correction.reviewed_by = current_user.user_id
     correction.reviewed_at = datetime.now(timezone.utc)
 
@@ -404,7 +494,6 @@ def review_attendance_correction(
     # ------------------------------------------------------------------
 
     if data.status == AttendanceCorrectionStatus.approved.value:
-
         attendance = db.execute(
             select(Attendance).where(
                 Attendance.attendance_id == correction.attendance_id,
@@ -432,16 +521,22 @@ def review_attendance_correction(
                 )
             )
 
-        # Apply
+        # Apply: attendance.first_check_in / last_check_out are TIMESTAMPTZ,
+        # so store aware datetimes, not raw time objects.
         if correction.requested_time_in:
-            attendance.first_check_in = correction.requested_time_in
+            attendance.first_check_in = combine_date_and_time(
+                attendance.attendance_date,
+                correction.requested_time_in
+            )
 
         if correction.requested_time_out:
-            attendance.last_check_out = correction.requested_time_out
+            attendance.last_check_out = combine_date_and_time(
+                attendance.attendance_date,
+                correction.requested_time_out
+            )
 
         # Recalculate status
         if attendance.first_check_in:
-
             attendance.status = determine_attendance_status(
                 db=db,
                 organization_id=attendance.organization_id,
@@ -480,7 +575,6 @@ def get_department_attendance(
     skip: int = 0,
     limit: int = 50
 ):
-
     ensure_active_user(current_user)
 
     role_name = (
@@ -545,7 +639,6 @@ def get_department_attendance(
         query = query.where(
             Attendance.attendance_date == target_date
         )
-
     else:
         if start_date:
             query = query.where(
@@ -591,7 +684,6 @@ def get_organization_attendance(
     skip: int = 0,
     limit: int = 50
 ):
-
     ensure_active_user(current_user)
 
     role_name = (
@@ -635,7 +727,6 @@ def get_organization_attendance(
         query = query.where(
             Attendance.attendance_date == attendance_date
         )
-
     else:
         if start_date:
             query = query.where(
@@ -693,7 +784,6 @@ def get_monthly_attendance_stats(
     year: int,
     month: int
 ):
-
     user = db.execute(
         select(User).where(
             User.user_id == user_id,
